@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<fragment xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/search_result_browse_fragment"
+    android:name="com.omerflex.view.SearchResultFragment"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".view.SearchResultActivity"
+    tools:deviceIds="tv"
+    tools:ignore="MergeRootFrame" >
+
+    <WebView
+        android:layout_width="50dp"
+        android:layout_height="7dp"
+        android:visibility="gone"
+        android:id="@+id/webView_main"/>
+
+</fragment>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+
+    <application
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:banner="@drawable/app_icon_your_company"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:logo="@drawable/app_icon_your_company"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        tools:ignore="GoogleAppIndexingWarning"
+        android:theme="@style/Theme.OmarFlex">
+        <activity
+            android:name=".view.MainActivity"
+            android:banner="@drawable/app_icon_your_company"
+            android:exported="true"
+            android:icon="@drawable/app_icon_your_company"
+            android:label="@string/app_name"
+            android:logo="@drawable/app_icon_your_company"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".view.mobile.MobileWelcomeActivity" android:screenOrientation="landscape" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.DetailsActivity"
+            android:screenOrientation="landscape"
+            android:exported="false" />
+        <activity
+            android:name=".view.PlaybackActivity"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:exported="false" />
+        <activity
+            android:name=".view.BrowseErrorActivity"
+            android:exported="false" />
+        <activity
+            android:name=".view.BrowserActivity"
+            android:configChanges="orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
+            android:screenOrientation="landscape"
+            android:hardwareAccelerated="true"
+            android:allowBackup="true"
+            android:theme="@style/Theme.AppCompat" />
+        <activity
+            android:name=".view.BBrowserActivity"
+            android:configChanges="orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
+            android:screenOrientation="landscape"
+            android:hardwareAccelerated="true"
+            android:allowBackup="true"
+            android:theme="@style/Theme.AppCompat" />
+        <activity
+            android:name=".view.GetSearchQueryActivity"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat" />
+        <activity
+            android:name=".view.SearchResultActivity"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".view.ExoplayerMediaPlayer"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat" />
+    </application>
+
+</manifest>

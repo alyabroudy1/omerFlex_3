@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.omerflex.view.CursorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cursorLayout"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent">
+
+    <FrameLayout
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <WebView
+            android:id="@+id/webView"
+            android:layout_height="match_parent"
+            android:layout_width="match_parent" />
+
+        <!-- URL Notification Bar -->
+        <LinearLayout
+            android:id="@+id/urlNotificationBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            android:background="#CCCCCC"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/urlBar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonHide"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hide" />
+
+            <Button
+                android:id="@+id/buttonYes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Yes" />
+
+            <Button
+                android:id="@+id/buttonNo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No" />
+        </LinearLayout>
+    </FrameLayout>
+
+</com.omerflex.view.CursorLayout>
