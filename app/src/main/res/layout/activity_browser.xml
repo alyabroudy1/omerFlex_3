@@ -14,6 +14,7 @@
         <WebView
             android:id="@+id/webView"
             android:layout_height="match_parent"
+            android:focusable="false"
             android:layout_width="match_parent" />
 
         <!-- URL Notification Bar -->

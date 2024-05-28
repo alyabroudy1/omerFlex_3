@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,25 +36,30 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.leanback.widget.ArrayObjectAdapter;
 
-import com.omerflex.R;
-import com.omerflex.service.ServerManager;
-import com.omerflex.service.database.MovieDbHelper;
-import com.omerflex.entity.Movie;
-import com.omerflex.server.*;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
+import com.omerflex.server.AbstractServer;
+import com.omerflex.server.Util;
+import com.omerflex.service.ServerManager;
+import com.omerflex.service.database.MovieDbHelper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Timer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -166,11 +170,19 @@ public class BrowserActivity extends AppCompatActivity {
         //String customUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36";
         String customUserAgent = "Android 7";
         // String customUserAgent = "Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36 Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0";
-        if (movie.getState() == Movie.COOKIE_STATE || movie.getStudio().equals(Movie.SERVER_FASELHD)) {
+        if (movie.getState() == Movie.COOKIE_STATE
+                || movie.getStudio().equals(Movie.SERVER_ARAB_SEED)
+                || movie.getStudio().equals(Movie.SERVER_FASELHD)
+                || movie.getStudio().equals(Movie.SERVER_MyCima)
+        ) {
             webSettings.setUserAgentString(customUserAgent);
         }
 
-        if (movie.getState() == Movie.ITEM_STATE || movie.getState() == Movie.RESOLUTION_STATE) {
+        if (
+                movie.getState() == Movie.ITEM_STATE ||
+                        movie.getState() == Movie.RESOLUTION_STATE
+                || movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE
+        ) {
             webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         }
 
@@ -269,7 +281,17 @@ public class BrowserActivity extends AppCompatActivity {
 
                 Log.d(TAG, "browser: map:" + map.toString() + ", url:" + url);
                 webView.loadUrl(url, map);
-            } else {
+//            }else if (url.contains("|")) {
+//                Map<String, String> map = parseParamsToMap(movie.getVideoUrl());
+//                url = url.substring(0, url.indexOf("|"));
+//
+//                Log.d(TAG, "browser: map:" + map.toString() + ", url:" + url);
+//                if (map != null){
+//                    webView.loadUrl(url, map);
+//                }else {
+//                    webView.loadUrl(url);
+//                }
+            }else {
                 Log.d(TAG, "onCreate: url:" + url);
                 webView.loadUrl(url);
             }
@@ -607,11 +629,11 @@ public class BrowserActivity extends AppCompatActivity {
                 "// Call the deleteIframes function to delete all iframes on the page\n" +
                 "deleteIframes();";
 
-        view.loadUrl("javascript: " + delIframes + "; deleteIframes();");
+//        view.loadUrl("javascript: " + delIframes + "; deleteIframes();");
 
 
 // delete all elements out of the body
-        view.loadUrl("javascript:(function() { " +
+        String jsBodyRemoveCode = "javascript:(function() { " +
                 "  // Get all elements in the document" +
                 "  var allElements = document.querySelectorAll('*');" +
                 "  " +
@@ -625,22 +647,25 @@ public class BrowserActivity extends AppCompatActivity {
                 "      element.remove();" +
                 "    }" +
                 "  }" +
-                "})();");
+                "})();";
+
+//        view.evaluateJavascript(jsBodyRemoveCode, null);
 
 
         //remove divs with display block
         view.evaluateJavascript(
                 "(function() {\n" +
-                        "  var elements = document.querySelectorAll('[style*=\"display: block\"], [style*=\"display: block !important\"]');\n" +
-                        "  for (var i = 0; i < elements.length; i++) {\n" +
-                        "    elements[i].parentNode.removeChild(elements[i]);\n" +
-                        "  }\n" +
-                        "})();",
+                        "    var elements = document.querySelectorAll('[style*=\"display: block\"], [style*=\"display: block !important\"]');\n" +
+                        "    \n" +
+                        "    elements.forEach(function(element) {\n" +
+                        "        element.parentNode.removeChild(element);\n" +
+                        "    });\n" +
+                        "})();\n",
                 null
         );
 
         //delete ads iframes
-        String jsCode = "(function() {" +
+        String jsCode_old = "(function() {" +
                 "var iframes = [];" +
                 "var allIframes = document.querySelectorAll('iframe');" +
                 "for (var i = 0; i < allIframes.length; i++) {" +
@@ -666,6 +691,36 @@ public class BrowserActivity extends AppCompatActivity {
                 "}" +
                 "return iframes;" +
                 "})();";
+
+        String jsCode = "(function() {\n" +
+                "    var iframes = [];\n" +
+                "    var allIframes = document.querySelectorAll('iframe');\n" +
+                "\n" +
+                "    allIframes.forEach(function(iframe) {\n" +
+                "        iframe.click();\n" +
+                "\n" +
+                "        while (iframe.hasChildNodes()) {\n" +
+                "            iframe.removeChild(iframe.firstChild);\n" +
+                "        }\n" +
+                "\n" +
+                "        var src = iframe.getAttribute('src');\n" +
+                "        if (src !== 'about:blank' && src !== null) {\n" +
+                "            iframes.push({\n" +
+                "                src: src,\n" +
+                "                height: iframe.getAttribute('height'),\n" +
+                "                width: iframe.getAttribute('width')\n" +
+                "            });\n" +
+                "        } else {\n" +
+                "            if (iframe.parentNode !== null) {\n" +
+                "                iframe.parentNode.removeChild(iframe);\n" +
+                "            } else {\n" +
+                "                iframe.remove();\n" +
+                "            }\n" +
+                "        }\n" +
+                "    });\n" +
+                "\n" +
+                "    return iframes;\n" +
+                "})();\n";
         view.evaluateJavascript(jsCode, null);
     }
 
@@ -697,10 +752,33 @@ public class BrowserActivity extends AppCompatActivity {
         return !result;
     }
 
-    public static boolean isVideo(String url) {
-        if (url.contains("click") || url.contains("brand") || url.contains("/patrik") || url.contains("adserver") || url.contains(".php") || url.contains(".gif") || url.contains("error") || url.endsWith("null")) {
-            return false;
+    public static boolean isVideo(String url, Movie movie) {
+
+        // List of substrings to check
+        List<String> patterns = Arrays.asList(
+                "click", "brand", "/patrik", "adserver", ".php", ".gif", "error", "null"
+        );
+
+        // Check if the URL contains any of the substrings
+        for (String pattern : patterns) {
+            if (url.contains(pattern)) {
+                return false;
+            }
         }
+
+        List<String> patternsMovieUrl = Arrays.asList(
+                "vidmoly", ".html"
+        );
+
+        String movieUrl = movie.getVideoUrl();
+
+        // Check if the URL contains any of the substrings
+        for (String pattern : patternsMovieUrl) {
+            if (movieUrl.contains(pattern)) {
+                return false;
+            }
+        }
+
         if ((url.contains("token=") && (url.contains("inconsistencygasdifficult") || url.contains("video-delivery")))) {
 //        if ((url.contains("token=") && (url.contains("inconsistencygasdifficult")))) {
             return false;
@@ -732,11 +810,12 @@ public class BrowserActivity extends AppCompatActivity {
         public void myMethod(String elementJson) {
             // parse the JSON string to get the element
             // Element element = Json.parse(elementJson);
-
-            // do something with the element
-            //  element.innerHTML = "Hello, World!";
-            Log.d(TAG, "myMethod: xxxx: " + elementJson);
-            if (elementJson.equals("click")) {
+//            if (elementJson.startsWith("<html>")){
+            if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE){
+                Log.d(TAG, "myMethod: html contents: "+ elementJson);
+                server.handleJSWebResult(activity, movie, elementJson);
+                return;
+            }else if (elementJson.equals("click")) {
 //                mouseArrow.setX(screenHeight / 2);
 //                mouseArrow.setY(screenWidth / 2);
 //                simulateMouseClick(webView, screenHeight / 2, screenWidth / 2);
@@ -754,13 +833,15 @@ public class BrowserActivity extends AppCompatActivity {
                     }
                 });
 
-            } else {
+            } else
+            {
+                Log.d(TAG, "myMethod:else ");
                 if (movie.getState() == Movie.COOKIE_STATE) {
                     Intent intent = new Intent();
                     intent.putExtra("result", elementJson);
                     setResult(Activity.RESULT_OK, intent);
                     //server.setCookies(CookieManager.getInstance().getCookie(movie.getVideoUrl()));
-                    //  if (server.getReferer() == null){
+                    //  if (server.getReferer() == null){4
                     //String ref = getValidReferer(movie.)
                     //  }
                     Log.d(TAG, "myMethod: xxx referer:" + server.getReferer());
@@ -792,7 +873,8 @@ public class BrowserActivity extends AppCompatActivity {
                     dbHelper.saveHeadersAndCookies(server, movie.getStudio());
 
                     finish();
-                } else {
+                }
+                else {
                     Movie resultMovie = null;
                     if (
                             movie.getStudio().equals(Movie.SERVER_AKWAM) ||
@@ -1022,6 +1104,8 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
 //            Log.d(TAG, "shouldInterceptRequest: "+request.getUrl());
+            server.shouldInterceptRequest(view, request, dbHelper);
+//            testCookie(view, request);
             if (
                     movie.getStudio().equals(Movie.SERVER_ARAB_SEED) ||
                             movie.getStudio().equals(Movie.SERVER_OMAR)
@@ -1037,25 +1121,7 @@ public class BrowserActivity extends AppCompatActivity {
             try {
                 headers = request.getRequestHeaders();
 
-                //String url = "https://shahid4uu.cam/login";
-//                String cookieTest = CookieManager.getInstance().getCookie("https://www.faselhd.link");
-//                String url = "https://www.faselhd.link/account/login";
-//                Connection connection = Jsoup.connect(url);//.sslSocketFactory(getSSLSocketFactory());
-//                        connection.ignoreHttpErrors(true);
-//                        connection.ignoreContentType(true);
-//                connection.headers(request.getRequestHeaders());
-//                // String cookie = CookieManager.getInstance().getCookie("https://shahid4uu.cam");
-//                connection.cookies(getMapCookies(cookieTest));
-//                Document doc = connection.get();
-//
-//                //Document doc = Jsoup.parse(htmlContent);
-//
-//                String title = doc.title();
-//                Log.d(TAG, "shouldInterceptRequest: cookie test title:"+title);
-//                if (!title.contains("moment")){
-//                    Log.d(TAG, "shouldInterceptRequest: headers:"+request.getRequestHeaders().toString());
-//                    Log.d(TAG, "shouldInterceptRequest: cookies:"+cookieTest);
-//                }
+
 
                 if (!cookieFound && request.getRequestHeaders() != null && request.getRequestHeaders().containsKey("Referer")) {
                     String referer = request.getRequestHeaders().get("Referer");
@@ -1088,7 +1154,7 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
+//            Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
             boolean result = false;
             String url = request.getUrl().toString();
             redirectUrl = url;
@@ -1105,15 +1171,31 @@ public class BrowserActivity extends AppCompatActivity {
             //  result = !url.contains(CURRENT_WEB_NAME);
             String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
 
+
+
             if (newUrl.contains("intent:/")) {
                 return true;
             }
+
+//            Log.d(TAG, "shouldOverrideUrlLoading: contains config url : "+ newUrl.contains(server.getConfig().url) + ", "+server.getConfig().url);
+            if (server.getConfig() != null && newUrl.contains(server.getConfig().url)) {
+                Log.d(TAG, "shouldOverrideUrlLoading:0 false: "+url);
+                return false;
+            }
+            if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
+                if (url.contains("/e/")){
+                    Log.d(TAG, "shouldOverrideUrlLoading:0b false: "+url);
+                    return false;
+                }
+            }
+
 
             if (movie.getStudio().equals(Movie.SERVER_MyCima)) {
 //                boolean sameSite = server.getConfig() != null && server.getConfig().url != null && server.getConfig() != null && newUrl.contains(server.getConfig().url);
                 if (url.contains("embed")) {
 //                if (url.contains("embed") || sameSite) {
                     view.loadUrl(url);
+                    Log.d(TAG, "shouldOverrideUrlLoading:1 false: "+url);
                     return false;
                 }
                 if (!hideRedirectBar && !movie.getStudio().equals(Movie.SERVER_AKWAM)) {
@@ -1127,19 +1209,17 @@ public class BrowserActivity extends AppCompatActivity {
                     };
                     autoHideHandler.postDelayed(autoHideRunnable, 7000);
                 }
+                Log.d(TAG, "shouldOverrideUrlLoading:2 true: "+url);
                 return true;
             }
 
 
-            if (server.getConfig() != null && newUrl.contains(server.getConfig().url)) {
-                Log.d(TAG, "shouldOverrideUrlLoading:0 false: "+newUrl);
-                return false;
-            }
+
             if (
                     (
                             movie.getStudio().equals(Movie.SERVER_AKWAM) ||
                                     movie.getStudio().equals(Movie.SERVER_OLD_AKWAM)) &&
-                            isVideo(request.getUrl().toString())) {
+                            isVideo(request.getUrl().toString(), movie)) {
                 Intent returnIntent = new Intent(activity, DetailsActivity.class);
                 setResult(Activity.RESULT_OK, returnIntent);
                 Movie mm = Movie.clone(movie);
@@ -1156,12 +1236,13 @@ public class BrowserActivity extends AppCompatActivity {
                 returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
                 returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, jsonMovie);
                 activity.startActivity(returnIntent);
+                Log.d(TAG, "shouldOverrideUrlLoading:3 true: "+url);
                 activity.finish();
                 return true;
             }
 
             if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false))) {
-                Log.d(TAG, "shouldOverrideUrlLoading:1 false: "+newUrl);
+                Log.d(TAG, "shouldOverrideUrlLoading:4 false: "+url);
                 view.loadUrl(url);
                 return false;
             }
@@ -1171,12 +1252,11 @@ public class BrowserActivity extends AppCompatActivity {
                 if (url.startsWith("##")) {
                     url = url.replace("##", "");
                 }
-                Log.d(TAG, "shouldOverrideUrlLoading: no: " + url);
+                Log.d(TAG, "shouldOverrideUrlLoading:5 true: "+url);
                 view.loadUrl(url);
                 return true;
                 //  CURRENT_WEB_NAME = getWebName(url);
             }
-            Log.d(TAG, "shouldOverrideUrlLoading: yes: " + url);
 
             //########
 
@@ -1191,8 +1271,8 @@ public class BrowserActivity extends AppCompatActivity {
                 };
                 autoHideHandler.postDelayed(autoHideRunnable, 7000);
             }
+            Log.d(TAG, "shouldOverrideUrlLoading:6 true: "+url);
             //########
-            Log.d(TAG, "shouldOverrideUrlLoading: end true: "+url);
             return true;
             // }
         }
@@ -1200,7 +1280,7 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             super.onPageStarted(view, url, favicon);
-//                Log.d(TAG, "onPageStarted: " + url);
+                Log.d(TAG, "onPageStarted: " + url);
             BrowserActivity.EXECUTE_JS = true;
             BrowserActivity.RESULT_COUNTER = 0;
             //executedJS = false;
@@ -1269,8 +1349,18 @@ public class BrowserActivity extends AppCompatActivity {
             }
 
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
-                if (movie.getState() == Movie.RESOLUTION_STATE) {
-                    cleanWebPage(view);
+                if ( !movie.getVideoUrl().contains("vidmoly") &&
+                        movie.getState() == Movie.RESOLUTION_STATE
+                ) {
+                    //todo fix cleanweb
+                    if (
+                            movie.getVideoUrl().contains("voe.sx") ||
+                            movie.getVideoUrl().contains("brucevotewithin")
+                    ){
+
+                    }else {
+                        cleanWebPage(view);
+                    }
                 }
             }else {
                 if (movie.getState() == Movie.RESOLUTION_STATE || movie.getState() == Movie.BROWSER_STATE) {
@@ -1287,7 +1377,7 @@ public class BrowserActivity extends AppCompatActivity {
                 super.onLoadResource(view, url);
                 return;
             }
-            if (isVideo(url) && BrowserActivity.RESULT_COUNTER < 3 && !url.equals(currentVideoUrl)) {
+            if (isVideo(url, movie) && BrowserActivity.RESULT_COUNTER < 3 && !url.equals(currentVideoUrl)) {
                 BrowserActivity.EXECUTE_JS = false;
                 BrowserActivity.RESULT_COUNTER++;
                 String newUrl = url;
@@ -1408,6 +1498,37 @@ public class BrowserActivity extends AppCompatActivity {
 ////            return false; //changePos(event);
 //        }
 
+    }
+
+    private void testCookie(WebView view, WebResourceRequest request) {
+//        String url = "https://shahid4uu.cam/login";
+        String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
+
+        String cookieTest = CookieManager.getInstance().getCookie("https://wecima.show/");
+        if (cookieTest != null){
+            //                String url = "https://www.faselhd.link/account/login";
+            Connection connection = Jsoup.connect(url);//.sslSocketFactory(getSSLSocketFactory());
+            connection.ignoreHttpErrors(true);
+            connection.ignoreContentType(true);
+            connection.headers(request.getRequestHeaders());
+            // String cookie = CookieManager.getInstance().getCookie("https://shahid4uu.cam");
+            connection.cookies(getMapCookies(cookieTest));
+            Document doc = null;
+            try {
+                doc = connection.get();
+                String title = doc.title();
+                Log.d(TAG, "testCookie shouldInterceptRequest: cookie test title:"+title);
+                if (!title.contains("moment")){
+                    Log.d(TAG, "testCookie shouldInterceptRequest: success headers:"+request.getRequestHeaders().toString());
+                    Log.d(TAG, "testCookie shouldInterceptRequest: success cookies:"+cookieTest);
+                }
+            } catch (IOException e) {
+//            throw new RuntimeException(e);
+                //Document doc = Jsoup.parse(htmlContent);
+                Log.d(TAG, "testCookie: error: "+e.getMessage());
+
+            }
+        }
     }
 
     private boolean isValidReferer(String referer) {

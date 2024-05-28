@@ -607,9 +607,9 @@ public class MovieDbHelper extends SQLiteOpenHelper {
             mainMovie = movie;
         }
 
-        if (mainMovie.getIsHistory() == 1) {
-            return;
-        }
+//        if (mainMovie.getIsHistory() == 1) {
+//            return;
+//        }
         Log.d(TAG, "addMainMovieToHistory:ss " + mainMovie);
         Log.d(TAG, "tag:ss " + movie.getMainMovie());
 

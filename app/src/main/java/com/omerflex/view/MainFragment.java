@@ -4,14 +4,22 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.CookieManager;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityOptionsCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.app.BackgroundManager;
 import androidx.leanback.app.BrowseSupportFragment;
@@ -25,31 +33,24 @@ import androidx.leanback.widget.OnItemViewSelectedListener;
 import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
 import androidx.leanback.widget.RowPresenter;
-import androidx.core.app.ActivityOptionsCompat;
-import androidx.core.content.ContextCompat;
-
-import android.util.DisplayMetrics;
-import android.util.Log;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.CookieManager;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
 import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.server.AbstractServer;
+import com.omerflex.server.AkwamServer;
+import com.omerflex.server.ArabSeedServer;
 import com.omerflex.server.CimaClubServer;
+import com.omerflex.server.FaselHdController;
 import com.omerflex.server.IptvServer;
+import com.omerflex.server.MyCimaServer;
 import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
-import com.omerflex.entity.Movie;
-import com.omerflex.R;
-import com.omerflex.server.AbstractServer;
 
 import java.io.Serializable;
 import java.util.AbstractMap;
@@ -163,7 +164,14 @@ public class MainFragment extends BrowseSupportFragment {
                     // it done in new thread
                     if (server instanceof OmarServer) {
                         loadOmarServerHomepage(server);
-                    }else if (server instanceof OldAkwamServer || server instanceof CimaClubServer) {
+                    }else if (
+                            server instanceof OldAkwamServer ||
+                                    server instanceof CimaClubServer ||
+                                    server instanceof FaselHdController //||
+//                                    server instanceof AkwamServer ||
+//                                    server instanceof ArabSeedServer ||
+//                                    server instanceof MyCimaServer
+                    ) {
                         continue;
                     }else if (server instanceof IptvServer) {
                         //load history rows first
@@ -289,15 +297,17 @@ public class MainFragment extends BrowseSupportFragment {
 //        loadHomepageRaws();
 
 
-        Movie mm = new Movie();
+//        Movie mm = new Movie();
 //    //String url = "https://ui.cima4u.bio/category/%D8%A7%D9%81%D9%84%D8%A7%D9%85-%D8%A7%D8%AC%D9%86%D8%A8%D9%8A/";
 //    //String url = "https://main4.ci4u.co/%d9%81%d9%8a%d9%84%d9%85-your-christmas-or-mine-2022-%d9%85%d8%aa%d8%b1%d8%ac%d9%85-%d8%a7%d9%88%d9%86-%d9%84%d8%a7%d9%8a%d9%86/?wat=1";
 ////    String url = "https://cimatube.cc/embed1/29f1d50ae92194ed586eb34c47a41945";
 ////    String url = "https://www.faselhd.express/video_player?uid=0&vid=863adbd5b09c0b764128cec2dcb1d84f&img=https://img.scdns.io/thumb/863adbd5b09c0b764128cec2dcb1d84f/large.jpg&nativePlayer=true";
 //    String url = "https://m.gamezone.cam/blastman/play/?playit=4e5467344e54497a&fgame=aHR0cHM6Ly9tLmFzZC5ob21lcw==HhZ35wNXMr,,A838GBww1vdTL2F9AJxvrJvWstQaumxqBnXP6SaihNYaPEZa11xkTUWadvZZ66NZ3k0wmtvG_SRztVSfOiWIdHXBlao1UsSSYbNheJsyjywQ2FZNcD9tWIwPhGXYVS9YVmrn1jprLEwl8WqV1art8jZh32Al1Kbp1_VPDYZa8x7om2IrH9aQa6wwVkF24Z8Cot7f9TbGbGlWsKCnMi7Na9bbrza5sBTH_xiFP2DCBkcLFDrkw2lfbcdoCzPTou4Rafy3zvgDpbHgCJ5emNfuKyC67g-cotgx-AGgE7pyBYIuRzIL4gjlves52m7YnmvY0aoimtxyQfTRHWFGSgvQvsSktMyrbe7teUkYL-kUySwqxv81HgvG6jASzQULbYAXYk3zRZ2176TtMyyqruvcvnadVR4c5kyPbLf873rXcpGJPmrScq48wdKPUEaQAhGw6IPxolMBUfi_eRQAzgylEkdqNe";
+//    String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
+//    String url = "https://www.google.com/search?sca_esv=792c36b2414f597c&sca_upv=1&sxsrf=ADLYWILq2GQVLfS6OtWBOZttfUz_gO2FpA:1716908543425&q=ss&uds=ADvngMgnp21tvUWATbVPNUHyrBahasC3_Xskxp-yVqIWaah14uWwZGyEs8SEQnojasvFy1klDAGiK1X000V1u8TMw8WbPd4mdOSf3Z-_WfznXIH3KMxOFX-WPTEBgiVxKEucOwT4nWYlEkxizOQdCtNhrw_D4bTD33sKjMmA9bKU2UEcPXFk20y77h4YYmxpfxmbKeQt9hRlNGWgX8Tf0bU6xIx3rtYCluTxCDf7XbrXNNJ2yGCiJpA&udm=2&prmd=ivnbz&sa=X&ved=2ahUKEwjIw97ezrCGAxW_A9sEHf-IDPkQtKgLegQIDRAB";
 //    mm.setVideoUrl(url);
-//    mm.setStudio(Movie.SERVER_ARAB_SEED);
-//    mm.setState(Movie.RESOLUTION_STATE);
+//    mm.setStudio(Movie.SERVER_MyCima);
+//    mm.setState(Movie.ITEM_STATE);
 //        Intent browse = new Intent(getActivity(), BrowserActivity.class);
 //         browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
 //         getActivity().startActivity(browse);
@@ -352,18 +362,18 @@ public class MainFragment extends BrowseSupportFragment {
 //                loadMoviesRow(fasel.getLabel(), faselMovies);
 //            }
 
-//                        ControllableServer mycima = MyCimaController.getInstance(activity, fragment);
+//                        AbstractServer mycima = MyCimaServer.getInstance(activity, fragment);
 //            ServerConfig mycimaConfig = new ServerConfig();
-//            mycimaConfig.url = "https://%D9%85%D8%A7%D9%8A-%D8%B3%D9%8A%D9%85%D8%A7-%D9%88%D9%89-%D8%B3%D9%8A%D9%85%D8%A7%D8%A7%D8%A7.myciima-weciima.shop";
+//            mycimaConfig.url = "https://wecima.show/";
 //            mycima.setConfig(mycimaConfig);
 //            ArrayList<Movie> mycimaMovies = mycima.getHomepageMovies();
 //            if (mycimaMovies != null && mycimaMovies.size() > 0) {
-//                loadMoviesRow(mycima.getLabel(), mycimaMovies);
+//                loadMoviesRow(mycima, addRowToMainAdapter(mycima.getLabel()), mycimaMovies);
 //            }
-
-
-        });
-        executor.shutdown();
+//
+//
+//        });
+//        executor.shutdown();
 
 
 //        ControllableServer fasel = FaselHdController.getInstance(fragment, activity);
@@ -493,9 +503,9 @@ public class MainFragment extends BrowseSupportFragment {
 //    executor.submit(() -> {
 //
 //
-//});
-//
-//        executor.shutdown();
+});
+
+        executor.shutdown();
 
 
         //to set focus on the first row

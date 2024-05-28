@@ -3,14 +3,10 @@ package com.omerflex.server;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
-import android.view.View;
-import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
 
 import androidx.fragment.app.Fragment;
 
@@ -148,6 +144,11 @@ public class AkwamServer extends AbstractServer {
     @Override
     protected ArrayList<Movie> getSearchMovieList(Document doc) {
         return null;
+    }
+
+    @Override
+    public String getServerId() {
+        return Movie.SERVER_AKWAM;
     }
 
     @Override

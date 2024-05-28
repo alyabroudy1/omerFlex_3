@@ -41,11 +41,11 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.gson.Gson;
 import com.omerflex.R;
+import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.service.ServerManager;
-import com.google.gson.Gson;
-import com.omerflex.entity.Movie;
 
 import java.net.MalformedURLException;
 import java.net.URL;

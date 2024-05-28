@@ -5,12 +5,18 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityOptionsCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.app.DetailsSupportFragment;
 import androidx.leanback.app.DetailsSupportFragmentBackgroundController;
@@ -29,14 +35,6 @@ import androidx.leanback.widget.OnItemViewClickedListener;
 import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
 import androidx.leanback.widget.RowPresenter;
-import androidx.core.app.ActivityOptionsCompat;
-import androidx.core.content.ContextCompat;
-
-import android.os.Handler;
-import android.os.Message;
-import android.os.Parcelable;
-import android.util.Log;
-import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.model.LazyHeaders;
@@ -44,8 +42,8 @@ import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import com.omerflex.entity.Movie;
 import com.omerflex.R;
+import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieHistory;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
@@ -55,7 +53,6 @@ import com.omerflex.service.database.MovieDbHelper;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -68,6 +65,7 @@ import java.util.concurrent.Executors;
  */
 public class VideoDetailsFragment extends DetailsSupportFragment {
     private static final String TAG = "VideoDetailsFragment";
+    public static String TRANSITION_NAME = "poster_transition";
 
     public static final int ACTION_OPEN_DETAILS_ACTIVITY = 1;
     public static final int ACTION_OPEN_EXTERNAL_ACTIVITY = 2;
@@ -635,13 +633,37 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             Log.d(TAG, "onActivityResult:RESULT_OK ");
             if (data != null) {
                 Gson gson = new Gson();
+
                 //requestCode Movie.REQUEST_CODE_MOVIE_UPDATE is one movie object or 2 for a list of movies
                 //this result is only to update the clicked movie of the sublist only and in some cases to update the description of mSelectedMovie
                 //the id property of Movie object is used to identify the index of the clicked sublist movie
                 if (requestCode == Movie.REQUEST_CODE_MOVIE_UPDATE) {
                     Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
-                    Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
-                    updateItemFromActivityResult(resultMovie);
+                    if (resultMovie != null) {
+                        Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
+
+                        String movieSublistString =  data.getStringExtra(DetailsActivity.MOVIE_SUBLIST);
+//                    ArrayList<Movie> movieSublist = (ArrayList<Movie>) data.getSerializableExtra(DetailsActivity.MOVIE_SUBLIST);
+                        Type type = new TypeToken<List<Movie>>() {
+                        }.getType();
+                        List<Movie> movieSublist = gson.fromJson(movieSublistString, type);
+
+                        Log.d(TAG, "onActivityResult: subList:" + movieSublist);
+                        if (movieSublist != null && !movieSublist.isEmpty()) {
+                            String desc = movieSublist.get(0).getDescription();
+                            Log.d(TAG, "onActivityResult: desc: "+ desc);
+                            resultMovie.setDescription(desc);
+                            mSelectedMovie.setDescription(desc);
+                            resultMovie.setSubList(movieSublist);
+
+                        }
+                        mSelectedMovie = resultMovie;
+                        if (resultMovie.getSubList() != null) {
+                            listRowAdapter.addAll(listRowAdapter.size(), resultMovie.getSubList());
+                        }
+                        mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+                        mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+                    }
                 } else if (requestCode == Movie.REQUEST_CODE_EXOPLAYER) {
                     Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
                     Log.d(TAG, "onActivityResult: REQUEST_CODE_EXOPLAYER: " + resultMovie);
@@ -654,7 +676,13 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                     Objects.requireNonNull(getActivity()).startActivity(exoIntent);
                     dbHelper.addMainMovieToHistory(mSelectedMovie);
 
-                } else if (requestCode == Movie.REQUEST_CODE_EXTERNAL_PLAYER) {
+                } else if (requestCode == Movie.REQUEST_CODE_FETCH_HTML) {
+                    String result = data.getStringExtra("result");
+                    Movie resultMovie = (Movie) server.handleOnActivityResultHtml(result, mSelectedMovie);
+                    Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
+                    updateItemFromActivityResult(resultMovie);
+                }
+                else if (requestCode == Movie.REQUEST_CODE_EXTERNAL_PLAYER) {
                     Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
                     Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
                     updateItemFromActivityResult(resultMovie);
@@ -815,8 +843,13 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
 //        history.setSeason(subMovie.getTitle() + " | " + mainMovie.getTitle());
 //        history.setEpisode(removeDomain(movie.getVideoUrl()));
-        history.setMainMovieUrl(Util.getUrlPathOnly(mainMovie.getVideoUrl()));
-        Log.d(TAG, "generateMovieHistory: "+movie.getMainMovie());
+
+        String historyMainMovieUrl = movie.getMainMovieTitle() ;
+        if (mainMovie != null && mainMovie.getVideoUrl() != null){
+            historyMainMovieUrl = mainMovie.getVideoUrl();
+        }
+        history.setMainMovieUrl(Util.getUrlPathOnly(historyMainMovieUrl));
+        Log.d(TAG, "generateMovieHistory: "+historyMainMovieUrl);
 //        subMovie.setMovieHistory(history);
         dbHelper.saveMovieHistory(history);
     }

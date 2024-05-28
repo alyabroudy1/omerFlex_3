@@ -5,6 +5,8 @@ import android.util.Log;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Util {
     private static final String TAG = "Util";
@@ -40,4 +42,55 @@ public class Util {
         }
     }
 
+    public static Map<String, String> getMapCookies(String cookies) {
+        Map<String, String> cookiesHash = new HashMap<>();
+        if (cookies != null) {
+            //split the String by a comma
+            String parts[] = cookies.split(";");
+
+            //iterate the parts and add them to a map
+            for (String part : parts) {
+
+                //split the employee data by : to get id and name
+                String empdata[] = part.split("=");
+
+                String strId = empdata[0].trim();
+                String strName = empdata[1].trim();
+
+                //add to map
+                cookiesHash.put(strId, strName);
+            }
+
+        }
+        return cookiesHash;
+    }
+
+    public static String generateHeadersForVideoUrl(Map<String, String> headers) {
+        String headerString = "";
+        if (headers != null && !headers.isEmpty()){
+            try {
+                StringBuilder sb = new StringBuilder();
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+//                                if (entry.getKey().equals("User-Agent")){
+//                                    continue;
+//                                }
+                    sb.append(entry.getKey());
+                    sb.append("=");
+                    sb.append(entry.getValue());
+                    sb.append("&");
+                }
+                // Remove the last "&" character
+                sb.deleteCharAt(sb.length() - 1);
+                headerString = sb.toString();
+            } catch (Exception e) {
+                Log.d(TAG, "onLoadResource: error building headers for the video: " + e.getMessage());
+                return "";
+            }
+
+            if (!headerString.isEmpty()){
+                return  "|" + headerString;
+            }
+        }
+        return "";
+    }
 }

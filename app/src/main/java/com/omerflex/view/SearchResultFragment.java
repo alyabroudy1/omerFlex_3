@@ -36,11 +36,10 @@ import androidx.leanback.widget.RowPresenter;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
-import com.omerflex.R;
-import com.omerflex.entity.Movie;
-import com.omerflex.server.*;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.service.ServerManager;
 
@@ -141,7 +140,8 @@ public class SearchResultFragment extends BrowseSupportFragment {
                 return;
             }
 
-            ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
+            ArrayObjectAdapter adapter = getServerAdapter(server.getServerId());
+
             HeaderItem header = new HeaderItem(ROWS_COUNTER++, server.getLabel());
             rowsAdapter.add(new ListRow(header, adapter));
 
@@ -165,7 +165,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
                         }
                     }
                 } catch (Exception exception) {
-                    Log.d(TAG, "loadHomepageRaws: error: " + exception.getMessage());
+                    Log.d(TAG, "loadHomepageRaws: error: " + server.getLabel() + ", "+ exception.getMessage());
                 }
 
             });
@@ -232,13 +232,13 @@ public class SearchResultFragment extends BrowseSupportFragment {
 
     private void loadRows() {
         query = Objects.requireNonNull(getActivity().getIntent().getStringExtra("query")).trim();
+        faselAdapter = new ArrayObjectAdapter(new CardPresenter());
+        cimaClubAdapter = new ArrayObjectAdapter(new CardPresenter());
+        cima4uAdapter = new ArrayObjectAdapter(new CardPresenter());
+        shahidAdapter = new ArrayObjectAdapter(new CardPresenter());
+        arabSeedAdapter = new ArrayObjectAdapter(new CardPresenter());
+        tvAdapter = new ArrayObjectAdapter(new CardPresenter());
         loadSearchResultRaws();
-//        faselAdapter = new ArrayObjectAdapter(new CardPresenter());
-//        cimaClubAdapter = new ArrayObjectAdapter(new CardPresenter());
-//        cima4uAdapter = new ArrayObjectAdapter(new CardPresenter());
-//        shahidAdapter = new ArrayObjectAdapter(new CardPresenter());
-//        arabSeedAdapter = new ArrayObjectAdapter(new CardPresenter());
-//        tvAdapter = new ArrayObjectAdapter(new CardPresenter());
 //
 ////        AbstractServer omerServer = OmarServer.getInstance(getActivity(), fragment);
 ////        if (omerServer.getConfig() == null || omerServer.getConfig().isActive){
@@ -583,7 +583,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(TAG, "onActivityResult: " + requestCode + ", " + resultCode + ", " + data);
-        ArrayObjectAdapter objectAdapter = getServerAdapter(clickedMovie);
+        ArrayObjectAdapter objectAdapter = getServerAdapter(clickedMovie.getStudio());
         AbstractServer server = ServerManager.determineServer(clickedMovie, objectAdapter, getActivity(), fragment);
 
         if (requestCode == 0) {
@@ -677,8 +677,8 @@ public class SearchResultFragment extends BrowseSupportFragment {
 
     }
 
-    private ArrayObjectAdapter getServerAdapter(Movie movie) {
-        switch (movie.getStudio()) {
+    private ArrayObjectAdapter getServerAdapter(String serverId) {
+        switch (serverId) {
             case Movie.SERVER_CIMA_CLUB:
                 return cimaClubAdapter;
             case Movie.SERVER_CIMA4U:
@@ -687,8 +687,12 @@ public class SearchResultFragment extends BrowseSupportFragment {
                 return shahidAdapter;
             case Movie.SERVER_ARAB_SEED:
                 return arabSeedAdapter;
-            default:
+            case Movie.SERVER_FASELHD:
                 return faselAdapter;
+            case Movie.SERVER_IPTV:
+                return tvAdapter;
+            default:
+                return new ArrayObjectAdapter(new CardPresenter());
         }
     }
 }

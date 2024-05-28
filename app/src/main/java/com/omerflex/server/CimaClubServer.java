@@ -305,6 +305,21 @@ public class CimaClubServer extends AbstractServer {
     }
 
     @Override
+    public String getServerId() {
+        return Movie.SERVER_CIMA_CLUB;
+    }
+
+    @Override
+    protected Fragment getFragment() {
+        return fragment;
+    }
+
+    @Override
+    protected Activity getActivity() {
+        return activity;
+    }
+
+    @Override
     protected String getSearchUrl(String query) {
         return null;
     }
@@ -1305,7 +1320,7 @@ public class CimaClubServer extends AbstractServer {
                     }
 
                     //fetch video
-                    if (BrowserActivity.isVideo(url) && !url.equals(currentVideoUrl)) {
+                    if (BrowserActivity.isVideo(url, movie) && !url.equals(currentVideoUrl)) {
                         String newUrl = url;
                         // server.setHeaders(headers);
                         //server.setCookies(cookieManager.getCookie(movie.getVideoUrl()));

@@ -15,9 +15,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.omerflex.R;
-import com.omerflex.entity.Movie;
-import com.omerflex.service.database.MovieDbHelper;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackException;
@@ -35,6 +32,9 @@ import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.util.Util;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
+import com.omerflex.service.database.MovieDbHelper;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;

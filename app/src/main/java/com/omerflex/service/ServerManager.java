@@ -10,6 +10,7 @@ import com.omerflex.entity.Movie;
 import com.omerflex.server.AkwamServer;
 import com.omerflex.server.ArabSeedServer;
 import com.omerflex.server.CimaClubServer;
+import com.omerflex.server.FaselHdController;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
@@ -114,6 +115,7 @@ public class ServerManager {
                 config.url = serverCookie.referer;
                 config.name = serverCookie.name;
                 config.date = serverCookie.date.toString();
+                server.setReferer(serverCookie.referer);
                 server.setConfig(config);
                 server.setHeaders(getMappedHeaders(serverCookie.headers));
                 server.setCookies(serverCookie.cookie);
@@ -140,6 +142,16 @@ public class ServerManager {
         }
 
 //        Log.d(TAG, "addServerConfigsToDB: date: "+date.toString());
+
+        //        ### fasel ###
+        ServerConfig faselCDTO = new ServerConfig();
+        faselCDTO.name = Movie.SERVER_FASELHD;
+        faselCDTO.url = "https://faselhd.center";
+
+        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
+        faselhd.setConfig(faselCDTO);
+        dbHelper.saveServerConfigAsCookieDTO(faselCDTO, date);
+        servers.add(faselhd);
 
 //        ### Mycima ###
         ServerConfig mycimaCDTO = new ServerConfig();
@@ -380,8 +392,8 @@ public class ServerManager {
                 return AkwamServer.getInstance(activity, fragment);
             case Movie.SERVER_OLD_AKWAM:
                 return OldAkwamServer.getInstance(activity, fragment);
-//            case Movie.SERVER_FASELHD:
-//                return FaselHdController.getInstance(fragment, activity);
+            case Movie.SERVER_FASELHD:
+                return FaselHdController.getInstance(fragment, activity);
 //            case Movie.SERVER_CIMA4U:
 //                return Cima4uController.getInstance(fragment, activity);
 //            case Movie.SERVER_SHAHID4U:
@@ -412,8 +424,8 @@ public class ServerManager {
                 return AkwamServer.getInstance(activity, fragment);
             case Movie.SERVER_OLD_AKWAM:
                 return OldAkwamServer.getInstance(activity, fragment);
-//            case Movie.SERVER_FASELHD:
-//                return FaselHdController.getInstance(fragment, activity);
+            case Movie.SERVER_FASELHD:
+                return FaselHdController.getInstance(fragment, activity);
 //            case Movie.SERVER_CIMA4U:
 //                return Cima4uController.getInstance(fragment, activity);
 //            case Movie.SERVER_SHAHID4U:

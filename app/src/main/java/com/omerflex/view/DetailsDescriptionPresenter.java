@@ -1,5 +1,6 @@
 package com.omerflex.view;
 
+import android.os.Build;
 import android.util.Log;
 
 import androidx.leanback.widget.AbstractDetailsDescriptionPresenter;
@@ -18,7 +19,9 @@ public class DetailsDescriptionPresenter extends AbstractDetailsDescriptionPrese
         if (movie != null) {
             viewHolder.getTitle().setText(movie.getTitle());
             viewHolder.getSubtitle().setText(movie.getStudio());
-            viewHolder.getBody().setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Large);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                viewHolder.getBody().setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Large);
+            }
 
             String history = "";
             if (movie.getMovieHistory() != null &&

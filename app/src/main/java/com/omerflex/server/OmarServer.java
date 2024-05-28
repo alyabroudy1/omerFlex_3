@@ -12,7 +12,6 @@ import androidx.fragment.app.Fragment;
 import com.omerflex.entity.dto.CategoryDTO;
 import com.omerflex.entity.dto.MovieDTO;
 import com.omerflex.entity.dto.ServerConfig;
-import com.omerflex.entity.dto.SourceDTO;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.entity.Movie;
@@ -503,5 +502,20 @@ public class OmarServer extends AbstractServer {
     @Override
     public String getLabel() {
         return "omar";
+    }
+
+    @Override
+    public String getServerId() {
+        return Movie.SERVER_OMAR;
+    }
+
+    @Override
+    protected Fragment getFragment() {
+        return fragment;
+    }
+
+    @Override
+    protected Activity getActivity() {
+        return activity;
     }
 }

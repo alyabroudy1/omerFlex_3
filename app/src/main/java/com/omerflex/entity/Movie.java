@@ -5,6 +5,9 @@ import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.Serializable;
@@ -16,6 +19,7 @@ import java.util.List;
 /*
  * Movie class represents video entity with title, description, image thumbs and video url.
  */
+@Entity(tableName = "movies")
 public class Movie implements Serializable, Parcelable {
     public static final String SERVER_OMAR = "omar";
     static final long serialVersionUID = 727566175075960653L;
@@ -50,6 +54,8 @@ public class Movie implements Serializable, Parcelable {
     public final static int REQUEST_CODE_EXTERNAL_PLAYER = 11;
     public final static int REQUEST_CODE_MOVIE_UPDATE = 12;
     public final static int REQUEST_CODE_MOVIE_LIST = 13;
+    public final static int REQUEST_CODE_FETCH_HTML = 14;
+    public static final int HTML_STATE = 15;
     private static int count = 0;
     private String searchContext;
 
@@ -59,6 +65,7 @@ public class Movie implements Serializable, Parcelable {
     private String description;
     private String bgImageUrl;
     private String cardImageUrl;
+    @PrimaryKey
     private String videoUrl;
     private String trailerUrl;
     private String studio;

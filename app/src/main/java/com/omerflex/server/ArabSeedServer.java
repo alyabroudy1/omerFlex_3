@@ -583,6 +583,7 @@ public class ArabSeedServer extends AbstractServer {
                 return movie;//very important to return the original movie
             }
             Log.d(TAG, "fetchServers: serverElems:"+serverElems.size());
+            String domain = extractDomain(movie.getVideoUrl());
             for (Element serverElem : serverElems){
                 Elements listElems = serverElem.getElementsByAttribute("data-link");
                 int counter = 0;
@@ -591,24 +592,34 @@ public class ArabSeedServer extends AbstractServer {
                     server.setState(Movie.RESOLUTION_STATE);
 //                    String link = movie.getVideoUrl() + "??"+(counter++)+"||referer="+ referer;
                     String link = listElem.attr("data-link");
-                    if (link != null){
+                    if (link == null){
+//                            link = movie.getVideoUrl() + "||Referer=" + domain;
+                        continue;
+                    }
 //                        if (link.contains(".wiki")){
 //                            continue;
 //                        }
+                        //              "if (title.includes(\"عرب سيد\")) {\n" +
+                        //                        "        post.videoUrl = \""+movie.getVideoUrl()+"\"; \n" +
+                        //                        "    }\n" +
 
-                        link = link + "||Referer=" + extractDomain(movie.getVideoUrl());
+                            link = link + "||Referer=" + domain;
+
 //                        "&Accept-Encoding=\"gzip, deflate, br\""+
 //                        "&Accept=\"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\""+
 //                        "&Accept-Language=\"de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7\"";
 //                        link = link + "||referer=https://arabseed.show/";
                         server.setVideoUrl(link);
-                    }
+
                     Elements titleElems = listElem.getElementsByTag("span");
                     if (titleElems.size() > 0){
                         if (titleElems.first() != null){
-                            String title = titleElems.first().text();
+                            String titleText = titleElems.first().text();
+                             if(titleText.contains("عرب سيد")){
+                                 continue;
+                             }
 
-                            server.setTitle(title);
+                            server.setTitle(titleText);
                         }
                     }else {
                         server.setTitle(listElem.text());
@@ -1121,5 +1132,20 @@ public class ArabSeedServer extends AbstractServer {
     @Override
     public String getLabel() {
         return "عرب سيد";
+    }
+
+    @Override
+    public String getServerId() {
+        return Movie.SERVER_ARAB_SEED;
+    }
+
+    @Override
+    protected Fragment getFragment() {
+        return fragment;
+    }
+
+    @Override
+    protected Activity getActivity() {
+        return activity;
     }
 }

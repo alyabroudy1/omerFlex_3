@@ -17,6 +17,7 @@ import android.view.MotionEvent.PointerCoords;
 import android.view.MotionEvent.PointerProperties;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.WebView;
 import android.widget.FrameLayout;
 
 import java.util.Timer;
@@ -55,6 +56,8 @@ public class CursorLayout extends FrameLayout {
     public long lastCursorUpdate = System.currentTimeMillis();
     private Paint paint = new Paint();
     PointF tmpPointF = new PointF();
+
+    private WebView webView;
 
     public interface Callback {
         void onUserInteraction();
@@ -101,6 +104,9 @@ public class CursorLayout extends FrameLayout {
         this.callback = callback2;
     }
 
+    public void setWebView(WebView webView) {
+        this.webView = webView;
+    }
     public boolean onInterceptTouchEvent(MotionEvent motionEvent) {
         Log.d(TAG, "onInterceptTouchEvent: ");
         Callback callback2 = this.callback;
@@ -243,7 +249,7 @@ public class CursorLayout extends FrameLayout {
         long uptimeMillis2 = SystemClock.uptimeMillis();
         PointerProperties pointerProperties = new PointerProperties();
         pointerProperties.id = 0;
-        pointerProperties.toolType = 1;
+        pointerProperties.toolType = MotionEvent.TOOL_TYPE_FINGER;
         PointerProperties[] pointerPropertiesArr = {pointerProperties};
         PointerCoords pointerCoords = new PointerCoords();
         pointerCoords.x = f;
@@ -541,4 +547,64 @@ public class CursorLayout extends FrameLayout {
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
     }
+
+    public void updateCursorPosition() {
+        Log.d(TAG, "updateCursorPosition: cursorDirection:" + this.cursorDirection);
+        PointF pointF = this.cursorPosition;
+        pointF.x += cursorDirection.x * 0.3f;
+        pointF.y += cursorDirection.y * 0.3f;
+        if (pointF.x < 0.0f) {
+            pointF.x = 0.0f;
+        }
+        if (pointF.y < 0.0f) {
+            pointF.y = 0.0f;
+        }
+        if (pointF.x > ((float) getWidth())) {
+            pointF.x = (float) getWidth();
+        }
+        if (pointF.y > ((float) getHeight())) {
+            pointF.y = (float) getHeight();
+        }
+        this.cursorSpeed.set(this.cursorDirection.x * 0.3f, this.cursorDirection.y * 0.3f);
+        this.tmpPointF.set(pointF.x, pointF.y);
+
+//        checkAndScrollWebView();
+
+        if (getHandler() != null) {
+            getHandler().removeCallbacks(this.cursorHideRunnable);
+            getHandler().postDelayed(this.cursorHideRunnable, 5000);
+        }
+        invalidate();
+    }
+
+//    private void checkAndScrollWebView() {
+//        if (this.webView != null) {
+//            int scrollX = this.webView.getScrollX();
+//            int scrollY = this.webView.getScrollY();
+//            int maxScrollX = this.webView.computeHorizontalScrollRange() - this.webView.getWidth();
+//            int maxScrollY = this.webView.computeVerticalScrollRange() - this.webView.getHeight();
+//            boolean shouldScroll = false;
+//
+//            if (this.cursorPosition.x > getWidth() - SCROLL_START_PADDING && scrollX < maxScrollX) {
+//                this.webView.scrollBy(10, 0);
+//                shouldScroll = true;
+//            } else if (this.cursorPosition.x < SCROLL_START_PADDING && scrollX > 0) {
+//                this.webView.scrollBy(-10, 0);
+//                shouldScroll = true;
+//            }
+//
+//            if (this.cursorPosition.y > getHeight() - SCROLL_START_PADDING && scrollY < maxScrollY) {
+//                this.webView.scrollBy(0, 10);
+//                shouldScroll = true;
+//            } else if (this.cursorPosition.y < SCROLL_START_PADDING && scrollY > 0) {
+//                this.webView.scrollBy(0, -10);
+//                shouldScroll = true;
+//            }
+//
+//            if (shouldScroll) {
+//                postInvalidate();
+//            }
+//        }
+//    }
+
 }

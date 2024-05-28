@@ -994,4 +994,19 @@ public class OldAkwamServer extends AbstractServer {
     public String getLabel() {
         return "old_akwam";
     }
+
+    @Override
+    public String getServerId() {
+        return Movie.SERVER_OLD_AKWAM;
+    }
+
+    @Override
+    protected Fragment getFragment() {
+        return fragment;
+    }
+
+    @Override
+    protected Activity getActivity() {
+        return activity;
+    }
 }

@@ -79,6 +79,21 @@ public class IptvServer extends AbstractServer {
     }
 
     @Override
+    public String getServerId() {
+        return Movie.SERVER_IPTV;
+    }
+
+    @Override
+    protected Fragment getFragment() {
+        return fragment;
+    }
+
+    @Override
+    protected Activity getActivity() {
+        return activity;
+    }
+
+    @Override
     protected String getSearchUrl(String query) {
         return null;
     }
