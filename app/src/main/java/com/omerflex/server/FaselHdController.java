@@ -31,17 +31,14 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.dto.ServerConfig;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -52,7 +49,6 @@ import java.util.Map;
 
 public class FaselHdController extends AbstractServer {
 
-    ServerConfig config;
     static String TAG = "FaselHd";
     static String WEBSITE_NAME = ".faselhd.";
     public static String WEBSITE_URL = "https://www.faselhd.center";
@@ -61,9 +57,6 @@ public class FaselHdController extends AbstractServer {
     static boolean START_BROWSER_CODE = false;
     static boolean STOP_BROWSER_CODE = false;
     static int RESULT_COUNTER = 0;
-    private String cookies;
-    private String referer;
-    private Map<String, String> headers;
 
     private static FaselHdController instance;
 
@@ -71,7 +64,6 @@ public class FaselHdController extends AbstractServer {
         // Private constructor to prevent instantiation
         this.fragment = fragment;
         this.activity = activity;
-        headers = new HashMap<>();
     }
 
     public static synchronized FaselHdController getInstance(Fragment fragment, Activity activity) {
@@ -86,39 +78,6 @@ public class FaselHdController extends AbstractServer {
             }
         }
         return instance;
-    }
-
-    @Override
-    public void setCookies(String cookies) {
-        this.cookies = cookies;
-    }
-
-    @Override
-    public String getCookies() {
-        return this.cookies;
-    }
-
-    public Map<String, String> getMapCookies() {
-        Map<String, String> cookiesHash = new HashMap<>();
-        if (cookies != null && !cookies.equals("")) {
-            //split the String by a comma
-            String parts[] = cookies.split(";");
-
-            //iterate the parts and add them to a map
-            for (String part : parts) {
-
-                //split the employee data by : to get id and name
-                String empdata[] = part.split("=");
-
-                String strId = empdata[0].trim();
-                String strName = empdata[1].trim();
-
-                //add to map
-                cookiesHash.put(strId, strName);
-            }
-
-        }
-        return cookiesHash;
     }
 
     @Override
@@ -277,9 +236,9 @@ public class FaselHdController extends AbstractServer {
         if (query.contains("http")) {
             return query;
         }
-        String webLink = config.url;
+        String webLink = getConfig().getUrl();
         if (webLink == null || webLink.isEmpty()) {
-            webLink = referer ;
+            webLink = getConfig().getReferer() ;
             if (webLink == null || webLink.isEmpty()) {
                 webLink = WEBSITE_URL ;
             }
@@ -388,17 +347,21 @@ public class FaselHdController extends AbstractServer {
     public Movie fetchGroupOfGroup(final Movie movie) {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
 
-        try {
-            Document doc = Jsoup.connect(movie.getVideoUrl())
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
-            Log.i("result stop title: ", doc.title());
 
-            if (!doc.title().contains("moment")) {
+//            Document doc = Jsoup.connect(movie.getVideoUrl())
+//                    .cookies(getMapCookies())
+//                    .headers(headers)
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        if (doc == null) {
+            return movie;
+        }
+        Log.i(TAG, "result stop title: "+ doc.title());
+        if (!doc.title().contains("moment")) {
                 Element posterImg = doc.selectFirst(".posterImg");
                 String backgroundImage = "";
                 String trailer = "";
@@ -455,7 +418,7 @@ public class FaselHdController extends AbstractServer {
                         }
                     }
                     if (seasonDiv.attr("onclick") != null) {
-                        link = config.url + seasonDiv.attr("onclick").replace("window.location.href = '", "").replace("'", "");
+                        link = getConfig().getUrl() + seasonDiv.attr("onclick").replace("window.location.href = '", "").replace("'", "");
                     }
 
                     Log.d(TAG, "fetchGroupOfGroup: image:" + image);
@@ -476,9 +439,6 @@ public class FaselHdController extends AbstractServer {
                 }
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         return movie;
     }
 
@@ -486,14 +446,18 @@ public class FaselHdController extends AbstractServer {
     public Movie fetchGroup(Movie movie) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
-        try {
-            Document doc = Jsoup.connect(movie.getVideoUrl())
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+            Document doc = this.getRequestDoc(movie.getVideoUrl());
+            if (doc == null) {
+                return movie;
+            }
+
+//            Document doc = Jsoup.connect(movie.getVideoUrl())
+//                    .cookies(getMapCookies())
+//                    .headers(headers)
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
             Log.i(TAG, doc.title());
 
             if (!doc.title().contains("moment")) {
@@ -553,9 +517,7 @@ public class FaselHdController extends AbstractServer {
                 }
 
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
         Log.d(TAG, "fetchGroup: result movie: " + movie.getSubList());
         return movie;
     }
@@ -596,15 +558,12 @@ public class FaselHdController extends AbstractServer {
     @Override
     public Movie fetchItem(Movie movie) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
-        try {
-            Document doc = Jsoup.connect(movie.getVideoUrl())
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
-            Log.i("result stop title: ", doc.title());
+
+            Document doc = this.getRequestDoc(movie.getVideoUrl());
+            if (doc == null) {
+                return movie;
+            }
+            Log.i(TAG, "result stop title: "+ doc.title());
 
             if (!doc.title().contains("moment")) {
                 Element posterImg = doc.selectFirst(".posterImg");
@@ -649,7 +608,7 @@ public class FaselHdController extends AbstractServer {
                         String linkElem = episodeDiv.attr("onclick");
                         if (linkElem != null) {
                             link = linkElem.replace("player_iframe.location.href = ", "").replace("'", "");
-                            link = link + Util.generateHeadersForVideoUrl(headers);
+                            link = link + Util.generateHeadersForVideoUrl(getConfig().getHeaders());
                         }
 
                         Log.i(TAG, "Fasel server element found: " + link);
@@ -671,10 +630,6 @@ public class FaselHdController extends AbstractServer {
                 }
 
             }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         return movie;
     }
 
@@ -778,11 +733,6 @@ public class FaselHdController extends AbstractServer {
     */
         //addToHistory(movie);
 
-    }
-
-    @Override
-    public Map<String, String> getHeaders() {
-        return headers;
     }
 
     @Override
@@ -945,11 +895,6 @@ public class FaselHdController extends AbstractServer {
         );
 */
         return true;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
     }
 
     @Override
@@ -1351,16 +1296,6 @@ public class FaselHdController extends AbstractServer {
     }
 
     @Override
-    public void setReferer(String referer) {
-        this.referer = referer;
-    }
-
-    @Override
-    public String getReferer() {
-        return referer;
-    }
-
-    @Override
     public String getWebScript(int mode, Movie movie) {
         String script = "";
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
@@ -1506,22 +1441,14 @@ public class FaselHdController extends AbstractServer {
             }
         }
 
+        Log.d(TAG, "getWebScript: "+script);
         return script;
     }
 
-    @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
-    }
 
     @Override
     public ArrayList<Movie> getHomepageMovies() {
-        return search(config.url + "/most_recent");
+        return search(getConfig().getUrl() + "/most_recent");
     }
 
 }

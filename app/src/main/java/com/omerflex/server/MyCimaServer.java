@@ -8,7 +8,7 @@ import android.webkit.WebView;
 import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 
@@ -19,20 +19,14 @@ import org.jsoup.select.Elements;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MyCimaServer extends AbstractServer {
-    ServerConfig config;
     private static MyCimaServer instance;
     static String TAG = "MyCima";
 
     Activity activity;
 
     Fragment fragment;
-    private String cookies;
-    private String referer;
-    private Map<String, String> headers;
 
     public static String WEBSITE_URL = "https://mycima.io";
 
@@ -40,7 +34,6 @@ public class MyCimaServer extends AbstractServer {
         // Private constructor to prevent instantiation
         this.activity = activity;
         this.fragment = fragment;
-        headers = new HashMap<>();
     }
 
     public static synchronized MyCimaServer getInstance(Activity activity, Fragment fragment) {
@@ -132,6 +125,10 @@ public class MyCimaServer extends AbstractServer {
             movieList.add(nextPage);
         }
 
+        Movie sampleMovie = movieList.get(0);
+        if (sampleMovie != null && sampleMovie.getVideoUrl() != null){
+            updateDomain(sampleMovie.getVideoUrl());
+        }
         return movieList;
     }
 
@@ -140,11 +137,12 @@ public class MyCimaServer extends AbstractServer {
         if (query.contains("http")) {
             return query;
         }
-        if (referer != null && !referer.isEmpty()) {
-            if (referer.endsWith("/")) {
-                searchUrl = referer + "search/" + query;
+        ServerConfig config = getConfig();
+        if (config.getUrl() != null && !config.getUrl().isEmpty()) {
+            if (config.getUrl().endsWith("/")) {
+                searchUrl = config.getUrl() + "search/" + query;
             } else {
-                searchUrl = referer + "/search/" + query;
+                searchUrl = config.getUrl() + "/search/" + query;
             }
         } else {
             searchUrl = WEBSITE_URL + "/search/" + query;
@@ -347,11 +345,6 @@ public class MyCimaServer extends AbstractServer {
     }
 
     @Override
-    public Map<String, String> getHeaders() {
-        return headers;
-    }
-
-    @Override
     public boolean onLoadResource(Activity activity, WebView view, String url, Movie movie) {
         return false;
     }
@@ -445,7 +438,7 @@ public class MyCimaServer extends AbstractServer {
         Document doc = getRequestDoc(url);
         if (doc == null) {
             Log.d(TAG, "fetchGroup: error doc is null ");
-            return null;
+            return movie;
         }
 
         if (doc.title().contains("Just a moment")) {
@@ -508,7 +501,7 @@ public class MyCimaServer extends AbstractServer {
 
         Document doc = getRequestDoc(url);
         if (doc == null) {
-            return null;
+            return movie;
         }
 
         if (doc.title().contains("Just a moment")) {
@@ -550,31 +543,6 @@ public class MyCimaServer extends AbstractServer {
         // Log.d(TAG, "isSeries: title:" + n + ", url=" + u);
         return n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
                 || u.contains("series");
-    }
-
-    @Override
-    public void setCookies(String cookies) {
-        this.cookies = cookies;
-    }
-
-    @Override
-    public String getCookies() {
-        return cookies;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
-    }
-
-    @Override
-    public void setReferer(String referer) {
-        this.referer = referer;
-    }
-
-    @Override
-    public String getReferer() {
-        return referer;
     }
 
     @Override
@@ -653,7 +621,7 @@ public class MyCimaServer extends AbstractServer {
                         "     }\n" +
                         " });";
             } else if (movie.getState() == Movie.ITEM_STATE) {
-                String referer = Util.extractDomain(movie.getVideoUrl(), true);
+                String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
                 script = "document.addEventListener('DOMContentLoaded', () => {\n" +
                         "if (!document.title.includes('Just a moment')){" +
                         "var descElems = document.getElementsByClassName('StoryMovieContent');\n" +
@@ -836,7 +804,7 @@ public class MyCimaServer extends AbstractServer {
                     Movie episode = Movie.clone(movie);
                     episode.setTitle(title);
                     episode.setDescription(desc);
-                    episode.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(headers));
+                    episode.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(getConfig().getHeaders()));
                     episode.setState(Movie.RESOLUTION_STATE);
                     if (movie.getSubList() == null) {
                         movie.setSubList(new ArrayList<>());
@@ -846,7 +814,7 @@ public class MyCimaServer extends AbstractServer {
             }
             break;
         }
-        String referer = Util.extractDomain(movie.getVideoUrl(), true);
+        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
         uls = doc.getElementsByClass("WatchServersList");
         for (Element ul : uls) {
             Elements lis = ul.getElementsByAttribute("data-url");
@@ -887,18 +855,8 @@ public class MyCimaServer extends AbstractServer {
         return movie;
     }
 
-    @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
-    }
-
     public ArrayList<Movie> getHomepageMovies() {
-        return search(config.url + "/movies/");
+        return search(getConfig().getUrl() + "/movies/");
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);
     }

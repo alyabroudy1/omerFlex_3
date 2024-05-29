@@ -19,29 +19,22 @@ import android.widget.Toast;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 
+import com.google.gson.Gson;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
-import com.omerflex.entity.Movie;
-import com.omerflex.R;
 import com.omerflex.view.VideoDetailsFragment;
-import com.omerflex.service.database.MovieDbHelper;
-import com.google.gson.Gson;
-import com.omerflex.entity.dto.ServerConfig;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class OldAkwamServer extends AbstractServer {
-    ServerConfig config;
     ArrayObjectAdapter listRowAdapter;
     TextView descriptionTextView;
     static String TAG = "Old_Akwam";
@@ -50,22 +43,16 @@ public class OldAkwamServer extends AbstractServer {
 
     Fragment fragment;
     public static String WEBSITE_URL = "https://www.akwam.cc/old";
-    private String cookies;
-    private String referer;
-    private Map<String, String> headers;
     static int GOO_FETCH_PAGE_REQUEST = 1;
     static int VIDEO_LINK_FETCH_PAGE_REQUEST = 2;
     static boolean STOP_BROWSER = false;
     static boolean CLOSE_BROWSER = false;
-    MovieDbHelper dbHelper;
-
     private static OldAkwamServer instance;
 
     private OldAkwamServer(Activity activity, Fragment fragment) {
         // Private constructor to prevent instantiation
         this.activity = activity;
         this.fragment = fragment;
-        headers = new HashMap<>();
     }
 
     public static synchronized OldAkwamServer getInstance(Activity activity, Fragment fragment) {
@@ -98,22 +85,19 @@ public class OldAkwamServer extends AbstractServer {
         String searchContext = query;
 
 
-        if (config != null && config.url != null){
-            query = config.url + "/search/" + query;
+        if (getConfig() != null && getConfig().getUrl() != null){
+            query = getConfig().getUrl() + "/search/" + query;
         }else {
             query = WEBSITE_URL + "/search/" + query;
         }
         //final String url = query;
         ArrayList<Movie> movieList = new ArrayList<>();
 
-            try {
-                Document doc = Jsoup.connect(query)
-                        .cookies(getMapCookies())
-                        .headers(headers)
-                        .followRedirects(true)
-                        .ignoreHttpErrors(true)
-                        .timeout(0)
-                        .get();
+
+                Document doc = getRequestDoc(query);
+                if (doc == null) {
+                    return movieList;
+                }
                 Elements divs = doc.select("div");
                 for (Element div : divs) {
                     if (div.hasClass("tags_box")) {
@@ -152,9 +136,7 @@ public class OldAkwamServer extends AbstractServer {
                         movieList.add(m);
                     }
                 }
-            } catch (IOException e) {
-                Log.i(TAG + " fail", e.getMessage() + "");
-            }
+
         return movieList;
     }
 
@@ -248,15 +230,18 @@ public class OldAkwamServer extends AbstractServer {
     public Movie fetchGroup(final Movie movie) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
-            try {
                 Log.d(TAG, "fetchGroup: source network");
-                Document doc = Jsoup.connect(movie.getVideoUrl()).header(
-                        "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8").header(
-                        "User-Agent", " Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36").header(
-                        "accept-encoding", "gzip, deflate").header(
-                        "accept-language", "en,en-US;q=0.9").header(
-                        "x-requested-with", "pc1"
-                ).timeout(6000).get();
+                        Document doc = getRequestDoc(movie.getVideoUrl());
+                if (doc == null) {
+                    return movie;
+                }
+//                Document doc = Jsoup.connect(movie.getVideoUrl()).header(
+//                        "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8").header(
+//                        "User-Agent", " Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36").header(
+//                        "accept-encoding", "gzip, deflate").header(
+//                        "accept-language", "en,en-US;q=0.9").header(
+//                        "x-requested-with", "pc1"
+//                ).timeout(6000).get();
                 //Elements links = doc.select("a[href]");sw
 
 
@@ -373,10 +358,6 @@ public class OldAkwamServer extends AbstractServer {
                         movie.addSubList(episode);
                     }
                 }
-
-            } catch (IOException e) {
-                Log.i("fail", e.getMessage() + "");
-            }
         return movie;
     }
 
@@ -822,16 +803,6 @@ public class OldAkwamServer extends AbstractServer {
     public int detectMovieState(Movie movie) {return Movie.GROUP_STATE;}
 
     @Override
-    public void setReferer(String referer) {
-
-    }
-
-    @Override
-    public String getReferer() {
-        return "";
-    }
-
-    @Override
     public String getWebScript(int mode, Movie movie) {
         int state = movie.getState();
         String script = "";
@@ -933,59 +904,6 @@ public class OldAkwamServer extends AbstractServer {
         return script;
     }
 
-    @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
-    }
-
-
-    @Override
-    public void setCookies(String cookies) {
-        this.cookies = cookies;
-    }
-
-    public Map<String, String> getMapCookies() {
-        Map<String, String> cookiesHash = new HashMap<>();
-        if (cookies != null && !cookies.equals("")) {
-            //split the String by a comma
-            String parts[] = cookies.split(";");
-
-            //iterate the parts and add them to a map
-            for (String part : parts) {
-
-                //split the employee data by : to get id and name
-                String empdata[] = part.split("=");
-
-                String strId = empdata[0].trim();
-                String strName = empdata[1].trim();
-
-                //add to map
-                cookiesHash.put(strId, strName);
-            }
-
-        }
-        return cookiesHash;
-    }
-
-    @Override
-    public String getCookies() {
-        return this.cookies;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
-    }
-
-    @Override
-    public Map<String, String> getHeaders() {
-        return this.headers;
-    }
     public ArrayList<Movie> getHomepageMovies() {
         return new ArrayList<>();
     }

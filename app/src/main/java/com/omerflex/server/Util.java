@@ -7,11 +7,13 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Util {
     private static final String TAG = "Util";
 
-    public static String extractDomain(String videoUrl, boolean withSchema) {
+    public static String extractDomain(String videoUrl, boolean withSchema, boolean endSlash) {
         String fullDomain = "";
         try {
             URL url = new URL(videoUrl);
@@ -20,10 +22,14 @@ public class Util {
             if (!withSchema){
                 return host;
             }
-                fullDomain = protocol + "://" + host + "/";
+            String endPart = "";
+            if (endSlash){
+                endPart = "/";
+            }
+                fullDomain = protocol + "://" + host + endPart;
 
         } catch (Exception e) {
-
+            Log.d(TAG, "error: extractDomain: "+e.getMessage());
         }
         Log.d(TAG, "extractDomain: " + fullDomain);
         return fullDomain;
@@ -40,6 +46,19 @@ public class Util {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public static String getValidReferer(String referer) {
+        String result = referer;
+        if (referer != null) {
+            Pattern pattern = Pattern.compile("(https?://[^/]+)");
+            Matcher matcher = pattern.matcher(referer);
+            if (matcher.find()) {
+                result = matcher.group(1);
+            }
+        }
+        Log.d(TAG, "getValidReferer: " + result + ", " + referer);
+        return result;
     }
 
     public static Map<String, String> getMapCookies(String cookies) {

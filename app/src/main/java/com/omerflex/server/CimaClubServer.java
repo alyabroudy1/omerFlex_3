@@ -24,15 +24,14 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 
-import com.omerflex.view.BrowserActivity;
-import com.omerflex.view.DetailsActivity;
-import com.omerflex.entity.Movie;
-import com.omerflex.R;
-import com.omerflex.view.VideoDetailsFragment;
-import com.omerflex.service.database.MovieDbHelper;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
+import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.view.BrowserActivity;
+import com.omerflex.view.DetailsActivity;
+import com.omerflex.view.VideoDetailsFragment;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -59,7 +58,6 @@ import java.util.regex.Pattern;
  */
 public class CimaClubServer extends AbstractServer {
 
-    ServerConfig config;
     ArrayObjectAdapter listRowAdapter;
     static String TAG = "CimaClub";
     static String WEB_NAME = "cima";
@@ -70,16 +68,12 @@ public class CimaClubServer extends AbstractServer {
     MovieDbHelper dbHelper;
     private static CimaClubServer instance;
     public static int RESULT_COUNTER = 0;
-    private String cookies;
-    private String referer;
     Fragment fragment;
-    private Map<String, String> headers;
 
     private CimaClubServer(Fragment fragment, Activity activity) {
         // Private constructor to prevent instantiation
         this.activity = activity;
         this.fragment = fragment;
-        headers = new HashMap<>();
     }
 
     public static synchronized CimaClubServer getInstance(Fragment fragment, Activity activity) {
@@ -122,8 +116,8 @@ public class CimaClubServer extends AbstractServer {
 //            }else {
 //                query = WEB_URL + "/search?s=" + query;
 //            }
-            if (config != null && config.url != null){
-                query = config.url + "/search?s=" + query;
+            if (getConfig() != null && getConfig().getUrl() != null){
+                query = getConfig().getUrl() + "/search?s=" + query;
             }else {
                 query = WEB_URL + "/search?s=" + query;
             }
@@ -142,13 +136,17 @@ public class CimaClubServer extends AbstractServer {
         //#########
         try {
             Log.i(TAG, "Search url:" + query);
-            doc = Jsoup.connect(query)
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+                doc = Jsoup.connect(url)
+//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+                        .headers(getHeaders())
+                        .cookies(getMappedCookies())
+//                    .userAgent("Android 7")
+//                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+                        .followRedirects(true)
+                        .ignoreHttpErrors(true)
+                        .ignoreContentType(true)
+                        .timeout(16000)
+                        .get();
             Log.d(TAG,"result stop title: "+ doc.title());
 
             if (!doc.title().contains("moment")) {
@@ -159,7 +157,7 @@ public class CimaClubServer extends AbstractServer {
                         String videoUrl = imageElement.attr("href");
 
                         if (!videoUrl.contains("http")){
-                            videoUrl = config.url + videoUrl;
+                            videoUrl = getConfig().getUrl() + videoUrl;
                         }
 
                         String cardImageUrl = imageElement.attr("data-src");
@@ -243,7 +241,7 @@ public class CimaClubServer extends AbstractServer {
                             Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
                             Matcher matcher = pattern.matcher(linkUrl);
                             while (matcher.find()) {
-                                String referer = getValidReferer(matcher.group(1));
+                                String referer = Util.getValidReferer(matcher.group(1));
                                 setReferer(referer);
                                 query = referer + "/search?s=" + searchContext;
                                 Log.d(TAG, "search: host found:" + referer);
@@ -324,29 +322,6 @@ public class CimaClubServer extends AbstractServer {
         return null;
     }
 
-    public Map<String, String> getMapCookies() {
-        Map<String, String> cookiesHash = new HashMap<>();
-        if (cookies != null && !cookies.equals("")) {
-            //split the String by a comma
-            String parts[] = cookies.split(";");
-
-            //iterate the parts and add them to a map
-            for (String part : parts) {
-
-                //split the employee data by : to get id and name
-                String empdata[] = part.split("=");
-
-                String strId = empdata[0].trim();
-                String strName = empdata[1].trim();
-
-                //add to map
-                cookiesHash.put(strId, strName);
-            }
-
-        }
-        return cookiesHash;
-    }
-
     @Override
     public int detectMovieState(Movie movie) {
         String url = movie.getVideoUrl();
@@ -357,30 +332,6 @@ public class CimaClubServer extends AbstractServer {
         } else {
             return Movie.ITEM_STATE;
         }
-    }
-
-    @Override
-    public void setCookies(String cookies) {
-        this.cookies = cookies;
-    }
-
-    @Override
-    public String getCookies() {
-        return cookies;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
-    }
-
-    private String getValidReferer(String referer) {
-            Pattern pattern = Pattern.compile("(https?://[^/]+)");
-            Matcher matcher = pattern.matcher(referer);
-            if (matcher.find()){
-                referer = matcher.group(1);
-            }
-        return referer;
     }
 
     @Override
@@ -418,11 +369,6 @@ public class CimaClubServer extends AbstractServer {
         }
 
         return true;
-    }
-
-    @Override
-    public Map<String, String> getHeaders() {
-        return this.headers;
     }
 
     @Override
@@ -575,15 +521,11 @@ public class CimaClubServer extends AbstractServer {
 //                        "    postList.push(post);\n" +
 //                        "}\n" +
 //                        "postList;\n";
-        Document doc = null;
-        try {
-            doc = Jsoup.connect(url)
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+
+        Document doc = getRequestDoc(url);
+        if (doc == null) {
+            return movie;
+        }
 
             Elements links = doc.getElementsByClass("content-box");
             for (Element link : links) {
@@ -591,7 +533,7 @@ public class CimaClubServer extends AbstractServer {
                 if (imageElement != null){
                     String  videoUrl = imageElement.attr("href");
                     if (!videoUrl.contains("http")){
-                        videoUrl = config.url + videoUrl;
+                        videoUrl = getConfig().getUrl() + videoUrl;
                     }
                     String  cardImageUrl = imageElement.attr("data-src");
 
@@ -620,9 +562,6 @@ public class CimaClubServer extends AbstractServer {
                     }
                     movie.addSubList(m);
                 }
-            }
-        } catch (IOException e) {
-                Log.i(TAG, "search: error" + e.getMessage());
             }
         return movie;
     }
@@ -735,16 +674,10 @@ public class CimaClubServer extends AbstractServer {
 //        if (movie.getSubList().size() == 0) {
 //            //  if (series == null) {
 //            Log.d(TAG, "fetchGroup: source network");
-        try {
-            Log.i(TAG, "Search url:" + url);
-            Document doc = Jsoup.connect(url)
-                    .headers(headers)
-                    .cookies(getMapCookies())
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .ignoreContentType(true)
-                    .get();
+        Document doc = getRequestDoc(url);
+        if (doc == null) {
+            return movie;
+        }
 
             Elements episodesList = doc.getElementsByClass("content-box");
             for (Element episodeElement : episodesList) {
@@ -761,7 +694,7 @@ public class CimaClubServer extends AbstractServer {
                     image = imageElem.attr("data-src");
                     videoUrl = imageElem.attr("href");
                     if (!videoUrl.contains("http")){
-                        videoUrl = config.url + videoUrl;
+                        videoUrl = getConfig().getUrl() + videoUrl;
                     }
                     Element rateElem = episodeElement.getElementsByClass("rate ti-star").first();
                     String rate = "";
@@ -787,9 +720,7 @@ public class CimaClubServer extends AbstractServer {
                     movie.addSubList(season);
                 }
             }
-        } catch (IOException e) {
-            Log.i(TAG, "error" + e.getMessage());
-        }
+
         return movie;
     }
 
@@ -806,17 +737,10 @@ public class CimaClubServer extends AbstractServer {
                 .replace("episode", "watch")
                 .replace("movie", "watch")
                 .replace("film", "watch");
-        try {
-            Log.i(TAG, "Search url:" + url);
-            Document doc = Jsoup.connect(url)
-                    .headers(headers)
-                    .cookies(getMapCookies())
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .ignoreContentType(true)
-                    .get();
-
+        Document doc = getRequestDoc(url);
+        if (doc == null) {
+            return movie;
+        }
 //            Elements scripts = doc.getElementsByTag("script");
 //            String getServerLink = "";
 //            for (Element script : scripts) {
@@ -871,12 +795,6 @@ public class CimaClubServer extends AbstractServer {
                     movie.addSubList(server);
                 }
             }
-
-
-        } catch (IOException e) {
-            Log.i(TAG, "error" + e.getMessage());
-        }
-
         return movie;
     }
 
@@ -1403,16 +1321,6 @@ public class CimaClubServer extends AbstractServer {
         void onCallback(String value, int counter);
     }
 
-
-    @Override
-    public void setReferer(String referer) {
-        this.referer = referer;
-    }
-
-    @Override
-    public String getReferer() {
-        return referer;
-    }
     @Override
     public String getWebScript(int mode, Movie movie) {
         String script = null;
@@ -1607,19 +1515,10 @@ public class CimaClubServer extends AbstractServer {
         Log.d(TAG, "getWebScript: script:"+script);
         return script;
     }
-    @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
-    }
 
     @Override
     public ArrayList<Movie> getHomepageMovies() {
-        return search(config.url + "/");
+        return search(getConfig().getUrl() + "/");
     }
 
     @Override

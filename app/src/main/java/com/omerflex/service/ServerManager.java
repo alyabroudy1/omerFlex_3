@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AkwamServer;
 import com.omerflex.server.ArabSeedServer;
 import com.omerflex.server.CimaClubServer;
@@ -20,7 +21,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.omerflex.entity.dto.CookieDTO;
-import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.MyCimaServer;
 
@@ -112,14 +113,15 @@ public class ServerManager {
                     continue;
                 }
                 ServerConfig config = new ServerConfig();
-                config.url = serverCookie.referer;
-                config.name = serverCookie.name;
-                config.date = serverCookie.date.toString();
-                server.setReferer(serverCookie.referer);
-                server.setConfig(config);
-                server.setHeaders(getMappedHeaders(serverCookie.headers));
-                server.setCookies(serverCookie.cookie);
-//                Log.d(TAG, "generateServers: adding server:"+server.getLabel());
+                config.setUrl(serverCookie.referer);
+                config.setReferer(serverCookie.referer);
+                config.setName(serverCookie.name);
+                config.setDate(serverCookie.date.toString());
+
+                config.setHeaders(getMappedHeaders(serverCookie.headers));
+                config.setStringCookies(serverCookie.cookie);
+                ServerConfigManager.addConfig(config);
+                Log.d(TAG, "generateServers: adding server:"+server.getLabel());
                 this.servers.add(server);
 //                Log.d(TAG, "generateServers: after adding servers.size: "+servers.size());
             }catch (Exception e){
@@ -143,61 +145,94 @@ public class ServerManager {
 
 //        Log.d(TAG, "addServerConfigsToDB: date: "+date.toString());
 
-        //        ### fasel ###
-        ServerConfig faselCDTO = new ServerConfig();
-        faselCDTO.name = Movie.SERVER_FASELHD;
-        faselCDTO.url = "https://faselhd.center";
 
-        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
-        faselhd.setConfig(faselCDTO);
-        dbHelper.saveServerConfigAsCookieDTO(faselCDTO, date);
-        servers.add(faselhd);
-
-//        ### Mycima ###
-        ServerConfig mycimaCDTO = new ServerConfig();
-        mycimaCDTO.name = Movie.SERVER_MyCima;
-        mycimaCDTO.url = "https://mycima.io";
+        //      //### mycima ###
+        ServerConfig mycimaConfig = new ServerConfig();
+        mycimaConfig.setName(Movie.SERVER_MyCima);
+        mycimaConfig.setUrl("https://mycima.io");
+        mycimaConfig.setReferer("https://mycima.io/");
+        ServerConfigManager.addConfig(mycimaConfig);
 
         AbstractServer mycima = MyCimaServer.getInstance(activity, fragment);
-        mycima.setConfig(mycimaCDTO);
-        dbHelper.saveServerConfigAsCookieDTO(mycimaCDTO, date);
+        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
         servers.add(mycima);
 
+        // ### akwam ###
+        ServerConfig akwamConfig = new ServerConfig();
+        akwamConfig.setName(Movie.SERVER_AKWAM);
+        akwamConfig.setUrl("https://ak.sv");
+        akwamConfig.setReferer("https://ak.sv/");
+        ServerConfigManager.addConfig(akwamConfig);
 
+        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
+        dbHelper.saveServerConfigAsCookieDTO(akwamConfig, date);
+        servers.add(akwam);
 
+        //        ### fasel ###
+        ServerConfig faselConfig = new ServerConfig();
+        faselConfig.setName(Movie.SERVER_FASELHD);
+        faselConfig.setUrl("https://faselhd.center");
+        faselConfig.setReferer("https://faselhd.center/");
+        ServerConfigManager.addConfig(faselConfig);
 
-        //### old_Akwam ###
-        ServerConfig oldAkwamCDTO = new ServerConfig();
-        oldAkwamCDTO.name = Movie.SERVER_OLD_AKWAM;
-        oldAkwamCDTO.url = "https://ak.sv/old";
+        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
+        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
+        servers.add(faselhd);
 
-        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
-        oldAkwam.setConfig(oldAkwamCDTO);
-        dbHelper.saveServerConfigAsCookieDTO(oldAkwamCDTO, date);
-        servers.add(oldAkwam);
-
-
-//        //### arabseed ###
-        ServerConfig arabseedCDTO = new ServerConfig();
-        arabseedCDTO.name = Movie.SERVER_ARAB_SEED;
-        arabseedCDTO.url = "https://arabseed.show";
+        //### arabseed ###
+        ServerConfig arabseedConfig = new ServerConfig();
+        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
+        arabseedConfig.setUrl("https://arabseed.show");
+        arabseedConfig.setReferer("https://arabseed.show/");
+        ServerConfigManager.addConfig(arabseedConfig);
 
         AbstractServer arabseed = ArabSeedServer.getInstance(fragment, activity);
-        arabseed.setConfig(arabseedCDTO);
-        dbHelper.saveServerConfigAsCookieDTO(arabseedCDTO, date);
+        dbHelper.saveServerConfigAsCookieDTO(arabseedConfig, date);
         servers.add(arabseed);
 
+        //### old_Akwam ###
+        ServerConfig oldAkwamConfig = new ServerConfig();
+        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
+        oldAkwamConfig.setUrl("https://ak.sv/old");
+        oldAkwamConfig.setReferer("https://ak.sv/old/");
+        ServerConfigManager.addConfig(oldAkwamConfig);
 
+        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
+        dbHelper.saveServerConfigAsCookieDTO(oldAkwamConfig, date);
+        servers.add(oldAkwam);
 
         //### cimaclub ###
-        ServerConfig cimaclubCDTO = new ServerConfig();
-        cimaclubCDTO.name = Movie.SERVER_CIMA_CLUB;
-        cimaclubCDTO.url = "https://cimaclub.top";
+        ServerConfig cimaclubConfig = new ServerConfig();
+        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);
+        cimaclubConfig.setUrl("https://cimaclub.top");
+        cimaclubConfig.setReferer("https://cimaclub.top/");
+        ServerConfigManager.addConfig(cimaclubConfig);
 
         AbstractServer cimaclub = CimaClubServer.getInstance(fragment, activity);
-        cimaclub.setConfig(cimaclubCDTO);
-        dbHelper.saveServerConfigAsCookieDTO(cimaclubCDTO, date);
+        dbHelper.saveServerConfigAsCookieDTO(cimaclubConfig, date);
         servers.add(cimaclub);
+
+        // ### omar ###
+        ServerConfig omarConfig = new ServerConfig();
+        omarConfig.setName(Movie.SERVER_OMAR);
+        omarConfig.setUrl("http://194.164.53.40/movie");
+        omarConfig.setReferer("http://194.164.53.40/");
+        ServerConfigManager.addConfig(omarConfig);
+
+        AbstractServer omar = OmarServer.getInstance(activity, fragment);
+        dbHelper.saveServerConfigAsCookieDTO(omarConfig, date);
+        servers.add(omar);
+
+        //### iptv ###
+        ServerConfig iptvConfig = new ServerConfig();
+        iptvConfig.setName(Movie.SERVER_IPTV);
+        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
+        iptvConfig.setReferer("https://drive.google.com/");
+        ServerConfigManager.addConfig(iptvConfig);
+
+        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
+        dbHelper.saveServerConfigAsCookieDTO(iptvConfig, date);
+        servers.add(iptv);
 
 //
 ////        //### watanflix ###
@@ -211,40 +246,9 @@ public class ServerManager {
 ////        servers.add(watanflix);
 ////
 ////
-//        ### Omar ###
-        ServerConfig omarCDTO = new ServerConfig();
-        omarCDTO.name = Movie.SERVER_OMAR;
-        omarCDTO.url = "http://194.164.53.40/movie";
-
-        AbstractServer omar = OmarServer.getInstance(activity, fragment);
-        omar.setConfig(omarCDTO);
-        dbHelper.saveServerConfigAsCookieDTO(omarCDTO, date);
-        servers.add(omar);
-
-        Log.d(TAG, "addServerConfigsToDB: servers.dize: "+servers.size());
 
 
-//        ### Akwam ###
-        ServerConfig akwamCDTO = new ServerConfig();
-        akwamCDTO.name = Movie.SERVER_AKWAM;
-        akwamCDTO.url = "https://ak.sv";
-
-        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
-        akwam.setConfig(akwamCDTO);
-        dbHelper.saveServerConfigAsCookieDTO(akwamCDTO, date);
-        servers.add(akwam);
-
-
-        //### Iptv ###
-        ServerConfig iptvDTO = new ServerConfig();
-        iptvDTO.name = Movie.SERVER_IPTV;
-        iptvDTO.url = "https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing";
-
-        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
-        iptv.setConfig(iptvDTO);
-        dbHelper.saveServerConfigAsCookieDTO(iptvDTO, date);
-        servers.add(iptv);
-
+        Log.d(TAG, "addServerConfigsToDB: servers.size: "+servers.size());
         return servers;
     }
 
@@ -272,10 +276,10 @@ public class ServerManager {
                             JsonObject serverObject = serverElement.getAsJsonObject();
 
                             // Convert the JSON object to a ServerConfig object
-                            ServerConfig serverConfig = gson.fromJson(serverObject, ServerConfig.class);
+                            ServerConfigDTO serverConfigDTO = gson.fromJson(serverObject, ServerConfigDTO.class);
 //                            Log.d(TAG, "updateServerConfig: serverConfig:"+serverConfig);
 
-                            updateServerConfig(serverConfig);
+                            updateServerConfig(serverConfigDTO);
 //                                Log.d(TAG, "initializeServers: result:"+servers.size());
                         }
 
@@ -288,29 +292,37 @@ public class ServerManager {
         executor.shutdown();
     }
 
-    private void updateServerConfig(ServerConfig serverConfig) {
+    private void updateServerConfig(ServerConfigDTO serverConfigDTO) {
 //        Log.d(TAG, "updateServerConfig: " + serverConfig);
-        if (serverConfig == null || serverConfig.name == null || serverConfig.name.equals("")) {
+        if (serverConfigDTO == null || serverConfigDTO.name == null || serverConfigDTO.name.equals("")) {
             return;
         }
 
 //        Log.d(TAG, "updateServerConfig2: " + serverConfig);
         try {
-            CookieDTO cookieDTO = dbHelper.getCookieDto(serverConfig.name);
+            CookieDTO cookieDTO = dbHelper.getCookieDto(serverConfigDTO.name);
             if (cookieDTO == null){
                 return;
             }
 //            Log.d(TAG, "updateServerConfig3:cookieDTO: " + cookieDTO);
 
-            if (serverConfig.url != null && !serverConfig.url.equals("")) {
+            if (serverConfigDTO.url != null && !serverConfigDTO.url.equals("")) {
                 if (cookieDTO.date != null) {
                     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                     try {
-                        Date githubDate = format.parse(serverConfig.date);
+                        Date githubDate = format.parse(serverConfigDTO.date);
                         //if github date is newer then take it
                         boolean isNewDate = githubDate.getTime() > cookieDTO.date.getTime();
-                        Log.d(TAG, "updateServerConfig:"+serverConfig.name+", g:"+ githubDate + ", db:"+cookieDTO.date+", isNewDate:"+isNewDate);
+                        Log.d(TAG, "updateServerConfig:"+ serverConfigDTO.name+", g:"+ githubDate + ", db:"+cookieDTO.date+", isNewDate:"+isNewDate);
                         if (isNewDate){
+                            ServerConfig serverConfig = new ServerConfig();
+                            serverConfig.setDate(serverConfigDTO.date);
+                            serverConfig.setName(serverConfigDTO.name);
+                            serverConfig.setUrl(serverConfigDTO.url);
+                            serverConfig.setDisplayName(serverConfigDTO.displayName);
+                            serverConfig.setWebName(serverConfigDTO.webName);
+                            serverConfig.setDescription(serverConfigDTO.description);
+                            serverConfig.setActive(serverConfigDTO.isActive);
                             dbHelper.saveServerConfigAsCookieDTO(serverConfig, githubDate);
                         }
                     } catch (ParseException e) {

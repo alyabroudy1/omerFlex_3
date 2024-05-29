@@ -9,7 +9,6 @@ import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.dto.ServerConfig;
 import com.omerflex.service.M3U8ContentFetcher;
 import com.omerflex.service.database.MovieDbHelper;
 
@@ -26,7 +25,6 @@ public class IptvServer extends AbstractServer {
 
     static String TAG = "iptv";
     Activity activity;
-    ServerConfig config;
     Fragment fragment;
     MovieDbHelper dbHelper;
     M3U8ContentFetcher contentFetcher;
@@ -169,26 +167,6 @@ public class IptvServer extends AbstractServer {
     }
 
     @Override
-    public void setCookies(String cookies) {
-
-    }
-
-    @Override
-    public String getCookies() {
-        return null;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-
-    }
-
-    @Override
-    public Map<String, String> getHeaders() {
-        return null;
-    }
-
-    @Override
     public boolean onLoadResource(Activity activity, WebView view, String url, Movie movie) {
         return false;
     }
@@ -196,16 +174,6 @@ public class IptvServer extends AbstractServer {
     @Override
     public int detectMovieState(Movie movie) {
         return 0;
-    }
-
-    @Override
-    public void setReferer(String referer) {
-
-    }
-
-    @Override
-    public String getReferer() {
-        return "";
     }
 
 //    @RequiresApi(api = Build.VERSION_CODES.N)
@@ -258,16 +226,6 @@ public class IptvServer extends AbstractServer {
     @Override
     public String getWebScript(int mode, Movie movie) {
         return "";
-    }
-
-    @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
     }
 
     public ArrayList<Movie> getHomepageMovies() {

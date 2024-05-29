@@ -10,7 +10,8 @@ import android.webkit.WebView;
 import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.entity.ServerConfig;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.MovieDbHelper;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
@@ -23,6 +24,7 @@ import org.jsoup.nodes.Document;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 public abstract class AbstractServer {
@@ -57,7 +59,7 @@ public abstract class AbstractServer {
             doc = Jsoup.connect(url)
 //                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
                     .headers(this.getHeaders())
-                    .cookies(Util.getMapCookies(getCookies()))
+                    .cookies(this.getMappedCookies())
 //                    .userAgent("Android 7")
 //                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
                     .followRedirects(true)
@@ -283,27 +285,89 @@ public abstract class AbstractServer {
      */
     public abstract boolean isSeries(Movie movie);
 
-    public abstract void setCookies(String cookies);
+    public void updateDomain(String movieLink){
+        ServerConfig config = getConfig();
+        String newDomain = Util.extractDomain(movieLink, true, false);
+        boolean equal = config.getUrl().contains(newDomain);
+        Log.d(TAG, "updateDomain: old: "+getConfig().getUrl() + ", new: "+ newDomain + ", = "+ (equal));
+        if (!equal){
+            config.setUrl(newDomain);
+            config.setReferer(newDomain + "/");
+            setConfig(config);
+        }
+    }
 
-    public abstract String getCookies();
+    public void setCookies(String cookies){
+        ServerConfig config = getConfig();
+        if (config != null){
+            config.setStringCookies(cookies);
+            ServerConfigManager.updateConfig(config);
+        }
+    }
 
-    public abstract void setHeaders(Map<String, String> headers);
+    public String getCookies(){
+        if (getConfig() != null){
+            return getConfig().getStringCookies();
+        }
+        return "";
+    }
 
-    public abstract Map<String, String> getHeaders();
+    public Map<String, String> getMappedCookies(){
+        if (getConfig() != null){
+            return getConfig().getMappedCookies();
+        }
+        return new HashMap<>();
+    }
+
+    public void setHeaders(Map<String, String> headers){
+        ServerConfig config = getConfig();
+        if (config != null){
+            config.setHeaders(headers);
+            ServerConfigManager.updateConfig(config);
+        }
+    };
+
+    public Map<String, String> getHeaders(){
+        if (getConfig() != null){
+            Log.d(TAG, "getHeaders: "+getConfig());
+            return getConfig().getHeaders();
+        }
+        return new HashMap<>();
+    }
 
     public abstract boolean onLoadResource(Activity activity, WebView view, String url, Movie movie);
 
     public abstract int detectMovieState(Movie movie);
 
-    public abstract void setReferer(String referer);
+    public void setReferer(String referer){
+        ServerConfig config = getConfig();
+        if (config != null){
+            config.setReferer(referer);
+            ServerConfigManager.updateConfig(config);
+        }
+    }
 
-    public abstract String getReferer();
+    public String getReferer(){
+        if (getConfig() != null){
+            return getConfig().getReferer();
+        }
+        return null;
+    }
 
     public abstract String getWebScript(int mode, Movie movie);
 
-    public abstract void setConfig(ServerConfig serverConfig);
+    public void setConfig(ServerConfig serverConfig){
+        ServerConfig config = getConfig();
+        if (config != null){
+            ServerConfigManager.updateConfig(serverConfig);
+        }else {
+            ServerConfigManager.addConfig(serverConfig);
+        }
+    }
 
-    public abstract ServerConfig getConfig();
+    public ServerConfig getConfig(){
+        return ServerConfigManager.getConfig(getServerId());
+    }
 
     /**
      * @return ArrayList<Movie> of movies to be in homepage
@@ -334,11 +398,11 @@ public abstract class AbstractServer {
         String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
 
         ServerConfig config = getConfig();
-        if (config == null || config.url == null){
+        if (config == null || config.getUrl() == null){
             return;
         }
 
-        String cookieTest = CookieManager.getInstance().getCookie(config.url);
+        String cookieTest = CookieManager.getInstance().getCookie(config.getUrl());
         if (cookieTest == null){
             return;
         }

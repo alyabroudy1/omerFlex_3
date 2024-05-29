@@ -39,7 +39,6 @@ import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.dto.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.AkwamServer;
 import com.omerflex.server.ArabSeedServer;

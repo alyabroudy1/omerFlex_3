@@ -1,41 +1,27 @@
 package com.omerflex.server;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.util.Log;
-import android.view.View;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
 
 import androidx.fragment.app.Fragment;
 
-import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
-import com.omerflex.entity.Movie;
-import com.omerflex.R;
 import com.omerflex.view.VideoDetailsFragment;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
 import java.io.Serializable;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * from SearchActivity or MainActivity -> item -> resolutions
@@ -46,22 +32,18 @@ import java.util.Map;
  */
 public class ArabSeedServer extends AbstractServer {
 
-    ServerConfig config;
     static String TAG = "arabseed";
     public static String WEBSITE_URL = "https://arabseed.show";
     Activity activity;
     static boolean START_BROWSER_CODE = false;
     private static ArabSeedServer instance;
-    private String cookies;
-    private String referer;
-    private Map<String, String> headers;
+
     Fragment fragment;
 
     private ArabSeedServer(Fragment fragment, Activity activity) {
         // Private constructor to prevent instantiation
         this.activity = activity;
         this.fragment = fragment;
-        headers = new HashMap<>();
     }
 
     public static synchronized ArabSeedServer getInstance(Fragment fragment, Activity activity) {
@@ -78,28 +60,6 @@ public class ArabSeedServer extends AbstractServer {
         return instance;
     }
 
-    public Map<String, String> getMapCookies() {
-        Map<String, String> cookiesHash = new HashMap<>();
-        if (cookies != null && !cookies.equals("")) {
-            //split the String by a comma
-            String parts[] = cookies.split(";");
-
-            //iterate the parts and add them to a map
-            for (String part : parts) {
-
-                //split the employee data by : to get id and name
-                String empdata[] = part.split("=");
-
-                String strId = empdata[0].trim();
-                String strName = empdata[1].trim();
-
-                //add to map
-                cookiesHash.put(strId, strName);
-            }
-
-        }
-        return cookiesHash;
-    }
 
     /**
      * produce movie from search result if isSeries than Group_State else Item_state
@@ -113,27 +73,20 @@ public class ArabSeedServer extends AbstractServer {
         String searchContext = query;
         String url = WEBSITE_URL + "/find/?find=" + query;
         ArrayList<Movie> movieList = new ArrayList<>();
+        ServerConfig config = getConfig();
         if (!query.contains("http")) {
-            if (referer != null && !referer.isEmpty()) {
-                if (referer.endsWith("/")) {
-                    query = referer + "find/?find=" + query;
+            if (config.getUrl() != null && !config.getUrl().isEmpty()) {
+                if (config.getUrl().endsWith("/")) {
+                    query = config.getUrl() + "find/?find=" + query;
                 } else {
-                    query = referer + "/find/?find=" + query;
+                    query = config.getUrl() + "/find/?find=" + query;
                 }
             } else {
                 query = WEBSITE_URL + "/find/?find=" + query;
             }
         }
         Log.d(TAG, "search: " + query);
-        try {
-
-            Document doc = Jsoup.connect(query)
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+            Document doc = getRequestDoc(query);
             Log.d(TAG, "result stop title: " + doc.title());
 
             if (!doc.title().contains("moment")) {
@@ -228,7 +181,7 @@ public class ArabSeedServer extends AbstractServer {
                     Elements footerUls = doc.getElementsByClass("next page-numbers");
                     Log.d(TAG, "search: footerUls:" + footerUls.size());
                     for (Element ul : footerUls) {
-                        String nextPageLink = config.url + ul.attr("href");
+                        String nextPageLink = config.getUrl() + ul.attr("href");
 
                         Movie nextPage = new Movie();
                         nextPage.setTitle("التالي");
@@ -270,12 +223,6 @@ public class ArabSeedServer extends AbstractServer {
                 m.setCreatedAt(Calendar.getInstance().getTime().toString());
                 movieList.add(m);
             }
-
-        } catch (
-                IOException e) {
-            e.printStackTrace();
-            Log.d(TAG, "search: error: " + e.getMessage());
-        }
 
         return movieList;
     }
@@ -354,18 +301,19 @@ public class ArabSeedServer extends AbstractServer {
         //  if (movie.getSubList().size() == 0) {
         //  if (series == null) {
         Log.d(TAG, "fetchGroup: source network");
-        try {
+
             Log.i(TAG, "FetchSeriesLink url:" + url);
             //descriptionTextView = activity.findViewById(R.id.textViewDesc);
 
-            Document doc = Jsoup.connect(url)
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .ignoreContentType(true)
-                    .get();
+            Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+//                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .ignoreContentType(true)
+//                    .get();
 
             //  Document doc = Jsoup.connect(url).header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8").header("User-Agent", "Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36").timeout(0).get();
             //description
@@ -474,9 +422,6 @@ public class ArabSeedServer extends AbstractServer {
                 }
             }
 
-        } catch (IOException e) {
-            Log.i(TAG + "failed", e.getMessage() + "");
-        }
     /*        movie.save(dbHelper);
         } else {
             Log.d(TAG, "fetchGroup: source db");
@@ -504,17 +449,16 @@ public class ArabSeedServer extends AbstractServer {
         Movie m = null;
         Log.d(TAG, "fetchItem: source Network");
 
-        try {
-
             String url = movie.getVideoUrl();
-            Document doc = Jsoup.connect(url)
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .ignoreContentType(true)
-                    .get();
+            Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+//                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .ignoreContentType(true)
+//                    .get();
 
             Elements storyElems = doc.getElementsByClass("StoryLine");
             String dec = "";
@@ -536,7 +480,7 @@ public class ArabSeedServer extends AbstractServer {
                 Elements linkElems = watchElem.getElementsByTag("a");
                 for (Element linkElem : linkElems) {
                     link = linkElem.attr("href");
-                    String domain = extractDomain(movie.getVideoUrl());
+                    String domain = Util.extractDomain(movie.getVideoUrl(), true, true);
                     movie.setDescription(dec);
                     if (link != null) {
                         Movie resolution = Movie.clone(movie);
@@ -550,25 +494,21 @@ public class ArabSeedServer extends AbstractServer {
                 }
                 break;
             }
-        } catch (IOException e) {
-            Log.i(TAG, "error:" + e.getMessage());
-        }
 
         return movie;
     }
 
     private Movie fetchServers(Movie movie, String referer) {
-        Document doc = null;
         Log.d(TAG, "fetchServers run-1: " + movie.getVideoUrl());
-        try {
-            doc = Jsoup.connect(movie.getVideoUrl())
-                    .header("referer", referer)
-                    .userAgent("Android 8")
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .ignoreContentType(true)
-                    .get();
+        Document doc = getRequestDoc(movie.getVideoUrl());
+//            doc = Jsoup.connect(movie.getVideoUrl())
+//                    .header("referer", referer)
+//                    .userAgent("Android 8")
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .ignoreContentType(true)
+//                    .get();
 
             Elements serverElems = doc.getElementsByClass("containerServers");
 
@@ -583,7 +523,7 @@ public class ArabSeedServer extends AbstractServer {
                 return movie;//very important to return the original movie
             }
             Log.d(TAG, "fetchServers: serverElems:"+serverElems.size());
-            String domain = extractDomain(movie.getVideoUrl());
+            String domain = Util.extractDomain(movie.getVideoUrl(), true, true);
             for (Element serverElem : serverElems){
                 Elements listElems = serverElem.getElementsByAttribute("data-link");
                 int counter = 0;
@@ -633,25 +573,8 @@ public class ArabSeedServer extends AbstractServer {
 
                 break;
             }
-        } catch (IOException e) {
-            //builder.append("Error : ").append(e.getMessage()).append("\n");
-            Log.i(TAG, "FetchVideoLink: " + e.getMessage() + "");
-        }
+
         return movie;
-    }
-
-    private String extractDomain(String videoUrl) {
-        String fullDomain = "";
-        try {
-            URL url = new URL(videoUrl);
-            String protocol = url.getProtocol();
-            String host = url.getHost();
-            fullDomain = protocol + "://" + host + "/";
-        } catch (Exception e) {
-
-        }
-        Log.d(TAG, "extractDomain: " + fullDomain);
-        return fullDomain;
     }
 
     @Override
@@ -705,54 +628,7 @@ public class ArabSeedServer extends AbstractServer {
         simpleWebView.clearFormData();
         simpleWebView.clearHistory();
 
-        simpleWebView.setWebViewClient(new Browser_Home() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                Log.d("WEBCLIENT", "OnreDirect url:" + url);
-                if (url.equals(link)) {
-                    ArabSeedServer.START_BROWSER_CODE = true;
-                }
-                return !url.contains("akwam.");
-            }
 
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                Log.d("WEBCLIENT", "onPageFinished");
-                if (ArabSeedServer.START_BROWSER_CODE) {
-                    view.evaluateJavascript("(function() { var x = document.getElementsByClassName(\"link btn btn-light\")[0]; return x.getAttribute(\"href\").toString();})();", new ValueCallback<String>() {
-                        @Override
-                        public void onReceiveValue(String s) {
-                            Log.d("LogName", s); // Prints the string 'null' NOT Java null
-                            if (s.contains(".download")) {
-                                Intent intent = new Intent(Intent.ACTION_VIEW);
-                                String type = "video/*"; // It works for all video application
-                                String link = s.replace("\"", "");
-                                Uri uri = Uri.parse(link);
-                                intent.setDataAndType(uri, type);
-                                try {
-                                    activity.startActivity(intent);
-                                } catch (ActivityNotFoundException e) {
-                                    Log.d("errorr", e.getMessage());
-                                }
-                                ArabSeedServer.START_BROWSER_CODE = false;
-                                activity.finish();
-                            }
-                        }
-                    });
-
-                }
-            }
-
-            @Override
-            public void onLoadResource(WebView view, String url) {
-                super.onLoadResource(view, url);
-                Log.d("WEBCLIENT", "onLoadResource");
-
-
-            }
-        });
-        simpleWebView.setWebChromeClient(new ChromeClient());
         WebSettings webSettings = simpleWebView.getSettings();
 
         webSettings.setJavaScriptEnabled(true);
@@ -777,26 +653,6 @@ public class ArabSeedServer extends AbstractServer {
     public Movie fetchCookie(Movie movie) {
 
         return movie;
-    }
-
-    @Override
-    public void setCookies(String cookies) {
-
-    }
-
-    @Override
-    public String getCookies() {
-        return null;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-
-    }
-
-    @Override
-    public Map<String, String> getHeaders() {
-        return null;
     }
 
     public String fixTrailerUrl(String url) {
@@ -863,77 +719,6 @@ public class ArabSeedServer extends AbstractServer {
         String u = movie.getVideoUrl();
         return u.contains("/series") || u.contains("/movies");
     }
-
-    private class Browser_Home extends WebViewClient {
-        Browser_Home() {
-        }
-
-        @Override
-        public boolean shouldOverrideUrlLoading(WebView view, String url) {
-            super.shouldOverrideUrlLoading(view, url);
-            Log.i("override", "url: " + url);
-            //return !url.contains(getStudioText(movie.getStudio()));
-            return false;
-        }
-
-        @Override
-        public void onPageStarted(WebView view, String url, Bitmap favicon) {
-            super.onPageStarted(view, url, favicon);
-        }
-
-        @Override
-        public void onPageFinished(WebView view, String url) {
-            super.onPageFinished(view, url);
-        }
-
-        @Override
-        public void onLoadResource(WebView view, String url) {
-            super.onLoadResource(view, url);
-        }
-    }
-
-    private class ChromeClient extends WebChromeClient {
-        private View mCustomView;
-        private CustomViewCallback mCustomViewCallback;
-        protected FrameLayout mFullscreenContainer;
-        private int mOriginalOrientation;
-        private int mOriginalSystemUiVisibility;
-
-        ChromeClient() {
-        }
-
-
-        public Bitmap getDefaultVideoPoster() {
-            if (mCustomView == null) {
-                return null;
-            }
-            return BitmapFactory.decodeResource(activity.getApplicationContext().getResources(), 2130837573);
-        }
-
-        public void onHideCustomView() {
-            ((FrameLayout) activity.getWindow().getDecorView()).removeView(this.mCustomView);
-            this.mCustomView = null;
-            activity.getWindow().getDecorView().setSystemUiVisibility(this.mOriginalSystemUiVisibility);
-            activity.setRequestedOrientation(this.mOriginalOrientation);
-            this.mCustomViewCallback.onCustomViewHidden();
-            this.mCustomViewCallback = null;
-        }
-
-        public void onShowCustomView(View paramView, CustomViewCallback paramCustomViewCallback) {
-            if (this.mCustomView != null) {
-                onHideCustomView();
-                return;
-            }
-            this.mCustomView = paramView;
-            this.mOriginalSystemUiVisibility = activity.getWindow().getDecorView().getSystemUiVisibility();
-            this.mOriginalOrientation = activity.getRequestedOrientation();
-            this.mCustomViewCallback = paramCustomViewCallback;
-            ((FrameLayout) activity.getWindow().getDecorView()).addView(this.mCustomView, new FrameLayout.LayoutParams(-1, -1));
-            activity.getWindow().getDecorView().setSystemUiVisibility(3846 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-        }
-
-    }
-
     public String getStudioText(String serverName) {
 
         switch (serverName) {
@@ -974,16 +759,6 @@ public class ArabSeedServer extends AbstractServer {
         fragment.startActivityForResult(browse, movie.getFetch());
 
         return movie;
-    }
-
-    @Override
-    public void setReferer(String referer) {
-        this.referer = referer;
-    }
-
-    @Override
-    public String getReferer() {
-        return referer;
     }
 
     @Override
@@ -1113,20 +888,10 @@ public class ArabSeedServer extends AbstractServer {
     }
 
     @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
-    }
-
-    @Override
     public ArrayList<Movie> getHomepageMovies() {
         return search(
 //                config.url +"/category/netfilx/");
-                config.url +"/latest1/");
+                getConfig().getUrl() +"/latest1/");
     }
 
     @Override

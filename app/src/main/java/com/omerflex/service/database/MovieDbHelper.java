@@ -11,15 +11,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.omerflex.entity.Movie;
-import com.omerflex.service.database.contract.CookieContract.*;
-import com.omerflex.service.database.contract.IptvContract.*;
-import com.omerflex.service.database.contract.MovieContract.*;
-import com.omerflex.service.database.contract.MovieHistoryContract.*;
 import com.omerflex.entity.MovieHistory;
-import com.omerflex.server.AbstractServer;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.CookieDTO;
-import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
+import com.omerflex.service.database.contract.CookieContract.CookieTable;
+import com.omerflex.service.database.contract.IptvContract.IptvTable;
+import com.omerflex.service.database.contract.MovieContract.MoviesTable;
+import com.omerflex.service.database.contract.MovieHistoryContract.MovieHistoryTable;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -173,7 +173,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         if (headers.containsKey("Referer")){
             String referer = headers.get("Referer");
             if (referer != null){
-                headers.put("Referer", Util.extractDomain(referer, true));
+                headers.put("Referer", Util.extractDomain(referer, true, true));
             }
         }
 //        else if (headers.containsKey("Origin")){
@@ -1483,7 +1483,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
 //        Log.d(TAG, "saveServerConfigAsCookieDTO: " + serverConfig);
         String selection = CookieTable.COLUMN_ID + " = ?";
-        String[] selectionArgs = new String[]{serverConfig.name};
+        String[] selectionArgs = new String[]{serverConfig.getName()};
         try (Cursor cursor = db.query(
                 CookieTable.TABLE_NAME, null,
                 selection, selectionArgs, null, null, null)) {
@@ -1491,8 +1491,8 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 //            Log.d(TAG, "saveServerConfigAsCookieDTO: cursor:" + cursor.getCount());
 
 
-            values.put(CookieTable.COLUMN_ID, serverConfig.name);
-            values.put(CookieTable.COLUMN_REFERRER, serverConfig.url);
+            values.put(CookieTable.COLUMN_ID, serverConfig.getName());
+            values.put(CookieTable.COLUMN_REFERRER, serverConfig.getUrl());
             values.put(CookieTable.COLUMN_CREATED_AT, date.getTime());
 
             db = this.getWritableDatabase();
@@ -1500,7 +1500,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 Log.d(TAG, "saveServerConfigAsCookieDTO: update: "+ values);
                 // Server entry already exists, update the headers and cookies
 
-                db.update(CookieTable.TABLE_NAME, values, CookieTable.COLUMN_ID + " = ?", new String[]{serverConfig.name});
+                db.update(CookieTable.TABLE_NAME, values, CookieTable.COLUMN_ID + " = ?", new String[]{serverConfig.getName()});
             } else {
                 // Server entry does not exist, insert a new row
                 Log.d(TAG, "saveServerConfigAsCookieDTO: insert: "+ values);

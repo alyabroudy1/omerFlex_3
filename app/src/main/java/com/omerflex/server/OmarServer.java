@@ -9,16 +9,15 @@ import android.webkit.WebView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
-import com.omerflex.entity.dto.CategoryDTO;
-import com.omerflex.entity.dto.MovieDTO;
-import com.omerflex.entity.dto.ServerConfig;
-import com.omerflex.view.BrowserActivity;
-import com.omerflex.view.DetailsActivity;
-import com.omerflex.entity.Movie;
-import com.omerflex.view.VideoDetailsFragment;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.omerflex.entity.Movie;
+import com.omerflex.entity.dto.CategoryDTO;
+import com.omerflex.entity.dto.MovieDTO;
+import com.omerflex.view.BrowserActivity;
+import com.omerflex.view.DetailsActivity;
+import com.omerflex.view.VideoDetailsFragment;
 
 import org.jsoup.nodes.Document;
 
@@ -38,19 +37,14 @@ public class OmarServer extends AbstractServer {
     static String TAG = "Omar";
 
     Activity activity;
-    ServerConfig config;
 
     Fragment fragment;
-    private String cookies;
-    private String referer;
-    private Map<String, String> headers;
     private static OmarServer instance;
 
     private OmarServer(Activity activity, Fragment fragment) {
         // Private constructor to prevent instantiation
         this.activity = activity;
         this.fragment = fragment;
-        headers = new HashMap<>();
     }
 
     public static synchronized OmarServer getInstance(Activity activity, Fragment fragment) {
@@ -72,7 +66,7 @@ public class OmarServer extends AbstractServer {
         Log.d(TAG, "search: " + query);
         String url = query;
         if (!query.contains("http")){
-            url = getConfig().url + "/search/" + query;
+            url = getConfig().getUrl() + "/search/" + query;
         }
         Log.d(TAG, "search: " + url);
 
@@ -260,7 +254,7 @@ public class OmarServer extends AbstractServer {
 
     @Override
     public Movie fetchGroup(Movie movie) {
-        String url = getConfig().url + "/fetch/" + movie.getId();
+        String url = getConfig().getUrl() + "/fetch/" + movie.getId();
         // String url = movie.getVideoUrl();
         Log.d(TAG, "fetchGroup: " + url);
         OkHttpClient client = new OkHttpClient();
@@ -339,7 +333,7 @@ public class OmarServer extends AbstractServer {
 
     @Override
     public Movie fetchItem(Movie movie) {
-        String url = getConfig().url + "/fetch/" + movie.getId();
+        String url = getConfig().getUrl() + "/fetch/" + movie.getId();
         // String url = movie.getVideoUrl();
         Log.d(TAG, "fetchItem: " + url);
         OkHttpClient client = new OkHttpClient();
@@ -415,48 +409,6 @@ public class OmarServer extends AbstractServer {
         return false;
     }
 
-    @Override
-    public void setCookies(String cookies) {
-        this.cookies = cookies;
-    }
-
-    public Map<String, String> getMapCookies() {
-        Map<String, String> cookiesHash = new HashMap<>();
-        if (cookies != null && !cookies.equals("")) {
-            //split the String by a comma
-            String parts[] = cookies.split(";");
-
-            //iterate the parts and add them to a map
-            for (String part : parts) {
-
-                //split the employee data by : to get id and name
-                String empdata[] = part.split("=");
-
-                String strId = empdata[0].trim();
-                String strName = empdata[1].trim();
-
-                //add to map
-                cookiesHash.put(strId, strName);
-            }
-
-        }
-        return cookiesHash;
-    }
-
-    @Override
-    public String getCookies() {
-        return this.cookies;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
-    }
-
-    @Override
-    public Map<String, String> getHeaders() {
-        return headers;
-    }
 
     @Override
     public boolean onLoadResource(Activity activity, WebView view, String url, Movie movie) {
@@ -469,33 +421,13 @@ public class OmarServer extends AbstractServer {
     }
 
     @Override
-    public void setReferer(String referer) {
-        this.referer = referer;
-    }
-
-    @Override
-    public String getReferer() {
-        return referer;
-    }
-
-    @Override
     public String getWebScript(int mode, Movie movie) {
         return null;
     }
 
-    @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
-    }
-
     public ArrayList<Movie> getHomepageMovies() {
 
-        return search(config.url+"/homepage");
+        return search(getConfig().getUrl()+"/homepage");
 //        return search("sonic");
     }
 

@@ -40,6 +40,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
@@ -897,12 +898,13 @@ public class BrowserActivity extends AppCompatActivity {
                         Log.d(TAG, "myMethod: akwam resultActivity finish ");
 
                         //this case only for akwam as the valid referer already fetched by search method
-                        String movieReferer = getValidReferer(movie.getVideoUrl());
-                        server.setReferer(movieReferer);
-                        if (server.getConfig() != null) {
-                            server.getConfig().url = movieReferer;
-                        }
-                        dbHelper.saveHeadersAndCookies(server, movie.getStudio());
+                        String movieReferer = Util.getValidReferer(movie.getVideoUrl());
+                        ServerConfig config = server.getConfig();
+                        config.setReferer(movieReferer);
+                        config.setUrl(movieReferer);
+
+                        server.setConfig(config);
+                        dbHelper.saveHeadersAndCookies(server, server.getServerId());
 
 
                         finish();
@@ -1125,7 +1127,7 @@ public class BrowserActivity extends AppCompatActivity {
 
                 if (!cookieFound && request.getRequestHeaders() != null && request.getRequestHeaders().containsKey("Referer")) {
                     String referer = request.getRequestHeaders().get("Referer");
-                    String validReferer = getValidReferer(referer);
+                    String validReferer = Util.getValidReferer(referer);
                     String cookie = CookieManager.getInstance().getCookie(validReferer);
                     if (cookie != null && isValidReferer(referer)) {
 
@@ -1178,9 +1180,11 @@ public class BrowserActivity extends AppCompatActivity {
             }
 
 //            Log.d(TAG, "shouldOverrideUrlLoading: contains config url : "+ newUrl.contains(server.getConfig().url) + ", "+server.getConfig().url);
-            if (server.getConfig() != null && newUrl.contains(server.getConfig().url)) {
-                Log.d(TAG, "shouldOverrideUrlLoading:0 false: "+url);
-                return false;
+            if (server.getConfig() != null) {
+                if (url.contains(server.getConfig().getUrl())){
+                    return false;
+                }
+                Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: "+server.getConfig().getUrl() + ", u: " +url);
             }
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
                 if (url.contains("/e/")){
@@ -1241,7 +1245,7 @@ public class BrowserActivity extends AppCompatActivity {
                 return true;
             }
 
-            if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false))) {
+            if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false, false))) {
                 Log.d(TAG, "shouldOverrideUrlLoading:4 false: "+url);
                 view.loadUrl(url);
                 return false;
@@ -1336,7 +1340,7 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public void onLoadResource(WebView view, String url) {
             //if (webView.getProgress() == 100 && (movie.getState() == Movie.ITEM_STATE || movie.getState() == Movie.RESOLUTION_STATE )){
-            Log.d(TAG, "onLoadResource: " + webView.getProgress() + ", " + RESULT_COUNTER + ", " + url);
+//            Log.d(TAG, "onLoadResource: " + webView.getProgress() + ", " + RESULT_COUNTER + ", " + url);
             if (BrowserActivity.RESULT_COUNTER < 2 && webView.getProgress() == 100) {
                 Log.d(TAG, "onLoadResource: loaded");
                 BrowserActivity.RESULT_COUNTER++;
@@ -1533,9 +1537,9 @@ public class BrowserActivity extends AppCompatActivity {
 
     private boolean isValidReferer(String referer) {
         boolean result = false;
-        referer = getValidReferer(referer);
+        referer = Util.getValidReferer(referer);
         if (referer != null) {
-            if (server.getConfig() != null && referer.contains(server.getConfig().url)) {
+            if (server.getConfig() != null && referer.contains(server.getConfig().getUrl())) {
                 return true;
             }
             Pattern pattern = Pattern.compile("fas[ei]|shah[ei]d|c[ie]{0,2}m|ak[waom]{0,2}");
@@ -1543,19 +1547,6 @@ public class BrowserActivity extends AppCompatActivity {
             result = matcher.find();
         }
         Log.d(TAG, "isValidReferer: " + result + ", " + referer);
-        return result;
-    }
-
-    private String getValidReferer(String referer) {
-        String result = (server.getReferer() != null) ? server.getReferer() : movie.getStudio();
-        if (referer != null) {
-            Pattern pattern = Pattern.compile("(https?://[^/]+)");
-            Matcher matcher = pattern.matcher(referer);
-            if (matcher.find()) {
-                result = matcher.group(1);
-            }
-        }
-        Log.d(TAG, "getValidReferer: " + result + ", " + referer);
         return result;
     }
 

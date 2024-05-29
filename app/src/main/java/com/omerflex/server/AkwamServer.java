@@ -2,32 +2,25 @@ package com.omerflex.server;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.Log;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 
 import androidx.fragment.app.Fragment;
 
-import com.omerflex.entity.dto.ServerConfig;
+import com.omerflex.R;
+import com.omerflex.entity.Movie;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
-import com.omerflex.entity.Movie;
-import com.omerflex.R;
 import com.omerflex.view.VideoDetailsFragment;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,19 +39,15 @@ public class AkwamServer extends AbstractServer {
     static boolean START_BROWSER_CODE = false;
     public static String WEBSITE_URL = "https://www.akwam.cc";
     Activity activity;
-    ServerConfig config;
 
     Fragment fragment;
-    private String cookies;
-    private String referer;
-    private Map<String, String> headers;
+
     private static AkwamServer instance;
 
     private AkwamServer(Activity activity, Fragment fragment) {
         // Private constructor to prevent instantiation
         this.activity = activity;
         this.fragment = fragment;
-        headers = new HashMap<>();
     }
 
     public static synchronized AkwamServer getInstance(Activity activity, Fragment fragment) {
@@ -111,8 +100,8 @@ public class AkwamServer extends AbstractServer {
 //            } else {
 //                query = WEBSITE_URL + "/search?q=" + query;
 //            }
-            if (config != null && config.url != null){
-                query = config.url + "/search?q=" + query;
+            if (getConfig() != null && getConfig().getUrl() != null){
+                query = getConfig().getUrl() + "/search?q=" + query;
             }else {
                 query = WEBSITE_URL + "/search?q=" + query;
             }
@@ -125,19 +114,20 @@ public class AkwamServer extends AbstractServer {
         final String url = query;
 
         ArrayList<Movie> movieList = new ArrayList<>();
-        try {
-            Document doc = Jsoup.connect(url)
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+
+            Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .cookies(getMapCookies())
+//                    .headers(headers)
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+        if (doc == null){
+            return movieList;
+        }
             fetchSearchMovies(searchContext, movieList, doc);
 
-        } catch (IOException e) {
-            Log.i(TAG, "error" + e.getMessage());
-        }
         return movieList;
     }
 
@@ -307,14 +297,18 @@ public class AkwamServer extends AbstractServer {
     public Movie fetchGroup(final Movie movie) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
         final String url = movie.getVideoUrl();
-        try {
-            Document doc = Jsoup.connect(url)
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+            Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .cookies(getMappedCookies())
+//                    .headers(getHeaders())
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+        if (doc == null){
+            return movie;
+        }
 
             Elements decDivs = doc.select("h2");
             String description = "";
@@ -379,18 +373,13 @@ public class AkwamServer extends AbstractServer {
                     movie.addSubList(episode);
                 }
             }
-
-        } catch (IOException e) {
-            Log.i(TAG + "failed", e.getMessage() + "");
-        }
-
         return movie;
     }
 
     @Override
     public Movie fetchItem(final Movie movie) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
-        try {
+
             String url = movie.getVideoUrl();
 
             // page2 fetch goo- links
@@ -403,13 +392,19 @@ public class AkwamServer extends AbstractServer {
 //                        .timeout(0)
 //                        .ignoreContentType(true)
 //                        .get();
-            Document doc = Jsoup.connect(url)
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+            Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .cookies(getMappedCookies())
+//                    .headers(getHeaders())
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+            if (doc == null){
+                return movie;
+            }
+
 
             String bgImage = "";
             String ytLink = "";
@@ -492,9 +487,6 @@ public class AkwamServer extends AbstractServer {
                 }
                 movie.addSubList(resolution);
             }
-        } catch (IOException e) {
-            Log.i(TAG, "error:" + e.getMessage());
-        }
 
         return movie;
     }
@@ -514,9 +506,8 @@ public class AkwamServer extends AbstractServer {
     public Movie fetchResolutions(final Movie movie) {
         Log.i(TAG, "fetchResolutions: " + movie.getVideoUrl());
         Movie resolution = Movie.clone(movie);// the new movie to be returned*/
-        try {
             String url = movie.getVideoUrl();
-            Document doc = null;
+
             Log.d(TAG, "fetchToWatchLocally 1-run: " + url);
             if (!url.contains("/link")) {
                 Log.d(TAG, "fetchToWatchLocally: go page doesn't contain /link/ to akwam download page. url: " + url);
@@ -524,13 +515,19 @@ public class AkwamServer extends AbstractServer {
             }
 
             //Log.d(TAG, "fetchToWatchLocally run-2: " + url);
-            doc = Jsoup.connect(url)
-                    .cookies(getMapCookies())
-                    .headers(headers)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .timeout(0)
-                    .get();
+            Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .cookies(getMappedCookies())
+//                    .headers(getHeaders())
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+            if (doc == null){
+                return movie;
+            }
+
 
             String oldUrl = url;
             String regex = "(?:a[kwamoc])?.*/[download]{1,6}";
@@ -565,14 +562,19 @@ public class AkwamServer extends AbstractServer {
 
             Log.d(TAG, "fetchToWatchLocally run-4: " + url);
             //####
-            try {
-                Document  doc2 = Jsoup.connect(url)
-                        .cookies(getMapCookies())
-                        .headers(headers)
-                        .followRedirects(true)
-                        .ignoreHttpErrors(true)
-                        .timeout(0)
-                        .get();
+        Document doc2 = getRequestDoc(url);
+//            Document doc2 = Jsoup.connect(url)
+//                    .cookies(getMappedCookies())
+//                    .headers(getHeaders())
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+        if (doc2 == null){
+            return movie;
+        }
+
 
                 //check if security caption
                 Elements divs = doc2.getElementsByClass("btn-loader");
@@ -616,15 +618,7 @@ public class AkwamServer extends AbstractServer {
                     startWebForResultActivity(newMovie);
                     return null; //to do nothing till activity result returned to activity
                 }
-            } catch (IOException e) {
-            //builder.append("Error : ").append(e.getMessage()).append("\n");
-            Log.i(TAG, "error: FetchVideoLink: " + e.getMessage() + "");
-        }
 
-        } catch (IOException e) {
-            //builder.append("Error : ").append(e.getMessage()).append("\n");
-            Log.i(TAG, "FetchVideoLink: " + e.getMessage() + "");
-        }
         return resolution;
     }
 
@@ -753,49 +747,6 @@ public class AkwamServer extends AbstractServer {
         return movie;
     }
 
-    @Override
-    public void setCookies(String cookies) {
-        this.cookies = cookies;
-    }
-
-    public Map<String, String> getMapCookies() {
-        Map<String, String> cookiesHash = new HashMap<>();
-        if (cookies != null && !cookies.equals("")) {
-            //split the String by a comma
-            String parts[] = cookies.split(";");
-
-            //iterate the parts and add them to a map
-            for (String part : parts) {
-
-                //split the employee data by : to get id and name
-                String empdata[] = part.split("=");
-
-                String strId = empdata[0].trim();
-                String strName = empdata[1].trim();
-
-                //add to map
-                cookiesHash.put(strId, strName);
-            }
-
-        }
-        return cookiesHash;
-    }
-
-    @Override
-    public String getCookies() {
-        return this.cookies;
-    }
-
-    @Override
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
-    }
-
-    @Override
-    public Map<String, String> getHeaders() {
-        return headers;
-    }
-
     public String fixTrailerUrl(String url) {
         ////Log.i(TAG, "browseTrailer: " + url);
         String newUrl = url;
@@ -861,34 +812,6 @@ public class AkwamServer extends AbstractServer {
         return u.contains("/series") || u.contains("/movies");
     }
 
-    private class Browser_Home extends WebViewClient {
-        Browser_Home() {
-        }
-
-        @Override
-        public boolean shouldOverrideUrlLoading(WebView view, String url) {
-            super.shouldOverrideUrlLoading(view, url);
-            ////Log.i("override", "url: " + url);
-            //return !url.contains(getStudioText(movie.getStudio()));
-            return false;
-        }
-
-        @Override
-        public void onPageStarted(WebView view, String url, Bitmap favicon) {
-            super.onPageStarted(view, url, favicon);
-        }
-
-        @Override
-        public void onPageFinished(WebView view, String url) {
-            super.onPageFinished(view, url);
-        }
-
-        @Override
-        public void onLoadResource(WebView view, String url) {
-            super.onLoadResource(view, url);
-        }
-    }
-
     public String getStudioText(String serverName) {
 
         switch (serverName) {
@@ -918,16 +841,6 @@ public class AkwamServer extends AbstractServer {
     @Override
     public int detectMovieState(Movie movie) {
         return Movie.GROUP_STATE;
-    }
-
-    @Override
-    public void setReferer(String referer) {
-        this.referer = referer;
-    }
-
-    @Override
-    public String getReferer() {
-        return referer;
     }
 
     @Override
@@ -970,18 +883,6 @@ public class AkwamServer extends AbstractServer {
         return script;
     }
 
-    @Override
-    public void setConfig(ServerConfig serverConfig) {
-        this.config = serverConfig;
-    }
-
-    @Override
-    public ServerConfig getConfig() {
-        return this.config;
-    }
-
-
-
 
     public Activity getActivity() {
         return activity;
@@ -1001,7 +902,7 @@ public class AkwamServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies() {
-        return search(config.url + "/recent");
+        return search(getConfig().getUrl() + "/recent");
     }
 
     @Override
