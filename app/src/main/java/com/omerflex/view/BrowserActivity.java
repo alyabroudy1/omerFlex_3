@@ -1256,7 +1256,7 @@ public class BrowserActivity extends AppCompatActivity {
                 if (url.startsWith("##")) {
                     url = url.replace("##", "");
                 }
-                Log.d(TAG, "shouldOverrideUrlLoading:5 true: "+url);
+                Log.d(TAG, "shouldOverrideUrlLoading:5 false: "+url);
                 view.loadUrl(url);
                 return true;
                 //  CURRENT_WEB_NAME = getWebName(url);

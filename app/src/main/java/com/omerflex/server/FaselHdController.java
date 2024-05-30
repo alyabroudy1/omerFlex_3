@@ -184,6 +184,8 @@ public class FaselHdController extends AbstractServer {
 
             }
         } else {
+
+            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";
             String title = searchContext;
@@ -238,17 +240,17 @@ public class FaselHdController extends AbstractServer {
         }
         String webLink = getConfig().getUrl();
         if (webLink == null || webLink.isEmpty()) {
-            webLink = getConfig().getReferer() ;
+            webLink = getConfig().getReferer();
             if (webLink == null || webLink.isEmpty()) {
-                webLink = WEBSITE_URL ;
+                webLink = WEBSITE_URL;
             }
         }
-            if (webLink.endsWith("/")) {
-                searchUrl = webLink + "?s=" + query;
-            } else {
-                searchUrl = webLink + "/?s=" + query;
-            }
-        Log.d(TAG, "getSearchUrl: "+searchUrl);
+        if (webLink.endsWith("/")) {
+            searchUrl = webLink + "?s=" + query;
+        } else {
+            searchUrl = webLink + "/?s=" + query;
+        }
+        Log.d(TAG, "getSearchUrl: " + searchUrl);
         return searchUrl;
     }
 
@@ -304,17 +306,23 @@ public class FaselHdController extends AbstractServer {
     }
 
     private Movie startWebForResultActivity(Movie movie) {
-        fragment.getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Intent browse = new Intent(fragment.getActivity(), BrowserActivity.class);
-                browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-                //   Log.d(TAG, "getResultFromWeb: activity:" + fragment.getClass().getName());
-                //activity.startActivity(browse);
-                fragment.startActivityForResult(browse, movie.getFetch());
-            }
-        });
+//        fragment.getActivity().runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                Intent browse = new Intent(fragment.getActivity(), BrowserActivity.class);
+//                browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
+//                //   Log.d(TAG, "getResultFromWeb: activity:" + fragment.getClass().getName());
+//                //activity.startActivity(browse);
+//                fragment.startActivityForResult(browse, movie.getFetch());
+//            }
+//        });
+//
+//        return movie;
+        Intent browse = new Intent(activity, BrowserActivity.class);
+        browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
+        browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
 
+        fragment.startActivityForResult(browse, movie.getFetch());
         return movie;
     }
 
@@ -360,84 +368,90 @@ public class FaselHdController extends AbstractServer {
         if (doc == null) {
             return movie;
         }
-        Log.i(TAG, "result stop title: "+ doc.title());
-        if (!doc.title().contains("moment")) {
-                Element posterImg = doc.selectFirst(".posterImg");
-                String backgroundImage = "";
-                String trailer = "";
-                String description = "";
-                if (posterImg != null) {
-                    Element bgImage = posterImg.selectFirst("img");
-                    if (bgImage != null) {
-                        backgroundImage = bgImage.attr("src");
-                    }
+        Log.i(TAG, "result stop title: " + doc.title());
+        if (doc.title().contains("moment")) {
+            setCookieRefreshed(false);
+            Movie clonedMovie = Movie.clone(movie);
+            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+            return startWebForResultActivity(clonedMovie);
+        }
 
-                    Element trailerElement = posterImg.selectFirst("a");
-                    if (trailerElement != null) {
-                        trailer = trailerElement.attr("href");
-                    }
-                }
+        Element posterImg = doc.selectFirst(".posterImg");
+        String backgroundImage = "";
+        String trailer = "";
+        String description = "";
+        if (posterImg != null) {
+            Element bgImage = posterImg.selectFirst("img");
+            if (bgImage != null) {
+                backgroundImage = bgImage.attr("src");
+            }
 
-                Element singleDesc = doc.selectFirst(".singleDesc");
-                if (singleDesc != null) {
-                    Element desElement = singleDesc.selectFirst("p");
-                    if (desElement != null) {
-                        description = desElement.text();
-                    } else {
-                        description = singleDesc.text();
-                    }
-                }
+            Element trailerElement = posterImg.selectFirst("a");
+            if (trailerElement != null) {
+                trailer = trailerElement.attr("href");
+            }
+        }
 
-                movie.setDescription(description);
-                movie.setTrailerUrl(trailer);
-                movie.setBackgroundImageUrl(backgroundImage);
+        Element singleDesc = doc.selectFirst(".singleDesc");
+        if (singleDesc != null) {
+            Element desElement = singleDesc.selectFirst("p");
+            if (desElement != null) {
+                description = desElement.text();
+            } else {
+                description = singleDesc.text();
+            }
+        }
 
-                Elements lis = doc.getElementsByClass("seasonDiv");
-                for (Element seasonDiv : lis) {
-                    Log.i(TAG, "Fasel element found: " + description);
+        movie.setDescription(description);
+        movie.setTrailerUrl(trailer);
+        movie.setBackgroundImageUrl(backgroundImage);
 
-                    Movie a = Movie.clone(movie);
+        Elements lis = doc.getElementsByClass("seasonDiv");
+        for (Element seasonDiv : lis) {
+            Log.i(TAG, "Fasel element found: " + description);
+
+            Movie a = Movie.clone(movie);
 //                if (headers.containsKey("Referer") && !headers.get("Referer").contains("/s")){
 //                    WEBSITE_URL =  headers.get("Referer");
 //                }
 
-                    String title = "";
-                    String rate = "";
-                    String image = "";
-                    String link = "";
-                    if (seasonDiv.selectFirst(".title") != null) {
-                        title = seasonDiv.selectFirst(".title").text();
-                    }
-                    if (seasonDiv.selectFirst(".fa-star") != null) {
-                        rate = seasonDiv.selectFirst(".fa-star").parent().ownText();
-                    }
-                    if (seasonDiv.selectFirst("img") != null) {
-                        image = seasonDiv.selectFirst("img").attr("data-src");
-                        if (image == null || image.equals("")) {
-                            image = seasonDiv.selectFirst("img").attr("src");
-                        }
-                    }
-                    if (seasonDiv.attr("onclick") != null) {
-                        link = getConfig().getUrl() + seasonDiv.attr("onclick").replace("window.location.href = '", "").replace("'", "");
-                    }
-
-                    Log.d(TAG, "fetchGroupOfGroup: image:" + image);
-                    Log.d(TAG, "fetchGroupOfGroup: link:" + link);
-                    a.setTitle(title);
-                    a.setVideoUrl(link);
-                    a.setCardImageUrl(image);
-                    a.setRate(rate);
-                    a.setState(Movie.GROUP_STATE);
-                    a.setTrailerUrl(trailer);
-                    a.setDescription(description);
-                    a.setStudio(Movie.SERVER_FASELHD);
-                    a.setBackgroundImageUrl(backgroundImage);
-                    if (movie.getSubList() == null) {
-                        movie.setSubList(new ArrayList<>());
-                    }
-                    movie.addSubList(a);
+            String title = "";
+            String rate = "";
+            String image = "";
+            String link = "";
+            if (seasonDiv.selectFirst(".title") != null) {
+                title = seasonDiv.selectFirst(".title").text();
+            }
+            if (seasonDiv.selectFirst(".fa-star") != null) {
+                rate = seasonDiv.selectFirst(".fa-star").parent().ownText();
+            }
+            if (seasonDiv.selectFirst("img") != null) {
+                image = seasonDiv.selectFirst("img").attr("data-src");
+                if (image == null || image.equals("")) {
+                    image = seasonDiv.selectFirst("img").attr("src");
                 }
             }
+            if (seasonDiv.attr("onclick") != null) {
+                link = Util.extractDomain(movie.getVideoUrl(), true, false) + seasonDiv.attr("onclick").replace("window.location.href = '", "").replace("'", "");
+            }
+
+            Log.d(TAG, "fetchGroupOfGroup: image:" + image);
+            Log.d(TAG, "fetchGroupOfGroup: link:" + link);
+            a.setTitle(title);
+            a.setVideoUrl(link);
+            a.setCardImageUrl(image);
+            a.setRate(rate);
+            a.setState(Movie.GROUP_STATE);
+            a.setTrailerUrl(trailer);
+            a.setDescription(description);
+            a.setStudio(Movie.SERVER_FASELHD);
+            a.setBackgroundImageUrl(backgroundImage);
+            if (movie.getSubList() == null) {
+                movie.setSubList(new ArrayList<>());
+            }
+            movie.addSubList(a);
+        }
+
 
         return movie;
     }
@@ -446,10 +460,10 @@ public class FaselHdController extends AbstractServer {
     public Movie fetchGroup(Movie movie) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
-            Document doc = this.getRequestDoc(movie.getVideoUrl());
-            if (doc == null) {
-                return movie;
-            }
+        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        if (doc == null) {
+            return movie;
+        }
 
 //            Document doc = Jsoup.connect(movie.getVideoUrl())
 //                    .cookies(getMapCookies())
@@ -458,64 +472,67 @@ public class FaselHdController extends AbstractServer {
 //                    .ignoreHttpErrors(true)
 //                    .timeout(0)
 //                    .get();
-            Log.i(TAG, doc.title());
+        Log.i(TAG, doc.title());
 
-            if (!doc.title().contains("moment")) {
-                Element posterImg = doc.selectFirst(".posterImg");
-                String backgroundImage = "";
+        if (doc.title().contains("moment")) {
+            Movie clonedMovie = Movie.clone(movie);
+            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+            return startWebForResultActivity(clonedMovie);
+        }
 
-                String description = "";
-                if (posterImg != null) {
-                    Element bgImage = posterImg.selectFirst("img");
-                    if (bgImage != null) {
-                        backgroundImage = bgImage.attr("src");
-                    }
+            Element posterImg = doc.selectFirst(".posterImg");
+            String backgroundImage = "";
 
+            String description = "";
+            if (posterImg != null) {
+                Element bgImage = posterImg.selectFirst("img");
+                if (bgImage != null) {
+                    backgroundImage = bgImage.attr("src");
                 }
 
-                Element singleDesc = doc.selectFirst(".singleDesc");
-                if (singleDesc != null) {
-                    Element desElement = singleDesc.selectFirst("p");
-                    if (desElement != null) {
-                        description = desElement.text();
-                    } else {
-                        description = singleDesc.text();
-                    }
+            }
+
+            Element singleDesc = doc.selectFirst(".singleDesc");
+            if (singleDesc != null) {
+                Element desElement = singleDesc.selectFirst("p");
+                if (desElement != null) {
+                    description = desElement.text();
+                } else {
+                    description = singleDesc.text();
                 }
+            }
 
-                movie.setDescription(description);
-                movie.setBackgroundImageUrl(backgroundImage);
+            movie.setDescription(description);
+            movie.setBackgroundImageUrl(backgroundImage);
 
-                Element episodeContainer = doc.selectFirst(".epAll");
-                Log.d(TAG, "fetchGroup: xxx epAll ");
+            Element episodeContainer = doc.selectFirst(".epAll");
+            Log.d(TAG, "fetchGroup: xxx epAll ");
 //                Log.d(TAG+"xxx", "fetchGroup: xxx epAll2 " + episodeContainer);
-                if (episodeContainer != null) {
-                    Elements episodeList = episodeContainer.getElementsByTag("a");
+            if (episodeContainer != null) {
+                Elements episodeList = episodeContainer.getElementsByTag("a");
 //                    Log.d(TAG+"xxx", "fetchGroup: xxx epAll3 " + episodeList.size());
 //                    Log.d(TAG, "fetchGroup: xxx episode " + episodeList.size());
-                    for (Element episodeDiv : episodeList) {
-                        Log.i(TAG, "Fasel episode element found: ");
+                for (Element episodeDiv : episodeList) {
+                    Log.i(TAG, "Fasel episode element found: ");
 
-                        Movie a = Movie.clone(movie);
-                        String title = episodeDiv.text();
-                        String link = episodeDiv.attr("href");
+                    Movie a = Movie.clone(movie);
+                    String title = episodeDiv.text();
+                    String link = episodeDiv.attr("href");
 
-                        a.setTitle(title);
-                        a.setVideoUrl(link);
-                        a.setCardImageUrl(movie.getCardImageUrl());
-                        a.setRate(movie.getRate());
-                        a.setState(Movie.ITEM_STATE);
-                        a.setTrailerUrl(movie.getTrailerUrl());
-                        a.setDescription(description);
-                        a.setStudio(Movie.SERVER_FASELHD);
-                        a.setBackgroundImageUrl(backgroundImage);
-                        if (movie.getSubList() == null) {
-                            movie.setSubList(new ArrayList<>());
-                        }
-                        movie.addSubList(a);
+                    a.setTitle(title);
+                    a.setVideoUrl(link);
+                    a.setCardImageUrl(movie.getCardImageUrl());
+                    a.setRate(movie.getRate());
+                    a.setState(Movie.ITEM_STATE);
+                    a.setTrailerUrl(movie.getTrailerUrl());
+                    a.setDescription(description);
+                    a.setStudio(Movie.SERVER_FASELHD);
+                    a.setBackgroundImageUrl(backgroundImage);
+                    if (movie.getSubList() == null) {
+                        movie.setSubList(new ArrayList<>());
                     }
+                    movie.addSubList(a);
                 }
-
             }
 
         Log.d(TAG, "fetchGroup: result movie: " + movie.getSubList());
@@ -559,76 +576,78 @@ public class FaselHdController extends AbstractServer {
     public Movie fetchItem(Movie movie) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
 
-            Document doc = this.getRequestDoc(movie.getVideoUrl());
-            if (doc == null) {
-                return movie;
+        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        if (doc == null) {
+            return movie;
+        }
+        Log.i(TAG, "result stop title: " + doc.title());
+
+        if (doc.title().contains("moment")) {
+            Movie clonedMovie = Movie.clone(movie);
+            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+            return startWebForResultActivity(clonedMovie);
+        }
+            Element posterImg = doc.selectFirst(".posterImg");
+            String backgroundImage = "";
+
+            String description = "";
+            if (posterImg != null) {
+                Element bgImage = posterImg.selectFirst("img");
+                if (bgImage != null) {
+                    backgroundImage = bgImage.attr("src");
+                }
+
             }
-            Log.i(TAG, "result stop title: "+ doc.title());
 
-            if (!doc.title().contains("moment")) {
-                Element posterImg = doc.selectFirst(".posterImg");
-                String backgroundImage = "";
+            Element singleDesc = doc.selectFirst(".singleDesc");
+            if (singleDesc != null) {
+                Element desElement = singleDesc.selectFirst("p");
+                if (desElement != null) {
+                    description = desElement.text();
+                } else {
+                    description = singleDesc.text();
+                }
+            }
 
-                String description = "";
-                if (posterImg != null) {
-                    Element bgImage = posterImg.selectFirst("img");
-                    if (bgImage != null) {
-                        backgroundImage = bgImage.attr("src");
+            movie.setDescription(description);
+            movie.setBackgroundImageUrl(backgroundImage);
+
+            Element resolutionsTab = doc.selectFirst(".signleWatch");
+            if (resolutionsTab != null) {
+                Elements episodeList = resolutionsTab.getElementsByTag("li");
+                for (Element episodeDiv : episodeList) {
+
+                    Movie a = Movie.clone(movie);
+
+                    String title = "";
+                    Element titleElem = episodeDiv.selectFirst("a");
+                    if (titleElem != null) {
+                        title = titleElem.text();
                     }
 
-                }
-
-                Element singleDesc = doc.selectFirst(".singleDesc");
-                if (singleDesc != null) {
-                    Element desElement = singleDesc.selectFirst("p");
-                    if (desElement != null) {
-                        description = desElement.text();
-                    } else {
-                        description = singleDesc.text();
+                    String link = "";
+                    String linkElem = episodeDiv.attr("onclick");
+                    if (linkElem != null) {
+                        link = linkElem.replace("player_iframe.location.href = ", "").replace("'", "");
+                        link = link + Util.generateHeadersForVideoUrl(getConfig().getHeaders());
                     }
-                }
 
-                movie.setDescription(description);
-                movie.setBackgroundImageUrl(backgroundImage);
+                    Log.i(TAG, "Fasel server element found: " + link);
 
-                Element resolutionsTab = doc.selectFirst(".signleWatch");
-                if (resolutionsTab != null) {
-                    Elements episodeList = resolutionsTab.getElementsByTag("li");
-                    for (Element episodeDiv : episodeList) {
-
-                        Movie a = Movie.clone(movie);
-
-                        String title = "";
-                        Element titleElem = episodeDiv.selectFirst("a");
-                        if (titleElem != null) {
-                            title = titleElem.text();
-                        }
-
-                        String link = "";
-                        String linkElem = episodeDiv.attr("onclick");
-                        if (linkElem != null) {
-                            link = linkElem.replace("player_iframe.location.href = ", "").replace("'", "");
-                            link = link + Util.generateHeadersForVideoUrl(getConfig().getHeaders());
-                        }
-
-                        Log.i(TAG, "Fasel server element found: " + link);
-
-                        a.setTitle(title);
-                        a.setVideoUrl(link);
-                        a.setCardImageUrl(movie.getCardImageUrl());
-                        a.setRate(movie.getRate());
-                        a.setState(Movie.RESOLUTION_STATE);
-                        a.setTrailerUrl(movie.getTrailerUrl());
-                        a.setDescription(description);
-                        a.setStudio(Movie.SERVER_FASELHD);
-                        a.setBackgroundImageUrl(backgroundImage);
-                        if (movie.getSubList() == null) {
-                            movie.setSubList(new ArrayList<>());
-                        }
-                        movie.addSubList(a);
+                    a.setTitle(title);
+                    a.setVideoUrl(link);
+                    a.setCardImageUrl(movie.getCardImageUrl());
+                    a.setRate(movie.getRate());
+                    a.setState(Movie.RESOLUTION_STATE);
+                    a.setTrailerUrl(movie.getTrailerUrl());
+                    a.setDescription(description);
+                    a.setStudio(Movie.SERVER_FASELHD);
+                    a.setBackgroundImageUrl(backgroundImage);
+                    if (movie.getSubList() == null) {
+                        movie.setSubList(new ArrayList<>());
                     }
+                    movie.addSubList(a);
                 }
-
             }
         return movie;
     }
@@ -1441,7 +1460,7 @@ public class FaselHdController extends AbstractServer {
             }
         }
 
-        Log.d(TAG, "getWebScript: "+script);
+        Log.d(TAG, "getWebScript: " + script);
         return script;
     }
 

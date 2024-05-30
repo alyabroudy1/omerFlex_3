@@ -722,7 +722,7 @@ public class MyCimaServer extends AbstractServer {
 
 
         }
-        Log.d(TAG, "getWebScript: "+script);
+//        Log.d(TAG, "getWebScript: "+script);
         return script;
     }
 

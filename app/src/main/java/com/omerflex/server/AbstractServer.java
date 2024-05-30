@@ -30,6 +30,7 @@ import java.util.Map;
 public abstract class AbstractServer {
 
     private static final String TAG = "AbstractServer";
+    private boolean cookieRefreshed = false;
 
     /**
      * Search for the query and add the result to movieList
@@ -395,7 +396,7 @@ public abstract class AbstractServer {
     }
 
     public void shouldInterceptRequest(WebView view, WebResourceRequest request, MovieDbHelper dbHelper) {
-        String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
+//        String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
 
         ServerConfig config = getConfig();
         if (config == null || config.getUrl() == null){
@@ -407,12 +408,20 @@ public abstract class AbstractServer {
             return;
         }
             //                String url = "https://www.faselhd.link/account/login";
-            Connection connection = Jsoup.connect(url);//.sslSocketFactory(getSSLSocketFactory());
+            Connection connection = Jsoup.connect(config.getUrl());//.sslSocketFactory(getSSLSocketFactory());
             connection.ignoreHttpErrors(true);
             connection.ignoreContentType(true);
             connection.headers(request.getRequestHeaders());
             // String cookie = CookieManager.getInstance().getCookie("https://shahid4uu.cam");
             connection.cookies(Util.getMapCookies(cookieTest));
+
+
+            // new cookie already refreshed
+            if (isCookieRefreshed()){
+                Log.d(TAG, "shouldInterceptRequest: refresh cookie: refreshed");
+                return;
+            }
+
             Document doc = null;
             try {
                 doc = connection.get();
@@ -424,6 +433,7 @@ public abstract class AbstractServer {
                     setCookies(cookieTest);
                     setHeaders(request.getRequestHeaders());
                     dbHelper.saveHeadersAndCookies(this, getServerId());
+                    setCookieRefreshed(true);
                 }
             } catch (IOException e) {
 //            throw new RuntimeException(e);
@@ -432,5 +442,13 @@ public abstract class AbstractServer {
 
             }
 
+    }
+
+    public boolean isCookieRefreshed() {
+        return cookieRefreshed;
+    }
+
+    public void setCookieRefreshed(boolean refreshed) {
+        this.cookieRefreshed = refreshed;
     }
 }
