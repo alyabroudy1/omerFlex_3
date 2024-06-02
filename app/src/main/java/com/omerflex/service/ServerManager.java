@@ -24,6 +24,8 @@ import com.omerflex.entity.dto.CookieDTO;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.MyCimaServer;
+import com.omerflex.service.phub.ParadiseHillServer;
+import com.omerflex.service.phub.PornhubServer;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -98,7 +100,8 @@ public class ServerManager {
 
     public ArrayList<AbstractServer> initializeServersFromDB() {
         ArrayList<CookieDTO> serverConfigs = dbHelper.getAllCookieDto();
-        if (serverConfigs.size() == 0){
+        Log.d(TAG, "initializeServersFromDB: "+serverConfigs.size());
+        if (serverConfigs.isEmpty()){
             return addServerConfigsToDB();
         }
         return generateServers(serverConfigs);
@@ -145,94 +148,125 @@ public class ServerManager {
 
 //        Log.d(TAG, "addServerConfigsToDB: date: "+date.toString());
 
+        //      //### pornhub ###
+        ServerConfig pornhubConfig = new ServerConfig();
+        pornhubConfig.setName(Movie.SERVER_PORN_HUB);
+        pornhubConfig.setUrl("https://pornhub.com");
+        pornhubConfig.setWebName("https://pornhub.com");
+        pornhubConfig.setReferer("https://pornhub.com/");
+        pornhubConfig.setActive(true);
+        pornhubConfig.setDate(date.toString());
+        ServerConfigManager.addConfig(pornhubConfig);
+        Log.d(TAG, "addServerConfigsToDB: config: "+pornhubConfig);
+        AbstractServer pornhub = PornhubServer.getInstance(activity, fragment);
 
-        //      //### mycima ###
-        ServerConfig mycimaConfig = new ServerConfig();
-        mycimaConfig.setName(Movie.SERVER_MyCima);
-        mycimaConfig.setUrl("https://mycima.io");
-        mycimaConfig.setReferer("https://mycima.io/");
-        ServerConfigManager.addConfig(mycimaConfig);
+//            dbHelper.saveServerConfigAsCookieDTO(pornhubConfig, date);
 
-        AbstractServer mycima = MyCimaServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
-        servers.add(mycima);
+        Log.d(TAG, "addServerConfigsToDB: "+pornhub.getServerId());
+//        servers.add(pornhub);
 
-        // ### akwam ###
-        ServerConfig akwamConfig = new ServerConfig();
-        akwamConfig.setName(Movie.SERVER_AKWAM);
-        akwamConfig.setUrl("https://ak.sv");
-        akwamConfig.setReferer("https://ak.sv/");
-        ServerConfigManager.addConfig(akwamConfig);
+        //      //### paradisehill ###
+        ServerConfig paradisehillConfig = new ServerConfig();
+        paradisehillConfig.setName(Movie.SERVER_PARADISE_HILL);
+        paradisehillConfig.setUrl("https://en.paradisehill.cc");
+        paradisehillConfig.setWebName("https://en.paradisehill.cc");
+        paradisehillConfig.setReferer("https://en.paradisehill.cc/");
+        paradisehillConfig.setActive(true);
+        paradisehillConfig.setDate(date.toString());
+        ServerConfigManager.addConfig(paradisehillConfig);
+        Log.d(TAG, "addServerConfigsToDB: config: "+paradisehillConfig);
+        AbstractServer paradise = ParadiseHillServer.getInstance(activity, fragment);
+        dbHelper.saveServerConfigAsCookieDTO(paradisehillConfig, date);
+        servers.add(paradise);
+        Log.d(TAG, "addServerConfigsToDB: "+paradise.getServerId());
 
-        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(akwamConfig, date);
-        servers.add(akwam);
-
-        //        ### fasel ###
-        ServerConfig faselConfig = new ServerConfig();
-        faselConfig.setName(Movie.SERVER_FASELHD);
-        faselConfig.setUrl("https://faselhd.center");
-        faselConfig.setReferer("https://faselhd.center/");
-        ServerConfigManager.addConfig(faselConfig);
-
-        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
-        servers.add(faselhd);
-
-        //### arabseed ###
-        ServerConfig arabseedConfig = new ServerConfig();
-        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
-        arabseedConfig.setUrl("https://arabseed.show");
-        arabseedConfig.setReferer("https://arabseed.show/");
-        ServerConfigManager.addConfig(arabseedConfig);
-
-        AbstractServer arabseed = ArabSeedServer.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(arabseedConfig, date);
-        servers.add(arabseed);
-
-        //### old_Akwam ###
-        ServerConfig oldAkwamConfig = new ServerConfig();
-        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
-        oldAkwamConfig.setUrl("https://ak.sv/old");
-        oldAkwamConfig.setReferer("https://ak.sv/old/");
-        ServerConfigManager.addConfig(oldAkwamConfig);
-
-        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(oldAkwamConfig, date);
-        servers.add(oldAkwam);
-
-        //### cimaclub ###
-        ServerConfig cimaclubConfig = new ServerConfig();
-        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);
-        cimaclubConfig.setUrl("https://cimaclub.top");
-        cimaclubConfig.setReferer("https://cimaclub.top/");
-        ServerConfigManager.addConfig(cimaclubConfig);
-
-        AbstractServer cimaclub = CimaClubServer.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(cimaclubConfig, date);
-        servers.add(cimaclub);
-
-        // ### omar ###
-        ServerConfig omarConfig = new ServerConfig();
-        omarConfig.setName(Movie.SERVER_OMAR);
-        omarConfig.setUrl("http://194.164.53.40/movie");
-        omarConfig.setReferer("http://194.164.53.40/");
-        ServerConfigManager.addConfig(omarConfig);
-
-        AbstractServer omar = OmarServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(omarConfig, date);
-        servers.add(omar);
-
-        //### iptv ###
-        ServerConfig iptvConfig = new ServerConfig();
-        iptvConfig.setName(Movie.SERVER_IPTV);
-        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
-        iptvConfig.setReferer("https://drive.google.com/");
-        ServerConfigManager.addConfig(iptvConfig);
-
-        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(iptvConfig, date);
-        servers.add(iptv);
+//        //      //### mycima ###
+//        ServerConfig mycimaConfig = new ServerConfig();
+//        mycimaConfig.setName(Movie.SERVER_MyCima);
+//        mycimaConfig.setUrl("https://mycima.io");
+//        mycimaConfig.setReferer("https://mycima.io/");
+//        ServerConfigManager.addConfig(mycimaConfig);
+//
+//        AbstractServer mycima = MyCimaServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
+//        servers.add(mycima);
+//
+//        // ### akwam ###
+//        ServerConfig akwamConfig = new ServerConfig();
+//        akwamConfig.setName(Movie.SERVER_AKWAM);
+//        akwamConfig.setUrl("https://ak.sv");
+//        akwamConfig.setReferer("https://ak.sv/");
+//        ServerConfigManager.addConfig(akwamConfig);
+//
+//        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(akwamConfig, date);
+//        servers.add(akwam);
+//
+//        //        ### fasel ###
+//        ServerConfig faselConfig = new ServerConfig();
+//        faselConfig.setName(Movie.SERVER_FASELHD);
+//        faselConfig.setUrl("https://faselhd.center");
+//        faselConfig.setReferer("https://faselhd.center/");
+//        ServerConfigManager.addConfig(faselConfig);
+//
+//        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
+//        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
+//        servers.add(faselhd);
+//
+//        //### arabseed ###
+//        ServerConfig arabseedConfig = new ServerConfig();
+//        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
+//        arabseedConfig.setUrl("https://arabseed.show");
+//        arabseedConfig.setReferer("https://arabseed.show/");
+//        ServerConfigManager.addConfig(arabseedConfig);
+//
+//        AbstractServer arabseed = ArabSeedServer.getInstance(fragment, activity);
+//        dbHelper.saveServerConfigAsCookieDTO(arabseedConfig, date);
+//        servers.add(arabseed);
+//
+//        //### old_Akwam ###
+//        ServerConfig oldAkwamConfig = new ServerConfig();
+//        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
+//        oldAkwamConfig.setUrl("https://ak.sv/old");
+//        oldAkwamConfig.setReferer("https://ak.sv/old/");
+//        ServerConfigManager.addConfig(oldAkwamConfig);
+//
+//        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(oldAkwamConfig, date);
+//        servers.add(oldAkwam);
+//
+//        //### cimaclub ###
+//        ServerConfig cimaclubConfig = new ServerConfig();
+//        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);
+//        cimaclubConfig.setUrl("https://cimaclub.top");
+//        cimaclubConfig.setReferer("https://cimaclub.top/");
+//        ServerConfigManager.addConfig(cimaclubConfig);
+//
+//        AbstractServer cimaclub = CimaClubServer.getInstance(fragment, activity);
+//        dbHelper.saveServerConfigAsCookieDTO(cimaclubConfig, date);
+//        servers.add(cimaclub);
+//
+//        // ### omar ###
+//        ServerConfig omarConfig = new ServerConfig();
+//        omarConfig.setName(Movie.SERVER_OMAR);
+//        omarConfig.setUrl("http://194.164.53.40/movie");
+//        omarConfig.setReferer("http://194.164.53.40/");
+//        ServerConfigManager.addConfig(omarConfig);
+//
+//        AbstractServer omar = OmarServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(omarConfig, date);
+//        servers.add(omar);
+//
+//        //### iptv ###
+//        ServerConfig iptvConfig = new ServerConfig();
+//        iptvConfig.setName(Movie.SERVER_IPTV);
+//        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
+//        iptvConfig.setReferer("https://drive.google.com/");
+//        ServerConfigManager.addConfig(iptvConfig);
+//
+//        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(iptvConfig, date);
+//        servers.add(iptv);
 
 //
 ////        //### watanflix ###
@@ -420,6 +454,10 @@ public class ServerManager {
                 return IptvServer.getInstance(activity, fragment);
             case Movie.SERVER_OMAR:
                 return OmarServer.getInstance(activity, fragment);
+            case Movie.SERVER_PORN_HUB:
+                return PornhubServer.getInstance(activity, fragment);
+            case Movie.SERVER_PARADISE_HILL:
+                return ParadiseHillServer.getInstance(activity, fragment);
 //            case Movie.SERVER_WATAN_FLIX:
 //                return WatanFlixController.getInstance(fragment, activity);
 //            case Movie.SERVER_KOORA_LIVE:
@@ -438,6 +476,10 @@ public class ServerManager {
                 return OldAkwamServer.getInstance(activity, fragment);
             case Movie.SERVER_FASELHD:
                 return FaselHdController.getInstance(fragment, activity);
+            case Movie.SERVER_PORN_HUB:
+                return PornhubServer.getInstance(activity, fragment);
+            case Movie.SERVER_PARADISE_HILL:
+                return ParadiseHillServer.getInstance(activity, fragment);
 //            case Movie.SERVER_CIMA4U:
 //                return Cima4uController.getInstance(fragment, activity);
 //            case Movie.SERVER_SHAHID4U:

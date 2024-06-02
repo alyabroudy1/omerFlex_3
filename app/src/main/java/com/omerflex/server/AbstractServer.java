@@ -54,7 +54,7 @@ public abstract class AbstractServer {
 
     protected abstract ArrayList<Movie> getSearchMovieList(Document doc);
 
-    protected Document getRequestDoc(String url) {
+    public Document getRequestDoc(String url) {
         Document doc = null;
         try {
             doc = Jsoup.connect(url)
@@ -70,7 +70,7 @@ public abstract class AbstractServer {
                     .get();
 
             String docTitle = doc.title();
-//            Log.d(TAG, "getRequestDoc: " + docTitle);
+            Log.d(TAG, "getRequestDoc: " + docTitle);
 //            if (docTitle.contains("Just a moment")) {
 //                return fetchDocUsingWebView(url);
 //            }
@@ -450,5 +450,13 @@ public abstract class AbstractServer {
 
     public void setCookieRefreshed(boolean refreshed) {
         this.cookieRefreshed = refreshed;
+    }
+
+    public ArrayList<Movie> fetchMovieQualities(Movie mOriginalMovie) {
+        return new ArrayList<>();
+    }
+
+    public ArrayList<Movie> fetchRelatedMovies(Movie mOriginalMovie) {
+        return new ArrayList<>();
     }
 }

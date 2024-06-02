@@ -1481,14 +1481,14 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
         SQLiteDatabase db = this.getReadableDatabase();
 
-//        Log.d(TAG, "saveServerConfigAsCookieDTO: " + serverConfig);
+        Log.d(TAG, "saveServerConfigAsCookieDTO: " + serverConfig);
         String selection = CookieTable.COLUMN_ID + " = ?";
         String[] selectionArgs = new String[]{serverConfig.getName()};
         try (Cursor cursor = db.query(
                 CookieTable.TABLE_NAME, null,
                 selection, selectionArgs, null, null, null)) {
 
-//            Log.d(TAG, "saveServerConfigAsCookieDTO: cursor:" + cursor.getCount());
+            Log.d(TAG, "saveServerConfigAsCookieDTO: cursor:" + cursor.getCount());
 
 
             values.put(CookieTable.COLUMN_ID, serverConfig.getName());

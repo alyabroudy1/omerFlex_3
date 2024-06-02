@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -44,6 +45,27 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
+        <!--        phub-->
+<!--        <activity-->
+<!--            android:name=".service.phub.PornhubDownloadActivity"-->
+<!--            android:excludeFromRecents="true"-->
+<!--            android:taskAffinity=""-->
+<!--            android:theme="@style/AppTheme"-->
+<!--            android:exported="true">-->
+
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.SEND" />-->
+<!--                <category android:name="android.intent.category.DEFAULT" />-->
+<!--                                <action android:name="android.intent.action.MAIN" />-->
+
+<!--                                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--                <data android:mimeType="text/plain" />-->
+<!--            </intent-filter>-->
+
+<!--        </activity>-->
+        <!--        phub-->
         <activity
             android:name=".view.DetailsActivity"
             android:screenOrientation="landscape"
@@ -79,6 +101,10 @@
             android:screenOrientation="landscape" />
         <activity
             android:name=".view.ExoplayerMediaPlayer"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat" />
+        <activity
+            android:name=".view.VideoDetails_2"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.AppCompat" />
     </application>

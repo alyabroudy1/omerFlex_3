@@ -118,7 +118,10 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             //very important to initialize all required
             initializeThings();
             if (mSelectedMovie.getMovieHistory() == null && mSelectedMovie.getMainMovie() != null) {
-                mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mSelectedMovie.getMainMovie().getVideoUrl())));
+                String mainMovieUrl = mSelectedMovie.getMainMovie().getVideoUrl();
+                if( mainMovieUrl != null){
+                    mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mainMovieUrl)));
+                }
             }
 
 
@@ -471,7 +474,10 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             public void run() {
                                 //Intent intent = new Intent(activity, PlaybackActivity.class);
                                 Intent exoIntent = new Intent(getActivity(), ExoplayerMediaPlayer.class);
+//                                Intent exoIntent = new Intent(getActivity(), VideoDetails_2.class);
                                 exoIntent.putExtra(DetailsActivity.MOVIE, (Serializable) res);
+//                                exoIntent.putExtra(DetailsActivity.RESOLUTIONS, (Serializable) res.getMainMovie());
+//                                exoIntent.putExtra(DetailsActivity.RELATED_MOVIES, (Serializable) res.getMainMovie());
                                 exoIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) res.getMainMovie());
                                 //intent.putExtra(DetailsActivity.MOVIE, (Serializable) res.getSubList().get(0));
                                 Objects.requireNonNull(getActivity()).startActivity(exoIntent);

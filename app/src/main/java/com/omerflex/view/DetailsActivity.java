@@ -15,6 +15,8 @@ public class DetailsActivity extends FragmentActivity {
     public static final String MAIN_MOVIE = "Main_Movie";
     public static final String MOVIE_SUBLIST = "Movie_sub";
     public static final String DETAILS_FRAGMENT_TAG = "details_fragment_tag";
+    public static final String RESOLUTIONS = "Resolutions";
+    public static final String RELATED_MOVIES = "Related_movies";
 
 
     /**

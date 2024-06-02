@@ -22,6 +22,8 @@ import java.util.List;
 @Entity(tableName = "movies")
 public class Movie implements Serializable, Parcelable {
     public static final String SERVER_OMAR = "omar";
+    public static final String SERVER_PORN_HUB = "pornHub";
+    public static final String SERVER_PARADISE_HILL = "ParadiseHill";
     static final long serialVersionUID = 727566175075960653L;
     public final static String SERVER_AKWAM = "akwam";
     public final static String SERVER_OLD_AKWAM = "old_Akwam";
