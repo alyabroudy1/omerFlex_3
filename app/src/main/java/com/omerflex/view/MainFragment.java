@@ -1,6 +1,7 @@
 package com.omerflex.view;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -98,7 +99,14 @@ public class MainFragment extends BrowseSupportFragment {
     public void onActivityCreated(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate");
         super.onActivityCreated(savedInstanceState);
+        start();
+    }
 
+    public void start() {
+
+        if (isInitialized) {
+            return;
+        }
 
         setRetainInstance(true);
 
@@ -107,13 +115,18 @@ public class MainFragment extends BrowseSupportFragment {
         prepareBackgroundManager();
 
         setupUIElements();
-        if (!isInitialized) {
-            loadRows();
-            isInitialized = true;
-        }
 
+        loadRows();
 
         setupEventListeners();
+
+        isInitialized = true;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        start();
     }
 
     private void initializeThings() {
@@ -162,17 +175,18 @@ public class MainFragment extends BrowseSupportFragment {
                 try {
                     // it done in new thread
                     if (server instanceof OmarServer) {
-                        loadOmarServerHomepage(server);
-                    }else if (
+//                        loadOmarServerHomepage(server);
+                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
+                    } else if (
                             server instanceof OldAkwamServer ||
-                                    server instanceof CimaClubServer ||
-                                    server instanceof FaselHdController //||
+                                    server instanceof CimaClubServer //||
+//                                    server instanceof FaselHdController ||
 //                                    server instanceof AkwamServer ||
-//                                    server instanceof ArabSeedServer ||
+//                                    server instanceof ArabSeedServer //||
 //                                    server instanceof MyCimaServer
                     ) {
                         continue;
-                    }else if (server instanceof IptvServer) {
+                    } else if (server instanceof IptvServer) {
                         //load history rows first
                         loadHomepageHistoryRaws();
 
@@ -240,6 +254,10 @@ public class MainFragment extends BrowseSupportFragment {
                 final ArrayList<Movie> movies; // Declare as effectively final
                 if (moviesList == null && server != null) {
                     movies = server.getHomepageMovies();
+                    Movie sampleMovie = movies.get(0);
+                    if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
+                        server.updateDomain(sampleMovie.getVideoUrl(), dbHelper);
+                    }
                 } else {
                     movies = moviesList;
                 }
@@ -247,7 +265,7 @@ public class MainFragment extends BrowseSupportFragment {
                     @Override
                     public void run() {
                         // String newName = rowName + ("(" + finalMovieList.size() + ")");
-                        if (movies != null && adapter != null){
+                        if (movies != null && adapter != null) {
                             adapter.addAll(0, movies);
                         }
                     }
@@ -297,7 +315,7 @@ public class MainFragment extends BrowseSupportFragment {
 
 
 //        Movie mm = new Movie();
-//    //String url = "https://ui.cima4u.bio/category/%D8%A7%D9%81%D9%84%D8%A7%D9%85-%D8%A7%D8%AC%D9%86%D8%A8%D9%8A/";
+//    String url = "https://m.asd.quest/%d9%85%d8%b3%d9%84%d8%b3%d9%84-%d9%84%d8%b9%d8%a8%d8%a9-%d8%ad%d8%a8-%d8%a7%d9%84%d8%ad%d9%84%d9%82%d8%a9-39-%d8%a7%d9%84%d8%aa%d8%a7%d8%b3%d8%b9%d8%a9-%d9%88%d8%a7%d9%84%d8%ab%d9%84%d8%a7%d8%ab%d9%88/";
 //    //String url = "https://main4.ci4u.co/%d9%81%d9%8a%d9%84%d9%85-your-christmas-or-mine-2022-%d9%85%d8%aa%d8%b1%d8%ac%d9%85-%d8%a7%d9%88%d9%86-%d9%84%d8%a7%d9%8a%d9%86/?wat=1";
 ////    String url = "https://cimatube.cc/embed1/29f1d50ae92194ed586eb34c47a41945";
 ////    String url = "https://www.faselhd.express/video_player?uid=0&vid=863adbd5b09c0b764128cec2dcb1d84f&img=https://img.scdns.io/thumb/863adbd5b09c0b764128cec2dcb1d84f/large.jpg&nativePlayer=true";
@@ -305,7 +323,7 @@ public class MainFragment extends BrowseSupportFragment {
 //    String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
 //    String url = "https://www.google.com/search?sca_esv=792c36b2414f597c&sca_upv=1&sxsrf=ADLYWILq2GQVLfS6OtWBOZttfUz_gO2FpA:1716908543425&q=ss&uds=ADvngMgnp21tvUWATbVPNUHyrBahasC3_Xskxp-yVqIWaah14uWwZGyEs8SEQnojasvFy1klDAGiK1X000V1u8TMw8WbPd4mdOSf3Z-_WfznXIH3KMxOFX-WPTEBgiVxKEucOwT4nWYlEkxizOQdCtNhrw_D4bTD33sKjMmA9bKU2UEcPXFk20y77h4YYmxpfxmbKeQt9hRlNGWgX8Tf0bU6xIx3rtYCluTxCDf7XbrXNNJ2yGCiJpA&udm=2&prmd=ivnbz&sa=X&ved=2ahUKEwjIw97ezrCGAxW_A9sEHf-IDPkQtKgLegQIDRAB";
 //    mm.setVideoUrl(url);
-//    mm.setStudio(Movie.SERVER_MyCima);
+//    mm.setStudio(Movie.SERVER_ARAB_SEED);
 //    mm.setState(Movie.ITEM_STATE);
 //        Intent browse = new Intent(getActivity(), BrowserActivity.class);
 //         browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
@@ -386,13 +404,13 @@ public class MainFragment extends BrowseSupportFragment {
 
 //        searchResultIntent.putExtra("query", "الغريب");
 //        hhhhhhh     searchResultIntent.putExtra("query", "bab");
-        // setResult(Activity.RESULT_OK,returnIntent);
-        //  finish();
+            // setResult(Activity.RESULT_OK,returnIntent);
+            //  finish();
 
 
-        //hhhhhhh       Intent browse = new Intent(getActivity(), BrowserActivity.class);
-        //hhhhhhh browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
-        //hhhhhhh getActivity().startActivity(browse);
+            //hhhhhhh       Intent browse = new Intent(getActivity(), BrowserActivity.class);
+            //hhhhhhh browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
+            //hhhhhhh getActivity().startActivity(browse);
 
 //    Locale locale = new Locale("en");
 //    Locale.setDefault(locale);
@@ -402,17 +420,17 @@ public class MainFragment extends BrowseSupportFragment {
 //            getActivity().getBaseContext().getResources().getDisplayMetrics());
 
 
-        // dbHelper.cleanMovieList();
+            // dbHelper.cleanMovieList();
 
-        //  loadServerRow("شاهد", Shahid4uController.getInstance(getActivity()), "game of thrones" );
+            //  loadServerRow("شاهد", Shahid4uController.getInstance(getActivity()), "game of thrones" );
 
 
-        //            loadServerRow("أفلام",AkwamController.getInstance(getActivity()), "spider" );
-        //loadServerRow("ماي سيما", MyCimaController.getInstance(), "https://wecima.actor/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2023-series-ramadan-2023/list/" );
-        //loadServerRow("ماي سيما", MyCimaController.getInstance(), "https://mycima22.wecima.cam/seriestv/" );
+            //            loadServerRow("أفلام",AkwamController.getInstance(getActivity()), "spider" );
+            //loadServerRow("ماي سيما", MyCimaController.getInstance(), "https://wecima.actor/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2023-series-ramadan-2023/list/" );
+            //loadServerRow("ماي سيما", MyCimaController.getInstance(), "https://mycima22.wecima.cam/seriestv/" );
 //    loadServerRow("ماي سيما", MyCimaController.getInstance(), "https://mycima.uno/genre/%d9%83%d9%88%d9%85%d9%8a%d8%af%d9%8a%d8%a7-comedy/" );
-        // loadServerRow("سيمافوريو", Cima4uController.getInstance(getActivity()), "https://cima4u.mx/netflix/" );
-        //     loadServerRow("أفلام",new AkwamController(new ArrayObjectAdapter(new CardPresenter()), getActivity()), "https://akwam.co/movies" );
+            // loadServerRow("سيمافوريو", Cima4uController.getInstance(getActivity()), "https://cima4u.mx/netflix/" );
+            //     loadServerRow("أفلام",new AkwamController(new ArrayObjectAdapter(new CardPresenter()), getActivity()), "https://akwam.co/movies" );
 
 
 //    Movie mm = new Movie();
@@ -431,26 +449,26 @@ public class MainFragment extends BrowseSupportFragment {
 
 
 //hhhhhhh
-        //hhhhhhh       Movie mm = new Movie();
-        //hhhhhhh         mm.setStudio(Movie.SERVER_CIMA_CLUB);
-        //mm.setState(Movie.ITEM_STATE);
-        //hhhhhhh          mm.setState(Movie.BROWSER_STATE);
-        //hhhhhhh       mm.setTitle("test");
-        //hhhhhhh        mm.setCardImageUrl("www.google.com");
+            //hhhhhhh       Movie mm = new Movie();
+            //hhhhhhh         mm.setStudio(Movie.SERVER_CIMA_CLUB);
+            //mm.setState(Movie.ITEM_STATE);
+            //hhhhhhh          mm.setState(Movie.BROWSER_STATE);
+            //hhhhhhh       mm.setTitle("test");
+            //hhhhhhh        mm.setCardImageUrl("www.google.com");
 //        mm.setVideoUrl("https://tv.cima4u.mx/Video/Sonic+the+Hedgehog+2+2022-50604.html");
 //       // mm.setVideoUrl("https://www.faselhd.club/?p=194950");
-        // mm.setVideoUrl("https://ciima-clup.quest/c135");
-        //  mm.setVideoUrl("https://akwam.us/movie/9152/%D9%86%D8%A8%D9%8A%D9%84-%D8%A7%D9%84%D8%AC%D9%85%D9%8A%D9%84-%D8%A3%D8%AE%D8%B5%D8%A7%D8%A6%D9%8A-%D8%AA%D8%AC%D9%85%D9%8A%D9%84");
-        //hhhhhhh         mm.setVideoUrl("https://akwam.us/download/149205/9152/%D9%86%D8%A8%D9%8A%D9%84-%D8%A7%D9%84%D8%AC%D9%85%D9%8A%D9%84-%D8%A3%D8%AE%D8%B5%D8%A7%D8%A6%D9%8A-%D8%AA%D8%AC%D9%85%D9%8A%D9%84");
-        //      mm.setVideoUrl("#");
+            // mm.setVideoUrl("https://ciima-clup.quest/c135");
+            //  mm.setVideoUrl("https://akwam.us/movie/9152/%D9%86%D8%A8%D9%8A%D9%84-%D8%A7%D9%84%D8%AC%D9%85%D9%8A%D9%84-%D8%A3%D8%AE%D8%B5%D8%A7%D8%A6%D9%8A-%D8%AA%D8%AC%D9%85%D9%8A%D9%84");
+            //hhhhhhh         mm.setVideoUrl("https://akwam.us/download/149205/9152/%D9%86%D8%A8%D9%8A%D9%84-%D8%A7%D9%84%D8%AC%D9%85%D9%8A%D9%84-%D8%A3%D8%AE%D8%B5%D8%A7%D8%A6%D9%8A-%D8%AA%D8%AC%D9%85%D9%8A%D9%84");
+            //      mm.setVideoUrl("#");
 //hhh        mm.setVideoUrl("https://cimclllb.sbs/watch/مسلسل-the-wheel-of-time-الموسم-الثاني-الحلقة-5-الخامسة");
 //      //  mm.setVideoUrl("https://www.faselhd.ac/?s=sonic");
-        //mm.setVideoUrl("https://www.faselhd.club/seasons/%d9%85%d8%b3%d9%84%d8%b3%d9%84-sonic-prime");
+            //mm.setVideoUrl("https://www.faselhd.club/seasons/%d9%85%d8%b3%d9%84%d8%b3%d9%84-sonic-prime");
 
 ////        Log.d(TAG, "loadRows: cookie:"+CookieManager.getInstance().getCookie(mm.getVideoUrl()));
 
 
-        //hhhhhhh
+            //hhhhhhh
 
 //            Intent browse = new Intent(getActivity(), BBrowserActivity.class);
 //    browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
@@ -471,30 +489,30 @@ public class MainFragment extends BrowseSupportFragment {
 //        startActivity(in1);
 
 
-        // loadServerRow("سيماكلوب", CimaClubController.getInstance(getActivity()), "game of thrones" );
-        //     loadServerRow("ماي سيما", MyCimaController.getInstance(), "game of thrones" );
-        //    loadServerRow("كورة",new KooraLiveController(new ArrayObjectAdapter(new CardPresenter()), getActivity()), "https://www.yallashoote.com" );
-        //  loadServerRow("اكوام القديم", OldAkwamController.getInstance(getActivity()), "spider" );
-        //    loadServerRow("شاهد",Shahid4uController.getInstance( getActivity()), "https://shahed4u.vip/netflix/" );
-        //loadServerRow("شاهد",Shahid4uController.getInstance( getActivity()), "game of thrones" );
+            // loadServerRow("سيماكلوب", CimaClubController.getInstance(getActivity()), "game of thrones" );
+            //     loadServerRow("ماي سيما", MyCimaController.getInstance(), "game of thrones" );
+            //    loadServerRow("كورة",new KooraLiveController(new ArrayObjectAdapter(new CardPresenter()), getActivity()), "https://www.yallashoote.com" );
+            //  loadServerRow("اكوام القديم", OldAkwamController.getInstance(getActivity()), "spider" );
+            //    loadServerRow("شاهد",Shahid4uController.getInstance( getActivity()), "https://shahed4u.vip/netflix/" );
+            //loadServerRow("شاهد",Shahid4uController.getInstance( getActivity()), "game of thrones" );
 
 
-        //   HeaderItem faselHeader = new HeaderItem(ROWS_COUNTER++, "فاصل");
-        //   rowsAdapter.add(new ListRow(faselHeader, faselAdapter));
-        //kk  HeaderItem faselHeader = new HeaderItem(ROWS_COUNTER++, "فاصل");
-        //kk rowsAdapter.add(new ListRow(faselHeader, faselAdapter));
+            //   HeaderItem faselHeader = new HeaderItem(ROWS_COUNTER++, "فاصل");
+            //   rowsAdapter.add(new ListRow(faselHeader, faselAdapter));
+            //kk  HeaderItem faselHeader = new HeaderItem(ROWS_COUNTER++, "فاصل");
+            //kk rowsAdapter.add(new ListRow(faselHeader, faselAdapter));
 
 
-        // ArrayObjectAdapter  akwamRowsAdapter = new ArrayObjectAdapter(new CardPresenter());
-        //ControllableServer akwamS = ;
+            // ArrayObjectAdapter  akwamRowsAdapter = new ArrayObjectAdapter(new CardPresenter());
+            //ControllableServer akwamS = ;
 
 
-        //  HeaderItem header = new HeaderItem(0, "rowName");
-        //increase row counter location
-        //ROWS_COUNTER++;
-        //add header name and position of the row
-        // rowsAdapter.add(new ListRow(header, akwamRowsAdapter));
-        // rowsAdapter.notifyArrayItemRangeChanged(0, rowsAdapter.size());
+            //  HeaderItem header = new HeaderItem(0, "rowName");
+            //increase row counter location
+            //ROWS_COUNTER++;
+            //add header name and position of the row
+            // rowsAdapter.add(new ListRow(header, akwamRowsAdapter));
+            // rowsAdapter.notifyArrayItemRangeChanged(0, rowsAdapter.size());
 
 
 //
@@ -502,7 +520,7 @@ public class MainFragment extends BrowseSupportFragment {
 //    executor.submit(() -> {
 //
 //
-});
+        });
 
         executor.shutdown();
 
@@ -673,12 +691,17 @@ public class MainFragment extends BrowseSupportFragment {
 
     private void prepareBackgroundManager() {
 
-        mBackgroundManager = BackgroundManager.getInstance(getActivity());
-        mBackgroundManager.attach(getActivity().getWindow());
+        Activity currentActivity = getActivity();
+         Context context = getContext();
+        if (currentActivity == null || context == null){
+            return;
+        }
+        mBackgroundManager = BackgroundManager.getInstance(currentActivity);
+        mBackgroundManager.attach(currentActivity.getWindow());
 
-        mDefaultBackground = ContextCompat.getDrawable(getContext(), R.drawable.default_background);
+        mDefaultBackground = ContextCompat.getDrawable(context, R.drawable.default_background);
         mMetrics = new DisplayMetrics();
-        getActivity().getWindowManager().getDefaultDisplay().getMetrics(mMetrics);
+        currentActivity.getWindowManager().getDefaultDisplay().getMetrics(mMetrics);
     }
 
     private void setupUIElements() {
@@ -712,6 +735,10 @@ public class MainFragment extends BrowseSupportFragment {
     private void updateBackground(String uri) {
         int width = mMetrics.widthPixels;
         int height = mMetrics.heightPixels;
+        if (getActivity() == null){
+            return;
+        }
+
         Glide.with(getActivity())
                 .load(uri)
                 .centerCrop()
@@ -720,6 +747,10 @@ public class MainFragment extends BrowseSupportFragment {
                     @Override
                     public void onResourceReady(@NonNull Drawable drawable,
                                                 @Nullable Transition<? super Drawable> transition) {
+                        if (mBackgroundManager == null){
+                            return;
+                        }
+
                         mBackgroundManager.setDrawable(drawable);
                     }
                 });

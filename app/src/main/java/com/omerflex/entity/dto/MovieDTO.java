@@ -1,14 +1,12 @@
 package com.omerflex.entity.dto;
 
 import java.util.List;
-import java.util.Locale;
 
 public class MovieDTO {
+    public String type;
     public int id;
-    public int webId;
     public String title;
     public String description;
-    public int state;
     public String cardImage;
     public String backgroundImage;
     public String rate;
@@ -18,13 +16,9 @@ public class MovieDTO {
     public String createdAt;
 
     public String updatedAt;
+    public LinkDTO link;
 
-//    public List<SourceDTO> sources;
-    public int mainMovieId;
-    public int mainMovieUrl;
-    public List<MovieDTO> subMovies;
-    public String videoUrl;
-    public String serverUrl;
+    //    public List<SourceDTO> sources;
     public List<CategoryDTO> categories;
     //  public Collection categories;
 
@@ -32,12 +26,11 @@ public class MovieDTO {
     @Override
     public String toString() {
         return "MovieDTO{" +
+                "type=" + type +
                 "id=" + id +
                 ", title='" + title + '\'' +
-                ", serverUrl='" + serverUrl + '\'' +
                 ", categories='" + categories + '\'' +
                 ", description='" + description + '\'' +
-                ", state=" + state +
                 ", cardImage='" + cardImage + '\'' +
                 ", backgroundImage='" + backgroundImage + '\'' +
                 ", rate='" + rate + '\'' +
@@ -46,10 +39,7 @@ public class MovieDTO {
                 ", createdAt='" + createdAt + '\'' +
                 ", updatedAt='" + updatedAt + '\'' +
 //                ", sources=" + sources +
-                ", mainMovieId=" + mainMovieId +
-                ", mainMovieUrl=" + mainMovieUrl +
-                ", subMovies=" + subMovies +
-                ", videoUrl='" + videoUrl + '\'' +
+                ", link =" + link.url +
                 '}';
     }
 }

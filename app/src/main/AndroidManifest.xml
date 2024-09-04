@@ -25,6 +25,7 @@
         android:theme="@style/Theme.OmarFlex">
         <activity
             android:name=".view.MainActivity"
+            android:launchMode="singleTop"
             android:banner="@drawable/app_icon_your_company"
             android:exported="true"
             android:icon="@drawable/app_icon_your_company"
@@ -36,6 +37,7 @@
 
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+
         </activity>
         <activity android:name=".view.mobile.MobileWelcomeActivity" android:screenOrientation="landscape" android:exported="true">
             <intent-filter>
@@ -76,6 +78,7 @@
             android:theme="@style/Theme.AppCompat" />
         <activity
             android:name=".view.SearchResultActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="landscape" />
         <activity
             android:name=".view.ExoplayerMediaPlayer"

@@ -15,10 +15,12 @@ import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -500,17 +502,19 @@ public class ArabSeedServer extends AbstractServer {
 
     private Movie fetchServers(Movie movie, String referer) {
         Log.d(TAG, "fetchServers run-1: " + movie.getVideoUrl());
-        Document doc = getRequestDoc(movie.getVideoUrl());
-//            doc = Jsoup.connect(movie.getVideoUrl())
-//                    .header("referer", referer)
-//                    .userAgent("Android 8")
-//                    .followRedirects(true)
-//                    .ignoreHttpErrors(true)
-//                    .timeout(0)
-//                    .ignoreContentType(true)
-//                    .get();
+        Document doc = null;
+//        Document doc = getRequestDoc(movie.getVideoUrl());
+        try {
+            doc = Jsoup.connect(movie.getVideoUrl())
+                    .header("referer", referer)
+                    .userAgent("Android 8")
+                    .followRedirects(true)
+                    .ignoreHttpErrors(true)
+                    .timeout(0)
+                    .ignoreContentType(true)
+                    .get();
 
-            Elements serverElems = doc.getElementsByClass("containerServers");
+        Elements serverElems = doc.getElementsByClass("containerServers");
 
             if (serverElems.size() == 0){
                 Movie clonedMovie = Movie.clone(movie);
@@ -573,6 +577,11 @@ public class ArabSeedServer extends AbstractServer {
 
                 break;
             }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
 
         return movie;
     }

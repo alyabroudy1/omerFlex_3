@@ -14,6 +14,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.dto.CategoryDTO;
+import com.omerflex.entity.dto.LinkDTO;
 import com.omerflex.entity.dto.MovieDTO;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
@@ -35,7 +36,16 @@ import okhttp3.Response;
 public class OmarServer extends AbstractServer {
 
     static String TAG = "Omar";
+    public static final  String TYPE_SERIES = "Series";
+    public static final  String TYPE_SEASON = "Season";
+    public static final  String TYPE_EPISODE = "Episode";
+    public static final  String TYPE_FILM = "Film";
 
+    public static final  String LINK_STATE_FETCH = "Fetch";
+    public static final  String LINK_STATE_BROWSE = "Browse";
+    public static final  String LINK_STATE_VIDEO = "Video";
+
+    public static final  String FETCH_URL = "/fetch/";
     Activity activity;
 
     Fragment fragment;
@@ -66,7 +76,7 @@ public class OmarServer extends AbstractServer {
         Log.d(TAG, "search: " + query);
         String url = query;
         if (!query.contains("http")){
-            url = getConfig().getUrl() + "/search/" + query;
+            url = getSearchUrl(query);
         }
         Log.d(TAG, "search: " + url);
 
@@ -79,6 +89,7 @@ public class OmarServer extends AbstractServer {
         try (Response response = client.newCall(request).execute()) {
             if (response.isSuccessful()) {
                 try {
+                    Log.d(TAG, "search: isSuccessful");
                     String body = response.body().string();
 
                     Gson gson = new Gson();
@@ -96,15 +107,16 @@ public class OmarServer extends AbstractServer {
                         movieList.add(movie);
                     }
                 } catch (JsonSyntaxException e) {
-                    e.printStackTrace();
+//                    e.printStackTrace();
                     Log.d(TAG, "search: error parsing json:" + e.getMessage());
                 }
 
             }
         } catch (IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             Log.d(TAG, "search: error:" + e.getMessage());
         }
+        Log.d(TAG, "search: movieList: "+movieList.toString());
         return movieList;
     }
 
@@ -115,7 +127,7 @@ public class OmarServer extends AbstractServer {
 
     @Override
     protected String getSearchUrl(String query) {
-        return null;
+        return getConfig().getUrl() + "/search/";
     }
 
     @NonNull
@@ -126,18 +138,49 @@ public class OmarServer extends AbstractServer {
 
         String image = movieDTO.cardImage;
         String bgImage = movieDTO.backgroundImage;
-        String serverAddress = movieDTO.serverUrl;
+        LinkDTO linkDTO = movieDTO.link;
+        String serverAddress = linkDTO.authority;
+//        String serverAddress = movieDTO.serverUrl;
         if (!image.startsWith("http")){
-//            String serverAddress = movieDTO.sources.get(0).server.webAddress;
             image = serverAddress + image;
             bgImage = serverAddress + bgImage;
         }
+
+        String type = movieDTO.type;
+        int movieState = Movie.GROUP_OF_GROUP_STATE;
+        if (type.equals(TYPE_SEASON)) {
+            movieState = Movie.GROUP_STATE;
+        } else {
+            movieState = Movie.ITEM_STATE;
+        }
+
+        String stateString = linkDTO.state;
+        int linkState = Movie.VIDEO_STATE;
+        if (stateString.equals(LINK_STATE_FETCH)) {
+            linkState = Movie.RESOLUTION_STATE;
+        } else {
+            linkState = Movie.BROWSER_STATE;
+        }
+
+
+
+//        if (linkDTO.url.startsWith("http")){
+//            movie.setVideoUrl(linkDTO.url);
+//        }else {
+//            movie.setVideoUrl(linkDTO.server.authority + linkDTO.url);
+//        }
+            movie.setVideoUrl(getConfig().getUrl() + FETCH_URL +movieDTO.id);
+
+
+        //state
+            movie.setState(movieState);
+
         movie.setCardImageUrl(image);
         movie.setBackgroundImageUrl(bgImage);
         movie.setStudio(Movie.SERVER_OMAR);
-        movie.setState(movieDTO.state);
+//        movie.setState(movieDTO.state);
         movie.setRate(movieDTO.rate);
-        movie.setVideoUrl(movieDTO.videoUrl);
+
         movie.setId(movieDTO.id);
         for (CategoryDTO categorydto: movieDTO.categories) {
             movie.addCategory(categorydto.name);
@@ -272,9 +315,9 @@ public class OmarServer extends AbstractServer {
                     ArrayList<MovieDTO> movies = gson.fromJson(body, listType);
 
                     for (MovieDTO movieDTO : movies) {
-                       if (movieDTO.subMovies == null || movieDTO.subMovies.size() == 0) {
-                            continue;
-                        }
+//                       if (movieDTO.subMovies == null || movieDTO.subMovies.size() == 0) {
+//                            continue;
+//                        }
                         Log.d(TAG, "fetchGroup: end 1:");
                         ArrayList<Movie> sublist = generateSubMovieList(movieDTO, movie);
                         Log.d(TAG, "fetchGroup: end 2:" + sublist);
@@ -297,43 +340,53 @@ public class OmarServer extends AbstractServer {
     private ArrayList<Movie> generateSubMovieList(MovieDTO movieDTO, Movie mainMovie) {
         ArrayList<Movie> sublist = new ArrayList<>();
         Log.d(TAG, "generateSubMovieList: 1");
-        for (MovieDTO subMovieDTO : movieDTO.subMovies) {
-                try {
-                    Movie subMovie = generateMovieObject(subMovieDTO);
-                    Log.d(TAG, "generateSubMovieList: 3: " + subMovie);
-                    subMovie.setMainMovie(mainMovie);
-                    sublist.add(subMovie);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.d(TAG, "search: error parsing json:" + e.getMessage());
-                }
-        }
-        return sublist;
-    }
-
-    @NonNull
-    private static ArrayList<Movie> generateSubSourceList(MovieDTO movieDTO, Movie mainMovie) {
-        ArrayList<Movie> sublist = new ArrayList<>();
-//        Log.d(TAG, "generateSubSourceList: 1");
 //                try {
-//                    Movie sourceMovie = Movie.clone(mainMovie);
-//                    sourceMovie.setId(sourceDTO.id);
-//                    sourceMovie.setTitle(sourceDTO.title);
-//                    sourceMovie.setVideoUrl(sourceDTO.vidoUrl);
-//                    sourceMovie.setState(sourceDTO.state);
-//
-//                    sourceMovie.setMainMovie(mainMovie);
-//                    sublist.add(sourceMovie);
+//                    Movie subMovie = generateMovieObject(subMovieDTO);
+//                    Log.d(TAG, "generateSubMovieList: 3: " + subMovie);
+//                    subMovie.setMainMovie(mainMovie);
+//                    sublist.add(subMovie);
 //                } catch (Exception e) {
 //                    e.printStackTrace();
 //                    Log.d(TAG, "search: error parsing json:" + e.getMessage());
 //                }
+
         return sublist;
+    }
+
+    @NonNull
+    private static Movie generateResolutionlinks(LinkDTO linkDTO, Movie mainMovie) {
+        Log.d(TAG, "generateSubSourceList: 1");
+        Movie sourceMovie = Movie.clone(mainMovie);
+        try {
+                    sourceMovie.setId(linkDTO.id);
+                    sourceMovie.setTitle(linkDTO.title);
+
+
+                    String stateString = linkDTO.state;
+                    int linkState = Movie.VIDEO_STATE;
+                    if (stateString.equals(LINK_STATE_FETCH)) {
+                        linkState = Movie.RESOLUTION_STATE;
+                    } else {
+                        linkState = Movie.BROWSER_STATE;
+                    }
+                    sourceMovie.setState(linkState);
+
+                    if (linkDTO.url.startsWith("http")) {
+                        sourceMovie.setVideoUrl(linkDTO.url);
+                    } else {
+                        sourceMovie.setVideoUrl(linkDTO.server.authority + linkDTO.url);
+                    }
+                    sourceMovie.setMainMovie(mainMovie);
+                } catch (Exception e) {
+                    Log.d(TAG, "search: error parsing json:" + e.getMessage());
+                }
+        Log.d(TAG, "generateResolutionlinks: Link: "+ sourceMovie);
+        return sourceMovie;
     }
 
     @Override
     public Movie fetchItem(Movie movie) {
-        String url = getConfig().getUrl() + "/fetch/" + movie.getId();
+        String url = getConfig().getUrl() + FETCH_URL+ movie.getId();
         // String url = movie.getVideoUrl();
         Log.d(TAG, "fetchItem: " + url);
         OkHttpClient client = new OkHttpClient();
@@ -346,23 +399,25 @@ public class OmarServer extends AbstractServer {
                     String body = response.body().string();
 
                     Gson gson = new Gson();
-                    Type listType = new TypeToken<ArrayList<MovieDTO>>() {
+                    Type listType = new TypeToken<ArrayList<LinkDTO>>() {
                     }.getType();
-                    ArrayList<MovieDTO> movies = gson.fromJson(body, listType);
+                    ArrayList<LinkDTO> movies = gson.fromJson(body, listType);
+//                    Log.d(TAG, "fetchItem: movies: "+ movies);
+                    if (movie.getSubList() == null){
+                        movie.setSubList(new ArrayList<>());
+                    }
 
-                    for (MovieDTO movieDTO : movies) {
+                    for (LinkDTO linkDTO : movies) {
                         Log.d(TAG, "fetchGroup: end 1:");
-                        ArrayList<Movie> sublist = generateSubMovieList(movieDTO, movie);
-                        Log.d(TAG, "fetchGroup: end 2:" + sublist);
-                        movie.setSubList(sublist);
+                        Movie resoLink = generateResolutionlinks(linkDTO, movie);
+
+                        movie.addSubList(resoLink);
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
                     Log.d(TAG, "search: error parsing json:" + e.getMessage());
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
             Log.d(TAG, "fetchItem: error:" + e.getMessage());
         }
         return movie;

@@ -405,7 +405,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
         long insertResult = db.insert(IptvTable.TABLE_NAME, null, cv);
 
-        Log.d("TAG", "saveMovie Result: " + insertResult);
+//        Log.d("TAG", "saveMovie Result: " + insertResult);
         return true;
     }
 
@@ -433,7 +433,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
             long insertResult = db.insert(MoviesTable.TABLE_NAME, null, cv);
 
-            Log.d("TAG", "saveMovie Result: " + insertResult);
+//            Log.d("TAG", "saveMovie Result: " + insertResult);
             //    arrayObjectAdapter.add(movie);
             //    arrayObjectAdapter.notifyArrayItemRangeChanged(0, arrayObjectAdapter.size());
             //Log.d("TAG", "addMovieToHistory: "+ historyDesc);
@@ -443,7 +443,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
     public boolean updateMovie(Movie movie, String oldLink, boolean onlyTime) {
         db = getWritableDatabase();
-        Log.d("TAG", "search: dbHe" + db.toString());
+//        Log.d("TAG", "search: dbHe" + db.toString());
 
         ContentValues cv = new ContentValues();
         if (movie.getStudio().equals(Movie.SERVER_IPTV)) {
@@ -472,7 +472,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
 
         long updateResult = db.update(MoviesTable.TABLE_NAME, cv, selection, selectionArgs);
-        Log.d("TAG", "updateMovie result:" + updateResult);
+//        Log.d("TAG", "updateMovie result:" + updateResult);
         //    arrayObjectAdapter.add(movie);
         //    arrayObjectAdapter.notifyArrayItemRangeChanged(0, arrayObjectAdapter.size());
         //Log.d("TAG", "addMovieToHistory: "+ historyDesc);

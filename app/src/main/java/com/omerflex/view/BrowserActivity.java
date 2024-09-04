@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,6 +19,7 @@ import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
+import android.webkit.MimeTypeMap;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -182,7 +184,7 @@ public class BrowserActivity extends AppCompatActivity {
         if (
                 movie.getState() == Movie.ITEM_STATE ||
                         movie.getState() == Movie.RESOLUTION_STATE
-                || movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE
+                        || movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE
         ) {
             webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         }
@@ -282,17 +284,17 @@ public class BrowserActivity extends AppCompatActivity {
 
                 Log.d(TAG, "browser: map:" + map.toString() + ", url:" + url);
                 webView.loadUrl(url, map);
-//            }else if (url.contains("|")) {
-//                Map<String, String> map = parseParamsToMap(movie.getVideoUrl());
-//                url = url.substring(0, url.indexOf("|"));
-//
-//                Log.d(TAG, "browser: map:" + map.toString() + ", url:" + url);
-//                if (map != null){
-//                    webView.loadUrl(url, map);
-//                }else {
-//                    webView.loadUrl(url);
-//                }
-            }else {
+            }else if (url.contains("|")) {
+                Map<String, String> map = parseParamsToMap(movie.getVideoUrl());
+                url = url.substring(0, url.indexOf("|"));
+
+                Log.d(TAG, "browser: map:" + map.toString() + ", url:" + url);
+                if (map != null){
+                    webView.loadUrl(url, map);
+                }else {
+                    webView.loadUrl(url);
+                }
+            } else {
                 Log.d(TAG, "onCreate: url:" + url);
                 webView.loadUrl(url);
             }
@@ -812,11 +814,11 @@ public class BrowserActivity extends AppCompatActivity {
             // parse the JSON string to get the element
             // Element element = Json.parse(elementJson);
 //            if (elementJson.startsWith("<html>")){
-            if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE){
-                Log.d(TAG, "myMethod: html contents: "+ elementJson);
+            if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) {
+                Log.d(TAG, "myMethod: html contents: " + elementJson);
                 server.handleJSWebResult(activity, movie, elementJson);
                 return;
-            }else if (elementJson.equals("click")) {
+            } else if (elementJson.equals("click")) {
 //                mouseArrow.setX(screenHeight / 2);
 //                mouseArrow.setY(screenWidth / 2);
 //                simulateMouseClick(webView, screenHeight / 2, screenWidth / 2);
@@ -834,8 +836,7 @@ public class BrowserActivity extends AppCompatActivity {
                     }
                 });
 
-            } else
-            {
+            } else {
                 Log.d(TAG, "myMethod:else ");
                 if (movie.getState() == Movie.COOKIE_STATE) {
                     Intent intent = new Intent();
@@ -874,8 +875,7 @@ public class BrowserActivity extends AppCompatActivity {
                     dbHelper.saveHeadersAndCookies(server, movie.getStudio());
 
                     finish();
-                }
-                else {
+                } else {
                     Movie resultMovie = null;
                     if (
                             movie.getStudio().equals(Movie.SERVER_AKWAM) ||
@@ -1102,10 +1102,85 @@ public class BrowserActivity extends AppCompatActivity {
             super.onReceivedSslError(view, handler, error);
         }
 
+        private boolean isSupportedMedia(WebResourceRequest request) {
+            String mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(MimeTypeMap.getFileExtensionFromUrl(request.getUrl().toString()));
+            String acceptEncoding = request.getRequestHeaders().get("Accept-Encoding");
+            boolean isAcceptEncoding = acceptEncoding != null && acceptEncoding.contains("identity;q=1");
+            if (isAcceptEncoding) {
+                Log.d(TAG, "isSupportedMedia: isAcceptEncoding: " + acceptEncoding);
+                return true;
+            }
+            if (mimeType != null) {
+//                Log.d(TAG, "isSupportedMedia: mimeType: "+mimeType);
+                if (mimeType.startsWith("video") || mimeType.startsWith("audio")) {
+                    Log.d(TAG, "isSupportedMedia: mimeType: " + mimeType);
+                    return true;
+                }  // Check for video mimetypes
+            }
+
+            return false;
+        }
+
         @Nullable
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-//            Log.d(TAG, "shouldInterceptRequest: "+request.getUrl());
+            Log.d(TAG, "shouldInterceptRequest: " + request.getUrl());
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                Log.d(TAG, "shouldInterceptRequest: isRedirect: "+request.isRedirect());
+//            }
+//            Map<String, String> headers = request.getRequestHeaders();
+            Log.d(TAG, "shouldInterceptRequest: headers:" + request.getRequestHeaders().toString());
+//            String oriReferer = headers.get("Referer");
+//            if (oriReferer == null && request.getUrl().toString().contains("gamezone")){
+//                Log.d(TAG, "shouldInterceptRequest: no referer");
+//                headers.put("Referer", "https://m.asd.quest/");
+//                request.getRequestHeaders().put("Referer", "https://m.asd.quest/");
+//                Log.d(TAG, "shouldInterceptRequest: headers:" + request.getRequestHeaders().toString());
+//
+//            }
+
+            boolean isSupportedState = movie.getState() == Movie.RESOLUTION_STATE || movie.getState() == Movie.BROWSER_STATE;
+            if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)){
+                isSupportedState = movie.getState() == Movie.RESOLUTION_STATE;
+            }
+            if (isSupportedState && isSupportedMedia(request)) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        webView.stopLoading();
+                    }
+                });
+//                Intent returnIntent = new Intent(activity, ExoplayerMediaPlayer.class);
+                Movie mm = Movie.clone(movie);
+                mm.setState(Movie.VIDEO_STATE);
+                mm.setVideoUrl(request.getUrl().toString() + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
+                Log.d(TAG, "shouldInterceptRequest: video: " + mm.getVideoUrl());
+
+//                //movie.setFetch(0); //tell next activity not to fetch movie on start
+//                returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
+//                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
+//                activity.startActivity(returnIntent);
+//                Intent intent = new Intent(activity, ExoplayerMediaPlayer.class);
+//                intent.putExtra(DetailsActivity.MOVIE, (Serializable) mov);
+//                Objects.requireNonNull(activity).startActivity(intent);
+//  hiiiier             String type = "video/*"; // It works for all video application
+//                Uri uri = Uri.parse(mm.getVideoUrl());
+//                Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
+//                in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+//                //  in1.setPackage("org.videolan.vlc");
+//                in1.setDataAndType(uri, type);
+//                // movie.getMainMovie().save(dbHelper);
+//
+//                activity.startActivity(in1);
+                Intent returnIntent = new Intent();
+                returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
+                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
+                setResult(Activity.RESULT_OK, returnIntent);
+                finish();
+                return super.shouldInterceptRequest(view, request);
+//                activity.finish();
+            }
+
             server.shouldInterceptRequest(view, request, dbHelper);
 //            testCookie(view, request);
             if (
@@ -1124,7 +1199,6 @@ public class BrowserActivity extends AppCompatActivity {
                 headers = request.getRequestHeaders();
 
 
-
                 if (!cookieFound && request.getRequestHeaders() != null && request.getRequestHeaders().containsKey("Referer")) {
                     String referer = request.getRequestHeaders().get("Referer");
                     String validReferer = Util.getValidReferer(referer);
@@ -1140,7 +1214,7 @@ public class BrowserActivity extends AppCompatActivity {
                         server.setCookies(cookie);
 
                         cookieFound = true;
-                        Log.d(TAG, "shouldInterceptRequest: response: headers:" + request.getRequestHeaders().toString());
+//                        Log.d(TAG, "shouldInterceptRequest: response: headers:" + request.getRequestHeaders().toString());
                         //  setResult(RESULT_OK);
                         //finish();
                         // }
@@ -1174,21 +1248,24 @@ public class BrowserActivity extends AppCompatActivity {
             String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
 
 
-
             if (newUrl.contains("intent:/")) {
                 return true;
             }
 
 //            Log.d(TAG, "shouldOverrideUrlLoading: contains config url : "+ newUrl.contains(server.getConfig().url) + ", "+server.getConfig().url);
             if (server.getConfig() != null) {
-                if (url.contains(server.getConfig().getUrl())){
+                if (url.contains(server.getConfig().getUrl())) {
                     return false;
                 }
-                Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: "+server.getConfig().getUrl() + ", u: " +url);
+                Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: " + server.getConfig().getUrl() + ", u: " + url);
             }
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
-                if (url.contains("/e/")){
-                    Log.d(TAG, "shouldOverrideUrlLoading:0b false: "+url);
+                if (url.contains("/e/")) {
+                    Log.d(TAG, "shouldOverrideUrlLoading:0b false: " + url);
+                    return false;
+                }
+                if (newUrl.contains("gameland")) {
+                    Log.d(TAG, "shouldOverrideUrlLoading:0c false: " + url);
                     return false;
                 }
             }
@@ -1199,7 +1276,7 @@ public class BrowserActivity extends AppCompatActivity {
                 if (url.contains("embed")) {
 //                if (url.contains("embed") || sameSite) {
                     view.loadUrl(url);
-                    Log.d(TAG, "shouldOverrideUrlLoading:1 false: "+url);
+                    Log.d(TAG, "shouldOverrideUrlLoading:1 false: " + url);
                     return false;
                 }
                 if (!hideRedirectBar && !movie.getStudio().equals(Movie.SERVER_AKWAM)) {
@@ -1213,10 +1290,9 @@ public class BrowserActivity extends AppCompatActivity {
                     };
                     autoHideHandler.postDelayed(autoHideRunnable, 7000);
                 }
-                Log.d(TAG, "shouldOverrideUrlLoading:2 true: "+url);
+                Log.d(TAG, "shouldOverrideUrlLoading:2 true: " + url);
                 return true;
             }
-
 
 
             if (
@@ -1240,13 +1316,13 @@ public class BrowserActivity extends AppCompatActivity {
                 returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
                 returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, jsonMovie);
                 activity.startActivity(returnIntent);
-                Log.d(TAG, "shouldOverrideUrlLoading:3 true: "+url);
+                Log.d(TAG, "shouldOverrideUrlLoading:3 true: " + url);
                 activity.finish();
                 return true;
             }
 
             if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false, false))) {
-                Log.d(TAG, "shouldOverrideUrlLoading:4 false: "+url);
+                Log.d(TAG, "shouldOverrideUrlLoading:4 false: " + url);
                 view.loadUrl(url);
                 return false;
             }
@@ -1256,7 +1332,7 @@ public class BrowserActivity extends AppCompatActivity {
                 if (url.startsWith("##")) {
                     url = url.replace("##", "");
                 }
-                Log.d(TAG, "shouldOverrideUrlLoading:5 false: "+url);
+                Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
                 view.loadUrl(url);
                 return true;
                 //  CURRENT_WEB_NAME = getWebName(url);
@@ -1275,7 +1351,7 @@ public class BrowserActivity extends AppCompatActivity {
                 };
                 autoHideHandler.postDelayed(autoHideRunnable, 7000);
             }
-            Log.d(TAG, "shouldOverrideUrlLoading:6 true: "+url);
+            Log.d(TAG, "shouldOverrideUrlLoading:6 true: " + url);
             //########
             return true;
             // }
@@ -1284,7 +1360,7 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             super.onPageStarted(view, url, favicon);
-                Log.d(TAG, "onPageStarted: " + url);
+            Log.d(TAG, "onPageStarted: " + url);
             BrowserActivity.EXECUTE_JS = true;
             BrowserActivity.RESULT_COUNTER = 0;
             //executedJS = false;
@@ -1342,7 +1418,7 @@ public class BrowserActivity extends AppCompatActivity {
             //if (webView.getProgress() == 100 && (movie.getState() == Movie.ITEM_STATE || movie.getState() == Movie.RESOLUTION_STATE )){
 //            Log.d(TAG, "onLoadResource: " + webView.getProgress() + ", " + RESULT_COUNTER + ", " + url);
             if (BrowserActivity.RESULT_COUNTER < 2 && webView.getProgress() == 100) {
-                Log.d(TAG, "onLoadResource: loaded");
+//                Log.d(TAG, "onLoadResource: loaded");
                 BrowserActivity.RESULT_COUNTER++;
                 //hhhhhh view.evaluateJavascript(getScript(WEB_VIEW_MODE_ON_LOAD_RESOURCES), null);
                 String script = server.getWebScript(WEB_VIEW_MODE_ON_LOAD_RESOURCES, movie);
@@ -1353,20 +1429,20 @@ public class BrowserActivity extends AppCompatActivity {
             }
 
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
-                if ( !movie.getVideoUrl().contains("vidmoly") &&
+                if (!movie.getVideoUrl().contains("vidmoly") &&
                         movie.getState() == Movie.RESOLUTION_STATE
                 ) {
                     //todo fix cleanweb
                     if (
                             movie.getVideoUrl().contains("voe.sx") ||
-                            movie.getVideoUrl().contains("brucevotewithin")
-                    ){
+                                    movie.getVideoUrl().contains("brucevotewithin")
+                    ) {
 
-                    }else {
+                    } else {
                         cleanWebPage(view);
                     }
                 }
-            }else {
+            } else {
                 if (movie.getState() == Movie.RESOLUTION_STATE || movie.getState() == Movie.BROWSER_STATE) {
                     cleanWebPage(view);
                 }
@@ -1389,7 +1465,7 @@ public class BrowserActivity extends AppCompatActivity {
                 if (!movie.getStudio().equals(Movie.SERVER_FASELHD)) {
                     //convert headers to string
                     String headerString = "";
-                    if (headers != null && headers.size() > 0){
+                    if (headers != null && headers.size() > 0) {
                         try {
                             StringBuilder sb = new StringBuilder();
                             for (Map.Entry<String, String> entry : headers.entrySet()) {
@@ -1409,9 +1485,9 @@ public class BrowserActivity extends AppCompatActivity {
                         }
                     }
 
-                    if (!headerString.equals("")){
+                    if (!headerString.equals("")) {
                         newUrl = url + "|" + headerString;
-                    }else {
+                    } else {
                         newUrl = url;
                     }
                     // newUrl =url+"|Referer=https://vidshar.org/";
@@ -1509,7 +1585,7 @@ public class BrowserActivity extends AppCompatActivity {
         String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
 
         String cookieTest = CookieManager.getInstance().getCookie("https://wecima.show/");
-        if (cookieTest != null){
+        if (cookieTest != null) {
             //                String url = "https://www.faselhd.link/account/login";
             Connection connection = Jsoup.connect(url);//.sslSocketFactory(getSSLSocketFactory());
             connection.ignoreHttpErrors(true);
@@ -1521,15 +1597,15 @@ public class BrowserActivity extends AppCompatActivity {
             try {
                 doc = connection.get();
                 String title = doc.title();
-                Log.d(TAG, "testCookie shouldInterceptRequest: cookie test title:"+title);
-                if (!title.contains("moment")){
-                    Log.d(TAG, "testCookie shouldInterceptRequest: success headers:"+request.getRequestHeaders().toString());
-                    Log.d(TAG, "testCookie shouldInterceptRequest: success cookies:"+cookieTest);
+//                Log.d(TAG, "testCookie shouldInterceptRequest: cookie test title:" + title);
+                if (!title.contains("moment")) {
+                    Log.d(TAG, "testCookie shouldInterceptRequest: success headers:" + request.getRequestHeaders().toString());
+                    Log.d(TAG, "testCookie shouldInterceptRequest: success cookies:" + cookieTest);
                 }
             } catch (IOException e) {
 //            throw new RuntimeException(e);
                 //Document doc = Jsoup.parse(htmlContent);
-                Log.d(TAG, "testCookie: error: "+e.getMessage());
+                Log.d(TAG, "testCookie: error: " + e.getMessage());
 
             }
         }

@@ -50,14 +50,23 @@ import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import okhttp3.Headers;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 /*
  * LeanbackDetailsFragment extends DetailsFragment, a Wrapper fragment for leanback details screens.
@@ -100,6 +109,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
     DetailsOverviewRow row;
     Fragment fragment = this;
+    private boolean isInitialized = false;
 
     // ********
 
@@ -107,10 +117,26 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     public void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate DetailsFragment");
         super.onCreate(savedInstanceState);
-        setRetainInstance(true);
+        start();
+    }
 
-        mSelectedMovie = (Movie) Objects.requireNonNull(getActivity()).getIntent().getSerializableExtra(DetailsActivity.MOVIE);
-        Movie mSelectedMovieMainMovie = (Movie) Objects.requireNonNull(getActivity()).getIntent().getSerializableExtra(DetailsActivity.MAIN_MOVIE);
+    public void start() {
+        if (isInitialized) {
+            return;
+        }
+        setRetainInstance(true);
+        Activity currentActivity = getActivity();
+        if (currentActivity == null) {
+            return;
+        }
+        Intent currentIntent = currentActivity.getIntent();
+
+        if (currentIntent == null) {
+            return;
+        }
+
+        mSelectedMovie = (Movie) currentIntent.getSerializableExtra(DetailsActivity.MOVIE);
+        Movie mSelectedMovieMainMovie = (Movie) currentIntent.getSerializableExtra(DetailsActivity.MAIN_MOVIE);
 
         if (mSelectedMovie != null) {
             mSelectedMovie.setMainMovie(mSelectedMovieMainMovie);
@@ -120,15 +146,15 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             if (mSelectedMovie.getMovieHistory() == null && mSelectedMovie.getMainMovie() != null) {
                 mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mSelectedMovie.getMainMovie().getVideoUrl())));
             }
-
-
-
             setupRowsAndServer();
         } else {
             Intent intent = new Intent(getActivity(), MainActivity.class);
             startActivity(intent);
         }
+
+        isInitialized = true;
     }
+
 
     @Override
     public void onStart() {
@@ -136,6 +162,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         //fetch server and load description and bg image
 //        server = ServerManager.determineServer(mSelectedMovie, listRowAdapter, getActivity(), this);
         super.onStart();
+        start();
     }
 
     @Override
@@ -196,7 +223,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                 listRowAdapter.addAll(0, mSelectedMovie.getSubList());
                 Movie firstSubMovie = mSelectedMovie.getSubList().get(0);
                 if (firstSubMovie != null) {
-                    boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE ;
+                    boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE;
                     boolean watchOmarCond = mSelectedMovie.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
                     if (watchCond || watchOmarCond) {
                         getActivity().runOnUiThread(new Runnable() {
@@ -207,10 +234,11 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                         });
                     }
                 }
+                removeInvalidLinks(mSelectedMovie.getSubList());
             }
             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
-            setSelectedPosition(getAdapter().size()-1, true);
+            setSelectedPosition(getAdapter().size() - 1, true);
             Log.d(TAG, "setupRowsAndServer: mSelectedMovie sublist after first fetch:" + mSelectedMovie.getSubList().toString());
 
             hideProgressDialog(true);
@@ -272,6 +300,123 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
     }
 
+    private void removeInvalidLinks(List<Movie> subList) {
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        // showProgressDialog(false);
+        executor.submit(() -> {
+            //            mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+            //            mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+            for (Movie movie : subList) {
+                if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE || movie.getState() == Movie.VIDEO_STATE){
+                    boolean invalidLink = !isValidLink(movie);
+                    Log.d(TAG, "removeInvalidLinks: " + !invalidLink + ", " + movie.getTitle() + ", " + movie.getVideoUrl());
+                    if (invalidLink){
+                        int movieIndexInRow = listRowAdapter.indexOf(movie);
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                listRowAdapter.remove(listRowAdapter.get(movieIndexInRow));
+                                listRowAdapter.notifyArrayItemRangeChanged(0, listRowAdapter.size());
+
+                                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+                                            mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+                                            mSelectedMovie.getSubList().remove(movie);
+                                Log.d(TAG, "removeInvalidLinks: removed index "+ movieIndexInRow + "title: "+movie.getTitle());
+                            }
+                        });
+
+                    }
+                }
+            }
+        });
+        executor.shutdown();
+    }
+
+    public Map<String, String> parseParamsToMap(String params) {
+        params = params.substring(params.indexOf("||") + 2);
+        Map<String, String> map = new HashMap<>();
+        String[] pairs;
+        if (params.contains("&")) {
+            pairs = params.split("&");
+        } else {
+            pairs = new String[]{params};
+        }
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            map.put(pair.substring(0, idx), pair.substring(idx + 1));
+        }
+        return map;
+    }
+
+
+    private boolean isValidLink(Movie movie) {
+        String url = movie.getVideoUrl();
+        Map<String, String> headers = new HashMap<>();
+        if (url.contains("||")) {
+            headers = parseParamsToMap(movie.getVideoUrl());
+            url = url.substring(0, url.indexOf("||"));
+        } else if (url.contains("|")) {
+            headers = parseParamsToMap(movie.getVideoUrl());
+            url = url.substring(0, url.indexOf("|"));
+        }
+
+        Log.d(TAG, "isValidLink: url: " + url + "headers: " + headers.toString());
+        OkHttpClient client = new OkHttpClient();
+
+        // Convert HashMap to Headers
+        Headers.Builder headersBuilder = new Headers.Builder();
+
+
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            try {
+                headersBuilder.add(entry.getKey(), entry.getValue());
+            } catch (Exception e) {
+                Log.d(TAG, "isValidLink: error headers: " + e.getMessage());
+            }
+        }
+
+
+        Headers headersMap = headersBuilder.build();
+
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(headersMap)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                // Read response.body().string() to get the response content
+                ResponseBody requestBody = response.body();
+                Log.d(TAG, "isValidLink: " + response.toString());
+                if (requestBody == null) {
+                    return false;
+                }
+                String body = requestBody.string();
+//                Log.d(TAG, "isValidLink: body: " + body);
+                if (body.contains("deleted") ||
+                        body.contains("has been blocked") ||
+                        body.contains("was deleted") ||
+                        body.contains("not found") ||
+                        body.contains("has been deleted")
+                ) {
+                    return false;
+                }
+                return true;
+                // System.out.print(body);
+                // Log.d("TAG", "xxxX: getMovieUrl: "+ body);
+
+            }
+        } catch (IOException e) {
+            Log.d(TAG, "isValidLink: error: " + e.getMessage());
+            if (e.getMessage().contains("PROTOCOL_ERROR")){
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     private void loadActionRow() {
         ArrayObjectAdapter actionAdapter = new ArrayObjectAdapter();
@@ -309,68 +454,65 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     }
 
 
-
-
     private void initializeBackground(Movie data) {
         mDetailsBackground.enableParallax();
-            server = ServerManager.determineServer(mSelectedMovie, null, getActivity(), this);
-            if (server.getHeaders() != null) {
-                String cookies = server.getCookies();
-                if (cookies == null) {
-                    cookies = "";
-                }
+        server = ServerManager.determineServer(mSelectedMovie, null, getActivity(), this);
+        if (server.getHeaders() != null) {
+            String cookies = server.getCookies();
+            if (cookies == null) {
+                cookies = "";
+            }
 
-                LazyHeaders.Builder builder = new LazyHeaders.Builder()
-                        .addHeader("Cookie", cookies);
+            LazyHeaders.Builder builder = new LazyHeaders.Builder()
+                    .addHeader("Cookie", cookies);
 
-                for (Map.Entry<String, String> entry : server.getHeaders().entrySet()) {
-                    builder.addHeader(entry.getKey(), entry.getValue());
-                }
+            for (Map.Entry<String, String> entry : server.getHeaders().entrySet()) {
+                builder.addHeader(entry.getKey(), entry.getValue());
+            }
 //            GlideUrl glideUrl = new GlideUrl(data.getBackgroundImageUrl(), builder.build());
 //            if (mSelectedMovie.getStudio().equals(Movie.SERVER_FASELHD)){
 //                glideUrl = new GlideUrl("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png", builder.build());
 //            }
 
-                if (data.getBackgroundImageUrl() == null || data.getBackgroundImageUrl().equals("")) {
-                    data.setBackgroundImageUrl(data.getCardImageUrl());
-                }
-
-                Glide.with(getActivity())
-                        .asBitmap()
-                        //.fitCenter()
-                        .centerCrop()
-                        //  .load(glideUrl)
-                        .load(data.getBackgroundImageUrl())
-                        .error(R.drawable.default_background_2)
-                        .fallback(R.drawable.default_background_2)
-                        .placeholder(R.drawable.default_background_2)
-                        .into(new SimpleTarget<Bitmap>() {
-                            @Override
-                            public void onResourceReady(@NonNull Bitmap bitmap,
-                                                        @Nullable Transition<? super Bitmap> transition) {
-                                mDetailsBackground.setCoverBitmap(bitmap);
-                                mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
-                            }
-                        });
-
+            if (data.getBackgroundImageUrl() == null || data.getBackgroundImageUrl().equals("")) {
+                data.setBackgroundImageUrl(data.getCardImageUrl());
             }
-            else {
+
             Glide.with(getActivity())
-                .asBitmap()
-                .centerCrop()
-                .error(R.drawable.default_background_2)
+                    .asBitmap()
+                    //.fitCenter()
+                    .centerCrop()
+                    //  .load(glideUrl)
+                    .load(data.getBackgroundImageUrl())
+                    .error(R.drawable.default_background_2)
                     .fallback(R.drawable.default_background_2)
                     .placeholder(R.drawable.default_background_2)
-                .load(data.getBackgroundImageUrl())
-                .into(new SimpleTarget<Bitmap>() {
-                    @Override
-                    public void onResourceReady(@NonNull Bitmap bitmap,
-                                                @Nullable Transition<? super Bitmap> transition) {
-                        mDetailsBackground.setCoverBitmap(bitmap);
-                        mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
-                    }
-                });
-            }
+                    .into(new SimpleTarget<Bitmap>() {
+                        @Override
+                        public void onResourceReady(@NonNull Bitmap bitmap,
+                                                    @Nullable Transition<? super Bitmap> transition) {
+                            mDetailsBackground.setCoverBitmap(bitmap);
+                            mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
+                        }
+                    });
+
+        } else {
+            Glide.with(getActivity())
+                    .asBitmap()
+                    .centerCrop()
+                    .error(R.drawable.default_background_2)
+                    .fallback(R.drawable.default_background_2)
+                    .placeholder(R.drawable.default_background_2)
+                    .load(data.getBackgroundImageUrl())
+                    .into(new SimpleTarget<Bitmap>() {
+                        @Override
+                        public void onResourceReady(@NonNull Bitmap bitmap,
+                                                    @Nullable Transition<? super Bitmap> transition) {
+                            mDetailsBackground.setCoverBitmap(bitmap);
+                            mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
+                        }
+                    });
+        }
     }
 
     private void setupDetailsOverviewRow() {
@@ -530,6 +672,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             handleItemClick(itemViewHolder, item, rowViewHolder, row);
         }
     }
+
     private void handleItemClick(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder,
                                  Row row) {
         if (item instanceof Movie) {
@@ -556,8 +699,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                                         DetailsActivity.SHARED_ELEMENT_NAME)
                                 .toBundle();
                 getActivity().startActivity(intent, bundle);
-            }
-            else if (nextAction == ACTION_OPEN_EXTERNAL_ACTIVITY) { // means to run movie with external video player usually when movie in Video state is
+            } else if (nextAction == ACTION_OPEN_EXTERNAL_ACTIVITY) { // means to run movie with external video player usually when movie in Video state is
                 Log.d(TAG, "onItemClicked: fetch only");
 
                 showProgressDialog(false);
@@ -589,9 +731,8 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
                 executor.shutdown();
 
-            }
-            else {
-                if (!((Movie) item).getVideoUrl().equals("")){
+            } else {
+                if (!((Movie) item).getVideoUrl().equals("")) {
                     Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
                 }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -642,7 +783,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                     if (resultMovie != null) {
                         Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
 
-                        String movieSublistString =  data.getStringExtra(DetailsActivity.MOVIE_SUBLIST);
+                        String movieSublistString = data.getStringExtra(DetailsActivity.MOVIE_SUBLIST);
 //                    ArrayList<Movie> movieSublist = (ArrayList<Movie>) data.getSerializableExtra(DetailsActivity.MOVIE_SUBLIST);
                         Type type = new TypeToken<List<Movie>>() {
                         }.getType();
@@ -651,7 +792,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                         Log.d(TAG, "onActivityResult: subList:" + movieSublist);
                         if (movieSublist != null && !movieSublist.isEmpty()) {
                             String desc = movieSublist.get(0).getDescription();
-                            Log.d(TAG, "onActivityResult: desc: "+ desc);
+                            Log.d(TAG, "onActivityResult: desc: " + desc);
                             resultMovie.setDescription(desc);
                             mSelectedMovie.setDescription(desc);
                             resultMovie.setSubList(movieSublist);
@@ -681,8 +822,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                     Movie resultMovie = (Movie) server.handleOnActivityResultHtml(result, mSelectedMovie);
                     Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
                     updateItemFromActivityResult(resultMovie);
-                }
-                else if (requestCode == Movie.REQUEST_CODE_EXTERNAL_PLAYER) {
+                } else if (requestCode == Movie.REQUEST_CODE_EXTERNAL_PLAYER) {
                     Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
                     Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
                     updateItemFromActivityResult(resultMovie);
@@ -716,7 +856,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             }
                             Log.d(TAG, "onActivityResult: movie before:" + mSelectedMovie.getSubList());
 
-                            if (mSelectedMovie.getSubList() == null){
+                            if (mSelectedMovie.getSubList() == null) {
                                 mSelectedMovie.setSubList(new ArrayList<>());
                             }
                             mSelectedMovie.setSubList(movies);
@@ -726,16 +866,16 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    for (Movie movie: movies) {
-                                        Log.d(TAG, "run: movie: "+movie);
+                                    for (Movie movie : movies) {
+                                        Log.d(TAG, "run: movie: " + movie);
                                         listRowAdapter.add(movie);
                                     }
                                     mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
                                     mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
 
-                                    if (movies.size() > 0 && movies.get(0) != null){
+                                    if (movies.size() > 0 && movies.get(0) != null) {
                                         int state = movies.get(0).getState();
-                                        if (state == Movie.RESOLUTION_STATE || state == Movie.VIDEO_STATE){
+                                        if (state == Movie.RESOLUTION_STATE || state == Movie.VIDEO_STATE) {
                                             loadActionRow();
                                         }
                                     }
@@ -820,40 +960,39 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 //            }
 //        }
 
-        if (movie.getState() > Movie.ITEM_STATE){
+        if (movie.getState() > Movie.ITEM_STATE) {
             return;
         }
         Movie mainMovie = movie.getMainMovie();
 
-        if (movie.getState() == Movie.GROUP_STATE){
+        if (movie.getState() == Movie.GROUP_STATE) {
             history.setSeason(movie.getTitle());
         }
 
-        if (movie.getState() == Movie.ITEM_STATE){
+        if (movie.getState() == Movie.ITEM_STATE) {
             history.setEpisode(movie.getTitle());
         }
 
-        if (subMovie.getState() == Movie.GROUP_STATE){
+        if (subMovie.getState() == Movie.GROUP_STATE) {
             history.setSeason(subMovie.getTitle());
         }
 
-        if (subMovie.getState() == Movie.ITEM_STATE){
+        if (subMovie.getState() == Movie.ITEM_STATE) {
             history.setEpisode(subMovie.getTitle());
         }
 
 //        history.setSeason(subMovie.getTitle() + " | " + mainMovie.getTitle());
 //        history.setEpisode(removeDomain(movie.getVideoUrl()));
 
-        String historyMainMovieUrl = movie.getMainMovieTitle() ;
-        if (mainMovie != null && mainMovie.getVideoUrl() != null){
+        String historyMainMovieUrl = movie.getMainMovieTitle();
+        if (mainMovie != null && mainMovie.getVideoUrl() != null) {
             historyMainMovieUrl = mainMovie.getVideoUrl();
         }
         history.setMainMovieUrl(Util.getUrlPathOnly(historyMainMovieUrl));
-        Log.d(TAG, "generateMovieHistory: "+historyMainMovieUrl);
+        Log.d(TAG, "generateMovieHistory: " + historyMainMovieUrl);
 //        subMovie.setMovieHistory(history);
         dbHelper.saveMovieHistory(history);
     }
-
 
 
     // Show the ProgressDialog

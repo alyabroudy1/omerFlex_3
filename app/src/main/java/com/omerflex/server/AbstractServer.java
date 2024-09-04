@@ -6,6 +6,7 @@ import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
@@ -23,7 +24,10 @@ import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,7 +73,7 @@ public abstract class AbstractServer {
                     .timeout(16000)
                     .get();
 
-            String docTitle = doc.title();
+//            String docTitle = doc.title();
 //            Log.d(TAG, "getRequestDoc: " + docTitle);
 //            if (docTitle.contains("Just a moment")) {
 //                return fetchDocUsingWebView(url);
@@ -78,9 +82,23 @@ public abstract class AbstractServer {
         } catch (IOException e) {
             //builder.append("Error : ").append(e.getMessage()).append("\n");
             Log.i(TAG, "error: " + e.getMessage());
+            String errorMessage = "error: " +getServerId() + ": "+e.getMessage();
+            showToastMessage(errorMessage);
         }
         return doc;
     }
+
+    public void showToastMessage(String message) {
+        if (getActivity() != null){
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getActivity(), message,Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
 
     protected Document getRequestDoc(String url, Movie movie, int operation) {
         Document doc = null;
@@ -286,7 +304,7 @@ public abstract class AbstractServer {
      */
     public abstract boolean isSeries(Movie movie);
 
-    public void updateDomain(String movieLink){
+    public void updateDomain(String movieLink, MovieDbHelper dbHelper){
         ServerConfig config = getConfig();
         String newDomain = Util.extractDomain(movieLink, true, false);
         boolean equal = config.getUrl().contains(newDomain);
@@ -295,6 +313,15 @@ public abstract class AbstractServer {
             config.setUrl(newDomain);
             config.setReferer(newDomain + "/");
             setConfig(config);
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            Log.d(TAG, "addServerConfigsToDB: ");
+            Date date = null;
+            try {
+                date = format.parse("2024-02-22T12:30:00");
+            } catch (ParseException e) {
+                date = new Date();
+            }
+            dbHelper.saveServerConfigAsCookieDTO(getConfig(), date);
         }
     }
 
@@ -330,7 +357,7 @@ public abstract class AbstractServer {
 
     public Map<String, String> getHeaders(){
         if (getConfig() != null){
-            Log.d(TAG, "getHeaders: "+getConfig());
+//            Log.d(TAG, "getHeaders: "+getConfig());
             return getConfig().getHeaders();
         }
         return new HashMap<>();

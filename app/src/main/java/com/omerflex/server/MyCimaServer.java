@@ -125,10 +125,6 @@ public class MyCimaServer extends AbstractServer {
             movieList.add(nextPage);
         }
 
-        Movie sampleMovie = movieList.get(0);
-        if (sampleMovie != null && sampleMovie.getVideoUrl() != null){
-            updateDomain(sampleMovie.getVideoUrl());
-        }
         return movieList;
     }
 
@@ -856,6 +852,7 @@ public class MyCimaServer extends AbstractServer {
     }
 
     public ArrayList<Movie> getHomepageMovies() {
+//        return search("ratched");
         return search(getConfig().getUrl() + "/movies/");
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);

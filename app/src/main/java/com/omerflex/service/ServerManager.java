@@ -96,7 +96,7 @@ public class ServerManager {
 //        }
 //    }
 
-    public ArrayList<AbstractServer> initializeServersFromDB() {
+    private ArrayList<AbstractServer> initializeServersFromDB() {
         ArrayList<CookieDTO> serverConfigs = dbHelper.getAllCookieDto();
         if (serverConfigs.size() == 0){
             return addServerConfigsToDB();
@@ -134,126 +134,12 @@ public class ServerManager {
     }
 
     private ArrayList<AbstractServer> addServerConfigsToDB() {
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        Log.d(TAG, "addServerConfigsToDB: ");
-        Date date = null;
-        try {
-            date = format.parse("2024-02-22T12:30:00");
-        } catch (ParseException e) {
-            date = new Date();
-        }
-
-//        Log.d(TAG, "addServerConfigsToDB: date: "+date.toString());
-
-
-        //      //### mycima ###
-        ServerConfig mycimaConfig = new ServerConfig();
-        mycimaConfig.setName(Movie.SERVER_MyCima);
-        mycimaConfig.setUrl("https://mycima.io");
-        mycimaConfig.setReferer("https://mycima.io/");
-        ServerConfigManager.addConfig(mycimaConfig);
-
-        AbstractServer mycima = MyCimaServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
-        servers.add(mycima);
-
-        // ### akwam ###
-        ServerConfig akwamConfig = new ServerConfig();
-        akwamConfig.setName(Movie.SERVER_AKWAM);
-        akwamConfig.setUrl("https://ak.sv");
-        akwamConfig.setReferer("https://ak.sv/");
-        ServerConfigManager.addConfig(akwamConfig);
-
-        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(akwamConfig, date);
-        servers.add(akwam);
-
-        //        ### fasel ###
-        ServerConfig faselConfig = new ServerConfig();
-        faselConfig.setName(Movie.SERVER_FASELHD);
-        faselConfig.setUrl("https://faselhd.center");
-        faselConfig.setReferer("https://faselhd.center/");
-        ServerConfigManager.addConfig(faselConfig);
-
-        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
-        servers.add(faselhd);
-
-        //### arabseed ###
-        ServerConfig arabseedConfig = new ServerConfig();
-        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
-        arabseedConfig.setUrl("https://arabseed.show");
-        arabseedConfig.setReferer("https://arabseed.show/");
-        ServerConfigManager.addConfig(arabseedConfig);
-
-        AbstractServer arabseed = ArabSeedServer.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(arabseedConfig, date);
-        servers.add(arabseed);
-
-        //### old_Akwam ###
-        ServerConfig oldAkwamConfig = new ServerConfig();
-        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
-        oldAkwamConfig.setUrl("https://ak.sv/old");
-        oldAkwamConfig.setReferer("https://ak.sv/old/");
-        ServerConfigManager.addConfig(oldAkwamConfig);
-
-        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(oldAkwamConfig, date);
-        servers.add(oldAkwam);
-
-        //### cimaclub ###
-        ServerConfig cimaclubConfig = new ServerConfig();
-        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);
-        cimaclubConfig.setUrl("https://cimaclub.top");
-        cimaclubConfig.setReferer("https://cimaclub.top/");
-        ServerConfigManager.addConfig(cimaclubConfig);
-
-        AbstractServer cimaclub = CimaClubServer.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(cimaclubConfig, date);
-        servers.add(cimaclub);
-
-        // ### omar ###
-        ServerConfig omarConfig = new ServerConfig();
-        omarConfig.setName(Movie.SERVER_OMAR);
-        omarConfig.setUrl("http://194.164.53.40/movie");
-        omarConfig.setReferer("http://194.164.53.40/");
-        ServerConfigManager.addConfig(omarConfig);
-
-        AbstractServer omar = OmarServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(omarConfig, date);
-        servers.add(omar);
-
-        //### iptv ###
-        ServerConfig iptvConfig = new ServerConfig();
-        iptvConfig.setName(Movie.SERVER_IPTV);
-        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
-        iptvConfig.setReferer("https://drive.google.com/");
-        ServerConfigManager.addConfig(iptvConfig);
-
-        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(iptvConfig, date);
-        servers.add(iptv);
-
-//
-////        //### watanflix ###
-////        ServerConfig watanflixCDTO = new ServerConfig();
-////        watanflixCDTO.name = Movie.SERVER_WATAN_FLIX;
-////        watanflixCDTO.url = "https://watanflix.com";
-////
-////        AbstractServer watanflix = WatanFlixController.getInstance(fragment, activity);
-////        watanflix.setConfig(watanflixCDTO);
-////        dbHelper.saveServerConfigAsCookieDTO(watanflixCDTO, date);
-////        servers.add(watanflix);
-////
-////
-
-
-        Log.d(TAG, "addServerConfigsToDB: servers.size: "+servers.size());
-        return servers;
+        this.servers = DefaultServersConfig.getDefaultServers(activity, fragment, dbHelper);
+        return this.servers;
     }
 
     /**
-     * initialize servers from remove servers.json
+     * initialize servers from remote servers.json
      *
      */
     public void updateServers() {
@@ -313,7 +199,15 @@ public class ServerManager {
                         Date githubDate = format.parse(serverConfigDTO.date);
                         //if github date is newer then take it
                         boolean isNewDate = githubDate.getTime() > cookieDTO.date.getTime();
-                        Log.d(TAG, "updateServerConfig:"+ serverConfigDTO.name+", g:"+ githubDate + ", db:"+cookieDTO.date+", isNewDate:"+isNewDate);
+                        Log.d(TAG,
+                                "updateServerConfig:"+
+                                        serverConfigDTO.name+
+                                        ", isNewDate:"+isNewDate+
+                                ", g:"+ githubDate +
+                                ", db:"+cookieDTO.date+
+                                        ", gUrl: "+ serverConfigDTO.url +
+                                        ", dbUrl: "+ cookieDTO.referer
+                        );
                         if (isNewDate){
                             ServerConfig serverConfig = new ServerConfig();
                             serverConfig.setDate(serverConfigDTO.date);

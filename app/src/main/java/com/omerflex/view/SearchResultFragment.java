@@ -1,6 +1,7 @@
 package com.omerflex.view;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -91,12 +92,23 @@ public class SearchResultFragment extends BrowseSupportFragment {
     private boolean isBound = false;
     ServerManager serverManager;
 
+    private boolean isInitialized = false;
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
-        activity = getActivity();
-        serverManager = new ServerManager(activity, fragment);
         Log.i(TAG, "onCreate");
         super.onActivityCreated(savedInstanceState);
+        start();
+    }
+
+    public void start() {
+        if (isInitialized) {
+            return;
+        }
+
+        activity = getActivity();
+        serverManager = new ServerManager(activity, fragment);
+
         rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
         webView = getActivity().findViewById(com.omerflex.R.id.webView_main);
 
@@ -112,6 +124,13 @@ public class SearchResultFragment extends BrowseSupportFragment {
         loadRows();
 
         setupEventListeners();
+        isInitialized = true;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        start();
     }
 
     @Override
@@ -136,7 +155,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 
     private void loadSearchResultRaws() {
         for (AbstractServer server : serverManager.getServers()) {
-            if (server == null){
+            if (server == null) {
                 return;
             }
 
@@ -165,7 +184,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
                         }
                     }
                 } catch (Exception exception) {
-                    Log.d(TAG, "loadHomepageRaws: error: " + server.getLabel() + ", "+ exception.getMessage());
+                    Log.d(TAG, "loadHomepageRaws: error: " + server.getLabel() + ", " + exception.getMessage());
                 }
 
             });
@@ -544,12 +563,17 @@ public class SearchResultFragment extends BrowseSupportFragment {
 
     private void prepareBackgroundManager() {
 
-        mBackgroundManager = BackgroundManager.getInstance(getActivity());
-        mBackgroundManager.attach(getActivity().getWindow());
+        Activity currentActivity = getActivity();
+        Context context = getContext();
+        if (currentActivity == null || context == null) {
+            return;
+        }
+        mBackgroundManager = BackgroundManager.getInstance(currentActivity);
+        mBackgroundManager.attach(currentActivity.getWindow());
 
-        mDefaultBackground = ContextCompat.getDrawable(getActivity(), R.drawable.default_background);
+        mDefaultBackground = ContextCompat.getDrawable(context, R.drawable.default_background);
         mMetrics = new DisplayMetrics();
-        getActivity().getWindowManager().getDefaultDisplay().getMetrics(mMetrics);
+        currentActivity.getWindowManager().getDefaultDisplay().getMetrics(mMetrics);
     }
 
     private void setupUIElements() {
@@ -583,6 +607,9 @@ public class SearchResultFragment extends BrowseSupportFragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(TAG, "onActivityResult: " + requestCode + ", " + resultCode + ", " + data);
+        if (clickedMovie == null) {
+            return;
+        }
         ArrayObjectAdapter objectAdapter = getServerAdapter(clickedMovie.getStudio());
         AbstractServer server = ServerManager.determineServer(clickedMovie, objectAdapter, getActivity(), fragment);
 
