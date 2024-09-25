@@ -1,4 +1,4 @@
 <resources>
-
     <style name="Theme.OmarFlex" parent="@style/Theme.Leanback" />
+    <style name="AppMobileTheme" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

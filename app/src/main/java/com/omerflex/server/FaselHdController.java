@@ -288,11 +288,20 @@ public class FaselHdController extends AbstractServer {
                 Log.i(TAG, "onItemClick. BROWSER_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
                 //startBrowser(movie.getVideoUrl());
                 break;
+            case Movie.COOKIE_STATE:
+                Log.i(TAG, "onItemClick. COOKIE_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+                Movie clonedMovie2 = Movie.clone(movie);
+                clonedMovie2.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+                startWebForResultActivity(clonedMovie2);
+                activity.finish();
+                return movie;
             case Movie.RESULT_STATE:
+                Log.i(TAG, "onItemClick. RESULT_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
                 startWebForResultActivity(movie);
                 activity.finish();
                 return movie;
             case Movie.VIDEO_STATE:
+                Log.i(TAG, "onItemClick. VIDEO_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
                 return movie;
             default:
                 return fetchResolutions(movie);
@@ -321,8 +330,12 @@ public class FaselHdController extends AbstractServer {
         Intent browse = new Intent(activity, BrowserActivity.class);
         browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
         browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-
-        fragment.startActivityForResult(browse, movie.getFetch());
+        Log.d(TAG, "startWebForResultActivity: fragment: "+ movie);
+        if (fragment == null){
+            activity.startActivityForResult(browse, movie.getFetch());
+        }else {
+            fragment.startActivityForResult(browse, movie.getFetch());
+        }
         return movie;
     }
 

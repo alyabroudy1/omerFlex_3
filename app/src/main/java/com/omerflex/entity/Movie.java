@@ -56,6 +56,8 @@ public class Movie implements Serializable, Parcelable {
     public final static int REQUEST_CODE_MOVIE_LIST = 13;
     public final static int REQUEST_CODE_FETCH_HTML = 14;
     public static final int HTML_STATE = 15;
+    public static final int FETCH_MOVIE_AT_START = 16;
+    public static final int NO_FETCH_MOVIE_AT_START = 17;
     private static int count = 0;
     private String searchContext;
 
@@ -134,6 +136,9 @@ public class Movie implements Serializable, Parcelable {
         this.fetch = fetch;
         this.backgroundImageUrl = backgroundImageUrl;
         this.group = group;
+        if (this.subList == null){
+            this.subList= new ArrayList<>();
+        }
     }
 
     protected Movie(Parcel in) {
@@ -159,6 +164,9 @@ public class Movie implements Serializable, Parcelable {
         group = in.readString();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             movieHistory = in.readTypedObject(MovieHistory.CREATOR);
+        }
+        if (this.subList == null){
+            this.subList= new ArrayList<>();
         }
     }
 

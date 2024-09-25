@@ -31,7 +31,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class AbstractServer {
+public abstract class AbstractServer implements ServerInterface {
 
     private static final String TAG = "AbstractServer";
     private boolean cookieRefreshed = false;
