@@ -40,21 +40,21 @@ import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.AkwamServer;
-import com.omerflex.server.ArabSeedServer;
-import com.omerflex.server.CimaClubServer;
-import com.omerflex.server.FaselHdController;
-import com.omerflex.server.IptvServer;
 import com.omerflex.server.MyCimaServer;
-import com.omerflex.server.OldAkwamServer;
-import com.omerflex.server.OmarServer;
+import com.omerflex.server.ServerInterface;
+import com.omerflex.server.Util;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -174,31 +174,32 @@ public class MainFragment extends BrowseSupportFragment {
 //                executor2.submit(() -> {
                 try {
                     // it done in new thread
-                    if (server instanceof OmarServer) {
-//                        loadOmarServerHomepage(server);
-                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
-                    } else if (
-                            server instanceof OldAkwamServer ||
-                                    server instanceof CimaClubServer //||
-//                                    server instanceof FaselHdController ||
-//                                    server instanceof AkwamServer ||
-//                                    server instanceof ArabSeedServer //||
-//                                    server instanceof MyCimaServer
-                    ) {
-                        continue;
-                    } else if (server instanceof IptvServer) {
-                        //load history rows first
-                        loadHomepageHistoryRaws();
-
-                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
-//                            //channel list
-//                            ArrayList<Movie> channels = dbHelper.getIptvHomepageChannels();
-//                            if (channels.size() > 0) {
-//                                loadMoviesRow("tv", channels);
-//                            }
-                    } else {
-                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
-                    }
+//                    if (server instanceof OmarServer) {
+////                        loadOmarServerHomepage(server);
+//                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
+//                    } else if (
+//                            server instanceof OldAkwamServer ||
+//                                    server instanceof CimaClubServer //||
+////                                    server instanceof FaselHdController ||
+////                                    server instanceof AkwamServer ||
+////                                    server instanceof ArabSeedServer //||
+////                                    server instanceof MyCimaServer
+//                    ) {
+//                        continue;
+//                    }
+//                    else if (server instanceof IptvServer) {
+//                        //load history rows first
+//                        loadHomepageHistoryRaws();
+//
+//                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
+////                            //channel list
+////                            ArrayList<Movie> channels = dbHelper.getIptvHomepageChannels();
+////                            if (channels.size() > 0) {
+////                                loadMoviesRow("tv", channels);
+////                            }
+//                    } else {
+//                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
+//                    }
 
                 } catch (Exception exception) {
                     Log.d(TAG, "loadHomepageRaws: error: " + exception.getMessage());
@@ -224,24 +225,42 @@ public class MainFragment extends BrowseSupportFragment {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
             if (activity != null) {
-                ArrayList<Movie> movies = server.getHomepageMovies();
+                ArrayList<Movie> movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                    @Override
+                    public void onSuccess(ArrayList<Movie> result) {
+                        Map<String, List<Movie>> moviesByCategory = result.stream()
+                                .flatMap(movie -> movie.getCategories().stream()
+                                        .map(category -> new AbstractMap.SimpleEntry<>(category, movie)))
+                                .collect(Collectors.groupingBy(
+                                        Map.Entry::getKey,
+                                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+                                ));
 
+                        // Assuming you already have the 'moviesByCategory' map
+                        for (Map.Entry<String, List<Movie>> entry : moviesByCategory.entrySet()) {
+                            String category = entry.getKey();
+                            List<Movie> moviesInCategory = entry.getValue();
+                            Log.d(TAG, "loadOmarServerHomepage: " + category + ", " + moviesInCategory.size());
+                            loadMoviesRow(server, addRowToMainAdapter(category), (ArrayList) moviesInCategory);
+                        }
+                    }
 
-                Map<String, List<Movie>> moviesByCategory = movies.stream()
-                        .flatMap(movie -> movie.getCategories().stream()
-                                .map(category -> new AbstractMap.SimpleEntry<>(category, movie)))
-                        .collect(Collectors.groupingBy(
-                                Map.Entry::getKey,
-                                Collectors.mapping(Map.Entry::getValue, Collectors.toList())
-                        ));
+                    @Override
+                    public void onInvalidCookie(ArrayList<Movie> result) {
 
-                // Assuming you already have the 'moviesByCategory' map
-                for (Map.Entry<String, List<Movie>> entry : moviesByCategory.entrySet()) {
-                    String category = entry.getKey();
-                    List<Movie> moviesInCategory = entry.getValue();
-                    Log.d(TAG, "loadOmarServerHomepage: " + category + ", " + moviesInCategory.size());
-                    loadMoviesRow(server, addRowToMainAdapter(category), (ArrayList) moviesInCategory);
-                }
+                    }
+
+                    @Override
+                    public void onInvalidLink(ArrayList<Movie> result) {
+
+                    }
+
+                    @Override
+                    public void onInvalidLink(String message) {
+
+                    }
+                });
+
             }
 
         });
@@ -253,10 +272,33 @@ public class MainFragment extends BrowseSupportFragment {
             if (activity != null) {
                 final ArrayList<Movie> movies; // Declare as effectively final
                 if (moviesList == null && server != null) {
-                    movies = server.getHomepageMovies();
+                    movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                        @Override
+                        public void onSuccess(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidCookie(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidLink(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidLink(String message) {
+
+                        }
+                    });
                     Movie sampleMovie = movies.get(0);
                     if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
-                        server.updateDomain(sampleMovie.getVideoUrl(), dbHelper);
+                        ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+                        if (null != config){
+                            updateDomain(sampleMovie.getVideoUrl(), config, dbHelper);
+                        }
                     }
                 } else {
                     movies = moviesList;
@@ -275,6 +317,28 @@ public class MainFragment extends BrowseSupportFragment {
         });
 
         executor.shutdown();
+    }
+
+    //todo clarify and optimize
+    private void updateDomain(String movieLink, ServerConfig config, MovieDbHelper dbHelper){
+        String newDomain = Util.extractDomain(movieLink, true, false);
+        boolean equal = config.getUrl().contains(newDomain);
+        Log.d(TAG, "updateDomain: old: "+config.getUrl() + ", new: "+ newDomain + ", = "+ (equal));
+        if (!equal){
+            config.setUrl(newDomain);
+            config.setReferer(newDomain + "/");
+            ServerConfigManager.updateConfig(config);
+
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            Log.d(TAG, "addServerConfigsToDB: ");
+            Date date = null;
+            try {
+                date = format.parse("2024-02-22T12:30:00");
+            } catch (ParseException e) {
+                date = new Date();
+            }
+            dbHelper.saveServerConfigAsCookieDTO(config, date);
+        }
     }
 
     private void loadMoviesRow_2(String label, ArrayList<Movie> movies) {
@@ -588,34 +652,38 @@ public class MainFragment extends BrowseSupportFragment {
                     }
                     //      try {
                     //   showProgressDialog();
-                    IptvServer iptvServer = IptvServer.getInstance(activity, fragment);
+                    //todo
+//                    IptvServer iptvServer = IptvServer.getInstance(activity, fragment);
+//
+//                    CompletableFuture<Map<String, List<Movie>>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie);
+//                    Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
+//
+//                    futureGroupedMovies.thenAcceptAsync(groupedMovies -> {
+//                        for (Map.Entry<String, List<Movie>> entry : groupedMovies.entrySet()) {
+//                            String group = entry.getKey();
+//                            List<Movie> groupMovies = entry.getValue();
+//                            // Creating a movie magic show with your UI update!
+//                            getActivity().runOnUiThread(() -> {
+//                                ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
+//                                iptvList.addAll(groupMovies);
+//                                listRowAdapter.addAll(0, groupMovies);
+//                                HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, group);
+//                                IPTV_HEADER_ROWS_COUNTER++;
+//                                rowsAdapter.add(new ListRow(header, listRowAdapter));
+//                            });
+//                        }
+//                    }).exceptionally(e -> {
+//                        // Handle any exceptions with grace (and maybe a touch of humor!)
+//                        Log.e(TAG, "Something went wrong: " + e.getMessage());
+//                        return null;
+//                    });
 
-                    CompletableFuture<Map<String, List<Movie>>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie);
-                    Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
 
-                    futureGroupedMovies.thenAcceptAsync(groupedMovies -> {
-                        for (Map.Entry<String, List<Movie>> entry : groupedMovies.entrySet()) {
-                            String group = entry.getKey();
-                            List<Movie> groupMovies = entry.getValue();
-                            // Creating a movie magic show with your UI update!
-                            getActivity().runOnUiThread(() -> {
-                                ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
-                                iptvList.addAll(groupMovies);
-                                listRowAdapter.addAll(0, groupMovies);
-                                HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, group);
-                                IPTV_HEADER_ROWS_COUNTER++;
-                                rowsAdapter.add(new ListRow(header, listRowAdapter));
-                            });
-                        }
-                    }).exceptionally(e -> {
-                        // Handle any exceptions with grace (and maybe a touch of humor!)
-                        Log.e(TAG, "Something went wrong: " + e.getMessage());
-                        return null;
-                    });
 // This line waits for the completion of the future
                     //  hideProgressDialog();
                     // } catch (ExecutionException | InterruptedException e) {
-                } else {
+                }
+                else {
                     Intent intent = new Intent(getActivity(), ExoplayerMediaPlayer.class);
                     intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
                     Objects.requireNonNull(getActivity()).startActivity(intent);
@@ -633,7 +701,27 @@ public class MainFragment extends BrowseSupportFragment {
                         public void run() {
                             AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
                             //server
-                            List<Movie> nextList = server.search(movie.getVideoUrl());
+                            List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                                @Override
+                                public void onSuccess(ArrayList<Movie> result) {
+
+                                }
+
+                                @Override
+                                public void onInvalidCookie(ArrayList<Movie> result) {
+
+                                }
+
+                                @Override
+                                public void onInvalidLink(ArrayList<Movie> result) {
+
+                                }
+
+                                @Override
+                                public void onInvalidLink(String message) {
+
+                                }
+                            });
                             Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
 
                             ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();

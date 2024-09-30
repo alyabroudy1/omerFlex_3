@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
@@ -45,6 +44,7 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
 
@@ -55,7 +55,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.ArrayList;
@@ -122,6 +121,7 @@ public class BrowserActivity extends AppCompatActivity {
     private Handler autoHideHandler = new Handler();
     private Runnable autoHideRunnable;
     private boolean hideRedirectBar;
+    ServerConfig config;
 
     //#############
     @Override
@@ -145,9 +145,7 @@ public class BrowserActivity extends AppCompatActivity {
 
         getSupportActionBar().hide();
 
-        movie = (Movie) getIntent().getSerializableExtra(DetailsActivity.MOVIE);
-        Movie mainMovie = (Movie) getIntent().getSerializableExtra(DetailsActivity.MAIN_MOVIE);
-        movie.setMainMovie(mainMovie);
+        movie = Util.recieveSelectedMovie(this);
 
 //        String movieJson = getIntent().getStringExtra("sub");
 //        Gson gson = new Gson();
@@ -257,7 +255,7 @@ public class BrowserActivity extends AppCompatActivity {
 
 
         server = ServerManager.determineServer(movie, listRowAdapter, BrowserActivity.this, null);
-
+        config = ServerConfigManager.getConfig(server.getServerId());
         //   simpleWebView.setWebViewClient(new CustomWebViewClient());
         //   webView.setWebChromeClient(new ChromeClient());
         //   webView.setWebViewClient(new CustomWebViewClient(this));
@@ -591,7 +589,7 @@ public class BrowserActivity extends AppCompatActivity {
                 Toast.makeText(this, "Press back 2 time to exit", Toast.LENGTH_SHORT).show();
         }
         backPressedTime = System.currentTimeMillis();
-
+        super.onBackPressed();
     }
 
     /**
@@ -727,34 +725,6 @@ public class BrowserActivity extends AppCompatActivity {
         view.evaluateJavascript(jsCode, null);
     }
 
-    public static boolean shouldOverride(String url) {
-
-        boolean result =
-                url.contains("gamezone") ||
-                        url.contains("cim")
-                        || url.contains("faselhd")
-                        || url.contains("/sharon")
-                        || url.contains("/d000")
-                        || url.contains("/dooo")
-                        || url.contains("fas")
-                        || url.contains("cem")
-                        || url.contains("akwam")
-                        || url.contains("club")
-                        || url.contains("clup")
-                        || url.contains("ciima")
-                        || url.contains("challenge")
-                        || url.contains("akoam")
-                        || url.contains("shahed")
-                        || url.contains("arab")
-                        || url.contains("seed")
-                        || url.contains("review")
-                        || url.contains("tech")
-                        || url.contains("youtube.com")
-                        || url.startsWith("##")
-                        || url.contains("shahid");
-        return !result;
-    }
-
     public static boolean isVideo(String url, Movie movie) {
 
         // List of substrings to check
@@ -811,13 +781,21 @@ public class BrowserActivity extends AppCompatActivity {
     class MyJavaScriptInterface {
         @JavascriptInterface
         public void myMethod(String elementJson) {
+            Log.d(TAG, "myMethod: xxxx");
             // parse the JSON string to get the element
             // Element element = Json.parse(elementJson);
 //            if (elementJson.startsWith("<html>")){
+            ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
             if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) {
                 Log.d(TAG, "myMethod: html contents: " + elementJson);
-                server.handleJSWebResult(activity, movie, elementJson);
-                return;
+      //todo          server.handleJSWebResult(activity, movie, elementJson);
+                Type movieListType = new TypeToken<List<Movie>>() {
+                }.getType();
+                List<Movie> movies = gson.fromJson(elementJson, movieListType);
+                //todo handle movie state of movies as it comes from js call without state
+                movie.setSubList(movies);
+                setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
+                finish();
             } else if (elementJson.equals("click")) {
 //                mouseArrow.setX(screenHeight / 2);
 //                mouseArrow.setY(screenWidth / 2);
@@ -836,17 +814,24 @@ public class BrowserActivity extends AppCompatActivity {
                     }
                 });
 
-            } else {
+            }
+            else {
                 Log.d(TAG, "myMethod:else ");
                 if (movie.getState() == Movie.COOKIE_STATE) {
-                    Intent intent = new Intent();
-                    intent.putExtra("result", elementJson);
-                    setResult(Activity.RESULT_OK, intent);
+//           hiiiiiieeeer         Intent intent = new Intent();
+//           hiiiiiieeeer         intent.putExtra("result", elementJson);
+//           hiiiiiieeeer setResult(Activity.RESULT_OK, intent);
                     //server.setCookies(CookieManager.getInstance().getCookie(movie.getVideoUrl()));
                     //  if (server.getReferer() == null){4
                     //String ref = getValidReferer(movie.)
                     //  }
-                    Log.d(TAG, "myMethod: xxx referer:" + server.getReferer());
+                    Type movieListType = new TypeToken<List<Movie>>() {
+                    }.getType();
+                    List<Movie> movies = gson.fromJson(elementJson, movieListType);
+                    //todo handle movie state of movies as it comes from js call without state
+                    movie.setSubList(movies);
+                    setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
+//                    Log.d(TAG, "myMethod: xxx referer:" + config.getReferer());
 
                     try {
                         // Parse the JSON string to a JSONArray
@@ -859,10 +844,12 @@ public class BrowserActivity extends AppCompatActivity {
                         String videoUrl = jsonObject.getString("videoUrl");
                         String movieReferer = urlExtractor(videoUrl);
                         if (null == movieReferer) {
-                            movieReferer = server.getReferer();
+                            movieReferer = config.getReferer();
                         }
-                        server.setReferer(movieReferer);
+                        config.setReferer(movieReferer);
+                        config.setUrl(movieReferer);
 
+                        ServerConfigManager.updateConfig(config);
                         // Print the extracted URL
                         Log.d(TAG, "Extracted URL: " + movieReferer);
                     } catch (Exception e) {
@@ -871,11 +858,12 @@ public class BrowserActivity extends AppCompatActivity {
 
 
                     Log.d(TAG, "myMethod: xxx result:" + elementJson);
-
-                    dbHelper.saveHeadersAndCookies(server, movie.getStudio());
+                    ServerConfigManager.updateConfig(config, dbHelper);
+//                    dbHelper.saveHeadersAndCookies(server, movie.getStudio());
 
                     finish();
-                } else {
+                }
+                else {
                     Movie resultMovie = null;
                     if (
                             movie.getStudio().equals(Movie.SERVER_AKWAM) ||
@@ -891,20 +879,19 @@ public class BrowserActivity extends AppCompatActivity {
                         }
 
                         // If you want to send back data
-                        Intent returnIntent = new Intent();
-                        returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) resultMovie);
-                        returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie()); //selected Movie mainMovie
-                        setResult(Activity.RESULT_OK, returnIntent);
+                        resultMovie.setMainMovie(movie.getMainMovie());
+                        setResult(Activity.RESULT_OK, Util.generateIntentResult(resultMovie));
                         Log.d(TAG, "myMethod: akwam resultActivity finish ");
 
                         //this case only for akwam as the valid referer already fetched by search method
                         String movieReferer = Util.getValidReferer(movie.getVideoUrl());
-                        ServerConfig config = server.getConfig();
+//                        ServerConfig config = server.getConfig();
+                        //todo optimize config update
                         config.setReferer(movieReferer);
                         config.setUrl(movieReferer);
 
-                        server.setConfig(config);
-                        dbHelper.saveHeadersAndCookies(server, server.getServerId());
+                        ServerConfigManager.updateConfig(config, dbHelper);
+//                        dbHelper.saveHeadersAndCookies(server, server.getServerId());
 
 
                         finish();
@@ -914,21 +901,34 @@ public class BrowserActivity extends AppCompatActivity {
 
                     if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
                         if (movie.getState() == Movie.BROWSER_STATE) {
-                            Intent intent = new Intent();
-                            intent.putExtra("result", elementJson);
-                            setResult(Activity.RESULT_OK, intent);
+//                            Intent intent = new Intent();
+//                            intent.putExtra("result", elementJson);
+//                            setResult(Activity.RESULT_OK, intent);
+                            Type movieListType = new TypeToken<List<Movie>>() {
+                            }.getType();
+                            List<Movie> movies = gson.fromJson(elementJson, movieListType);
+                            //todo handle movie state of movies as it comes from js call without state
+                            movie.setSubList(movies);
+                            setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
                             finish();
                         }
                     }
 
 
                     Log.d(TAG, "myMethod: xxxx: resultMovie: " + resultMovie);
-                    Intent returnIntent = new Intent(activity, VideoDetailsFragment.class);
-                    resultMovie.setFetch(0); //tell next activity not to fetch movie on start
-                    returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) resultMovie);
-                    returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie()); //selected Movie mainMovie
-                    returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, elementJson);
-                    startActivity(returnIntent);
+
+//                    Intent returnIntent = new Intent(activity, VideoDetailsFragment.class);
+//                    resultMovie.setFetch(0); //tell next activity not to fetch movie on start
+//                    returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) resultMovie);
+//                    returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie()); //selected Movie mainMovie
+//                    returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, elementJson);
+//                    startActivity(returnIntent);
+                    Type movieListType = new TypeToken<List<Movie>>() {
+                    }.getType();
+                    List<Movie> movies = gson.fromJson(elementJson, movieListType);
+                    //todo handle movie state of movies as it comes from js call without state
+                    movie.setSubList(movies);
+                    Util.openVideoDetailsIntent(movie, activity);
                     finish();
                 }
             }
@@ -1172,16 +1172,19 @@ public class BrowserActivity extends AppCompatActivity {
 //                // movie.getMainMovie().save(dbHelper);
 //
 //                activity.startActivity(in1);
-                Intent returnIntent = new Intent();
-                returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
-                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
-                setResult(Activity.RESULT_OK, returnIntent);
+                Log.d(TAG, "shouldInterceptRequest: video shouldInterceptRequest. "+ mm);
+//                Intent returnIntent = new Intent();
+//                returnIntent.putExtra(DetailsActivity.MOVIE,  mm);
+//                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, mm.getMainMovie());
+                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
                 finish();
+//                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
+//                finish();
                 return super.shouldInterceptRequest(view, request);
 //                activity.finish();
             }
 
-            server.shouldInterceptRequest(view, request, dbHelper);
+            server.shouldInterceptRequest(view, request);
 //            testCookie(view, request);
             if (
                     movie.getStudio().equals(Movie.SERVER_ARAB_SEED) ||
@@ -1209,10 +1212,14 @@ public class BrowserActivity extends AppCompatActivity {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             headers.replace("Referer", validReferer);
                         }
-                        server.setReferer(validReferer);
-                        server.setHeaders(request.getRequestHeaders());
-                        server.setCookies(cookie);
 
+                        config.setReferer(validReferer);
+                        config.setUrl(validReferer);
+                        config.setHeaders(request.getRequestHeaders());
+                        //todo handle setting StringCookies to manage mapped Cookies
+                        config.setStringCookies(cookie);
+
+                        ServerConfigManager.updateConfig(config, dbHelper);
                         cookieFound = true;
 //                        Log.d(TAG, "shouldInterceptRequest: response: headers:" + request.getRequestHeaders().toString());
                         //  setResult(RESULT_OK);
@@ -1246,19 +1253,28 @@ public class BrowserActivity extends AppCompatActivity {
             // if (BBrowserActivity.BLOCK_URL_SWITCH){
             //  result = !url.contains(CURRENT_WEB_NAME);
             String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
-
-
             if (newUrl.contains("intent:/")) {
                 return true;
             }
+            if (!server.shouldOverrideUrlLoading(movie, view, request)){
+                return false;
+            }
+
+            if (movie.getState() == Movie.COOKIE_STATE || !Util.shouldOverrideUrlLoading(newUrl)) {
+                if (url.startsWith("##")) {
+                    url = url.replace("##", "");
+                }
+                Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
+                view.loadUrl(url);
+                return true;
+                //  CURRENT_WEB_NAME = getWebName(url);
+            }
+
+
 
 //            Log.d(TAG, "shouldOverrideUrlLoading: contains config url : "+ newUrl.contains(server.getConfig().url) + ", "+server.getConfig().url);
-            if (server.getConfig() != null) {
-                if (url.contains(server.getConfig().getUrl())) {
-                    return false;
-                }
-                Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: " + server.getConfig().getUrl() + ", u: " + url);
-            }
+
+
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
                 if (url.contains("/e/")) {
                     Log.d(TAG, "shouldOverrideUrlLoading:0b false: " + url);
@@ -1271,14 +1287,9 @@ public class BrowserActivity extends AppCompatActivity {
             }
 
 
-            if (movie.getStudio().equals(Movie.SERVER_MyCima)) {
-//                boolean sameSite = server.getConfig() != null && server.getConfig().url != null && server.getConfig() != null && newUrl.contains(server.getConfig().url);
-                if (url.contains("embed")) {
-//                if (url.contains("embed") || sameSite) {
-                    view.loadUrl(url);
-                    Log.d(TAG, "shouldOverrideUrlLoading:1 false: " + url);
-                    return false;
-                }
+//            if (movie.getStudio().equals(Movie.SERVER_MyCima)) {
+////                boolean sameSite = server.getConfig() != null && server.getConfig().url != null && server.getConfig() != null && newUrl.contains(server.getConfig().url);
+//
                 if (!hideRedirectBar && !movie.getStudio().equals(Movie.SERVER_AKWAM)) {
                     urlBar.setText(newUrl);
                     urlNotificationBar.setVisibility(View.VISIBLE);
@@ -1290,9 +1301,9 @@ public class BrowserActivity extends AppCompatActivity {
                     };
                     autoHideHandler.postDelayed(autoHideRunnable, 7000);
                 }
-                Log.d(TAG, "shouldOverrideUrlLoading:2 true: " + url);
-                return true;
-            }
+//                Log.d(TAG, "shouldOverrideUrlLoading:2 true: " + url);
+//                return true;
+//            }
 
 
             if (
@@ -1300,8 +1311,7 @@ public class BrowserActivity extends AppCompatActivity {
                             movie.getStudio().equals(Movie.SERVER_AKWAM) ||
                                     movie.getStudio().equals(Movie.SERVER_OLD_AKWAM)) &&
                             isVideo(request.getUrl().toString(), movie)) {
-                Intent returnIntent = new Intent(activity, DetailsActivity.class);
-                setResult(Activity.RESULT_OK, returnIntent);
+                //hieeeer       Intent returnIntent = new Intent(activity, DetailsActivity.class);
                 Movie mm = Movie.clone(movie);
                 mm.setState(Movie.VIDEO_STATE);
                 mm.setVideoUrl(request.getUrl().toString());
@@ -1309,34 +1319,29 @@ public class BrowserActivity extends AppCompatActivity {
 
                 List<Movie> movieList = new ArrayList<>();
                 movieList.add(mm);
-                String jsonMovie = gson.toJson(movieList);
+                mm.setSubList(movieList);
 
-                //movie.setFetch(0); //tell next activity not to fetch movie on start
-                returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
-                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
-                returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, jsonMovie);
-                activity.startActivity(returnIntent);
+                setResult(Activity.RESULT_OK,  Util.generateIntentResult(mm));
+//      //hieeeer          String jsonMovie = gson.toJson(movieList);
+//
+//   //hieeeer             //movie.setFetch(0); //tell next activity not to fetch movie on start
+//   //hieeeer             returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
+//   //hieeeer             returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
+//   //hieeeer             returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, jsonMovie);
+//    //hieeeer            activity.startActivity(returnIntent);
                 Log.d(TAG, "shouldOverrideUrlLoading:3 true: " + url);
                 activity.finish();
                 return true;
             }
 
-            if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false, false))) {
-                Log.d(TAG, "shouldOverrideUrlLoading:4 false: " + url);
-                view.loadUrl(url);
-                return false;
-            }
+//            if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false, false))) {
+//                Log.d(TAG, "shouldOverrideUrlLoading:4 false: " + url);
+//                view.loadUrl(url);
+//                return false;
+//            }
 
 
-            if (movie.getState() == Movie.COOKIE_STATE || !shouldOverride(newUrl)) {
-                if (url.startsWith("##")) {
-                    url = url.replace("##", "");
-                }
-                Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
-                view.loadUrl(url);
-                return true;
-                //  CURRENT_WEB_NAME = getWebName(url);
-            }
+
 
             //########
 
@@ -1464,32 +1469,7 @@ public class BrowserActivity extends AppCompatActivity {
                 //   if (url.endsWith("m3u8")){
                 if (!movie.getStudio().equals(Movie.SERVER_FASELHD)) {
                     //convert headers to string
-                    String headerString = "";
-                    if (headers != null && headers.size() > 0) {
-                        try {
-                            StringBuilder sb = new StringBuilder();
-                            for (Map.Entry<String, String> entry : headers.entrySet()) {
-//                                if (entry.getKey().equals("User-Agent")){
-//                                    continue;
-//                                }
-                                sb.append(entry.getKey());
-                                sb.append("=");
-                                sb.append(entry.getValue());
-                                sb.append("&");
-                            }
-                            // Remove the last "&" character
-                            sb.deleteCharAt(sb.length() - 1);
-                            headerString = sb.toString();
-                        } catch (Exception e) {
-                            Log.d(TAG, "onLoadResource: error building headers for the video: " + e.getMessage());
-                        }
-                    }
-
-                    if (!headerString.equals("")) {
-                        newUrl = url + "|" + headerString;
-                    } else {
-                        newUrl = url;
-                    }
+                    newUrl = Util.generateMaxPlayerHeaders(url, headers);
                     // newUrl =url+"|Referer=https://vidshar.org/";
                     //   }
                 }
@@ -1526,10 +1506,7 @@ public class BrowserActivity extends AppCompatActivity {
 
 
                 //hier hhhhhhhh
-                Intent returnIntent = new Intent();
-                returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mov);
-                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mov.getMainMovie());
-                setResult(Activity.RESULT_OK, returnIntent);
+                setResult(Activity.RESULT_OK, Util.generateIntentResult(mov));
                 finish();
                 //hier hhhhhhhh
 
@@ -1615,7 +1592,7 @@ public class BrowserActivity extends AppCompatActivity {
         boolean result = false;
         referer = Util.getValidReferer(referer);
         if (referer != null) {
-            if (server.getConfig() != null && referer.contains(server.getConfig().getUrl())) {
+            if (config != null && referer.contains(config.getUrl())) {
                 return true;
             }
             Pattern pattern = Pattern.compile("fas[ei]|shah[ei]d|c[ie]{0,2}m|ak[waom]{0,2}");

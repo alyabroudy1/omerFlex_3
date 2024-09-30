@@ -15,14 +15,6 @@ import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.CookieDTO;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.AkwamServer;
-import com.omerflex.server.ArabSeedServer;
-import com.omerflex.server.CimaClubServer;
-import com.omerflex.server.FaselHdController;
-import com.omerflex.server.IptvServer;
-import com.omerflex.server.MyCimaServer;
-import com.omerflex.server.OldAkwamServer;
-import com.omerflex.server.OmarServer;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.IOException;
@@ -153,86 +145,86 @@ public class ServerManager_old {
         mycimaConfig.setReferer("https://mycima.io/");
         ServerConfigManager.addConfig(mycimaConfig);
 
-        AbstractServer mycima = MyCimaServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
-        servers.add(mycima);
+//        AbstractServer mycima = MyCimaServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
+//        servers.add(mycima);
 
         // ### akwam ###
-        ServerConfig akwamConfig = new ServerConfig();
-        akwamConfig.setName(Movie.SERVER_AKWAM);
-        akwamConfig.setUrl("https://ak.sv");
-        akwamConfig.setReferer("https://ak.sv/");
-        ServerConfigManager.addConfig(akwamConfig);
-
-        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(akwamConfig, date);
-        servers.add(akwam);
-
-        //        ### fasel ###
-        ServerConfig faselConfig = new ServerConfig();
-        faselConfig.setName(Movie.SERVER_FASELHD);
-        faselConfig.setUrl("https://faselhd.center");
-        faselConfig.setReferer("https://faselhd.center/");
-        ServerConfigManager.addConfig(faselConfig);
-
-        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
-        servers.add(faselhd);
-
-        //### arabseed ###
-        ServerConfig arabseedConfig = new ServerConfig();
-        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
-        arabseedConfig.setUrl("https://arabseed.show");
-        arabseedConfig.setReferer("https://arabseed.show/");
-        ServerConfigManager.addConfig(arabseedConfig);
-
-        AbstractServer arabseed = ArabSeedServer.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(arabseedConfig, date);
-        servers.add(arabseed);
-
-        //### old_Akwam ###
-        ServerConfig oldAkwamConfig = new ServerConfig();
-        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
-        oldAkwamConfig.setUrl("https://ak.sv/old");
-        oldAkwamConfig.setReferer("https://ak.sv/old/");
-        ServerConfigManager.addConfig(oldAkwamConfig);
-
-        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(oldAkwamConfig, date);
-        servers.add(oldAkwam);
-
-        //### cimaclub ###
-        ServerConfig cimaclubConfig = new ServerConfig();
-        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);
-        cimaclubConfig.setUrl("https://cimaclub.top");
-        cimaclubConfig.setReferer("https://cimaclub.top/");
-        ServerConfigManager.addConfig(cimaclubConfig);
-
-        AbstractServer cimaclub = CimaClubServer.getInstance(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(cimaclubConfig, date);
-        servers.add(cimaclub);
-
-        // ### omar ###
-        ServerConfig omarConfig = new ServerConfig();
-        omarConfig.setName(Movie.SERVER_OMAR);
-        omarConfig.setUrl("http://194.164.53.40/movie");
-        omarConfig.setReferer("http://194.164.53.40/");
-        ServerConfigManager.addConfig(omarConfig);
-
-        AbstractServer omar = OmarServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(omarConfig, date);
-        servers.add(omar);
-
-        //### iptv ###
-        ServerConfig iptvConfig = new ServerConfig();
-        iptvConfig.setName(Movie.SERVER_IPTV);
-        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
-        iptvConfig.setReferer("https://drive.google.com/");
-        ServerConfigManager.addConfig(iptvConfig);
-
-        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
-        dbHelper.saveServerConfigAsCookieDTO(iptvConfig, date);
-        servers.add(iptv);
+//        ServerConfig akwamConfig = new ServerConfig();
+//        akwamConfig.setName(Movie.SERVER_AKWAM);
+//        akwamConfig.setUrl("https://ak.sv");
+//        akwamConfig.setReferer("https://ak.sv/");
+//        ServerConfigManager.addConfig(akwamConfig);
+//
+//        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(akwamConfig, date);
+//        servers.add(akwam);
+//
+//        //        ### fasel ###
+//        ServerConfig faselConfig = new ServerConfig();
+//        faselConfig.setName(Movie.SERVER_FASELHD);
+//        faselConfig.setUrl("https://faselhd.center");
+//        faselConfig.setReferer("https://faselhd.center/");
+//        ServerConfigManager.addConfig(faselConfig);
+//
+//        AbstractServer faselhd = FaselHdController.getInstance(fragment, activity);
+//        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
+//        servers.add(faselhd);
+//
+//        //### arabseed ###
+//        ServerConfig arabseedConfig = new ServerConfig();
+//        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
+//        arabseedConfig.setUrl("https://arabseed.show");
+//        arabseedConfig.setReferer("https://arabseed.show/");
+//        ServerConfigManager.addConfig(arabseedConfig);
+//
+//        AbstractServer arabseed = ArabSeedServer.getInstance(fragment, activity);
+//        dbHelper.saveServerConfigAsCookieDTO(arabseedConfig, date);
+//        servers.add(arabseed);
+//
+//        //### old_Akwam ###
+//        ServerConfig oldAkwamConfig = new ServerConfig();
+//        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
+//        oldAkwamConfig.setUrl("https://ak.sv/old");
+//        oldAkwamConfig.setReferer("https://ak.sv/old/");
+//        ServerConfigManager.addConfig(oldAkwamConfig);
+//
+//        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(oldAkwamConfig, date);
+//        servers.add(oldAkwam);
+//
+//        //### cimaclub ###
+//        ServerConfig cimaclubConfig = new ServerConfig();
+//        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);
+//        cimaclubConfig.setUrl("https://cimaclub.top");
+//        cimaclubConfig.setReferer("https://cimaclub.top/");
+//        ServerConfigManager.addConfig(cimaclubConfig);
+//
+//        AbstractServer cimaclub = CimaClubServer.getInstance(fragment, activity);
+//        dbHelper.saveServerConfigAsCookieDTO(cimaclubConfig, date);
+//        servers.add(cimaclub);
+//
+//        // ### omar ###
+//        ServerConfig omarConfig = new ServerConfig();
+//        omarConfig.setName(Movie.SERVER_OMAR);
+//        omarConfig.setUrl("http://194.164.53.40/movie");
+//        omarConfig.setReferer("http://194.164.53.40/");
+//        ServerConfigManager.addConfig(omarConfig);
+//
+//        AbstractServer omar = OmarServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(omarConfig, date);
+//        servers.add(omar);
+//
+//        //### iptv ###
+//        ServerConfig iptvConfig = new ServerConfig();
+//        iptvConfig.setName(Movie.SERVER_IPTV);
+//        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
+//        iptvConfig.setReferer("https://drive.google.com/");
+//        ServerConfigManager.addConfig(iptvConfig);
+//
+//        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
+//        dbHelper.saveServerConfigAsCookieDTO(iptvConfig, date);
+//        servers.add(iptv);
 
 //
 ////        //### watanflix ###
@@ -398,28 +390,28 @@ public class ServerManager_old {
         }
         Log.d(TAG, "determineServer: "+serverName);
         switch (serverName) {
-            case Movie.SERVER_MyCima:
-                return MyCimaServer.getInstance(activity, fragment);
-            case Movie.SERVER_AKWAM:
-                return AkwamServer.getInstance(activity, fragment);
-            case Movie.SERVER_OLD_AKWAM:
-                return OldAkwamServer.getInstance(activity, fragment);
-            case Movie.SERVER_FASELHD:
-                return FaselHdController.getInstance(fragment, activity);
+//            case Movie.SERVER_MyCima:
+//                return MyCimaServer.getInstance(activity, fragment);
+//            case Movie.SERVER_AKWAM:
+//                return AkwamServer.getInstance(activity, fragment);
+//            case Movie.SERVER_OLD_AKWAM:
+//                return OldAkwamServer.getInstance(activity, fragment);
+//            case Movie.SERVER_FASELHD:
+//                return FaselHdController.getInstance(fragment, activity);
 //            case Movie.SERVER_CIMA4U:
 //                return Cima4uController.getInstance(fragment, activity);
 //            case Movie.SERVER_SHAHID4U:
 //                return Shahid4uController.getInstance(fragment, activity);
 ////            case Movie.SERVER_SERIES_TIME:
 ////                return new SeriesTimeController(listRowAdapter, activity);
-            case Movie.SERVER_CIMA_CLUB:
-                return CimaClubServer.getInstance(fragment, activity);
-            case Movie.SERVER_ARAB_SEED:
-                return ArabSeedServer.getInstance(fragment, activity);
-            case Movie.SERVER_IPTV:
-                return IptvServer.getInstance(activity, fragment);
-            case Movie.SERVER_OMAR:
-                return OmarServer.getInstance(activity, fragment);
+//            case Movie.SERVER_CIMA_CLUB:
+//                return CimaClubServer.getInstance(fragment, activity);
+//            case Movie.SERVER_ARAB_SEED:
+//                return ArabSeedServer.getInstance(fragment, activity);
+//            case Movie.SERVER_IPTV:
+//                return IptvServer.getInstance(activity, fragment);
+//            case Movie.SERVER_OMAR:
+//                return OmarServer.getInstance(activity, fragment);
 //            case Movie.SERVER_WATAN_FLIX:
 //                return WatanFlixController.getInstance(fragment, activity);
 //            case Movie.SERVER_KOORA_LIVE:
@@ -430,28 +422,28 @@ public class ServerManager_old {
 
     public static AbstractServer determineServer(Movie movie, ArrayObjectAdapter listRowAdapter, Activity activity, Fragment fragment) {
         switch (movie.getStudio()) {
-            case Movie.SERVER_MyCima:
-                return MyCimaServer.getInstance(activity, fragment);
-            case Movie.SERVER_AKWAM:
-                return AkwamServer.getInstance(activity, fragment);
-            case Movie.SERVER_OLD_AKWAM:
-                return OldAkwamServer.getInstance(activity, fragment);
-            case Movie.SERVER_FASELHD:
-                return FaselHdController.getInstance(fragment, activity);
+//            case Movie.SERVER_MyCima:
+//                return MyCimaServer.getInstance(activity, fragment);
+//            case Movie.SERVER_AKWAM:
+//                return AkwamServer.getInstance(activity, fragment);
+//            case Movie.SERVER_OLD_AKWAM:
+//                return OldAkwamServer.getInstance(activity, fragment);
+//            case Movie.SERVER_FASELHD:
+//                return FaselHdController.getInstance(fragment, activity);
 //            case Movie.SERVER_CIMA4U:
 //                return Cima4uController.getInstance(fragment, activity);
 //            case Movie.SERVER_SHAHID4U:
 //                return Shahid4uController.getInstance(fragment, activity);
 //            case Movie.SERVER_SERIES_TIME:
 //                return new SeriesTimeController(listRowAdapter, activity);
-            case Movie.SERVER_CIMA_CLUB:
-                return CimaClubServer.getInstance(fragment, activity);
-            case Movie.SERVER_ARAB_SEED:
-                return ArabSeedServer.getInstance(fragment, activity);
-            case Movie.SERVER_IPTV:
-                return IptvServer.getInstance(activity, fragment);
-            case Movie.SERVER_OMAR:
-                return OmarServer.getInstance(activity, fragment);
+//            case Movie.SERVER_CIMA_CLUB:
+//                return CimaClubServer.getInstance(fragment, activity);
+//            case Movie.SERVER_ARAB_SEED:
+//                return ArabSeedServer.getInstance(fragment, activity);
+//            case Movie.SERVER_IPTV:
+//                return IptvServer.getInstance(activity, fragment);
+//            case Movie.SERVER_OMAR:
+//                return OmarServer.getInstance(activity, fragment);
 //            case Movie.SERVER_WATAN_FLIX:
 //                return WatanFlixController.getInstance(fragment, activity);
 //            case Movie.SERVER_KOORA_LIVE:

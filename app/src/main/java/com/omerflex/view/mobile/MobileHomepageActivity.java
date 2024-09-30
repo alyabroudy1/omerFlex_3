@@ -16,22 +16,18 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.AkwamServer;
-import com.omerflex.server.ArabSeedServer;
-import com.omerflex.server.CimaClubServer;
-import com.omerflex.server.IptvServer;
-import com.omerflex.server.MyCimaServer;
-import com.omerflex.server.OldAkwamServer;
+import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
+import com.omerflex.service.database.MovieDbHelper;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.mobile.entity.Category;
 import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 import com.omerflex.view.mobile.view.OnMovieClickListener;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -47,7 +43,9 @@ public class MobileHomepageActivity extends AppCompatActivity {
     ServerManager serverManager;
     Activity activity;
     HorizontalMovieAdapter clickedHorizontalMovieAdapter;
+    int clickedMovieIndex = 0;
     private Handler handler = new Handler();
+    public MovieDbHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +58,9 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //            return insets;
 //        });
         activity = this;
+        dbHelper = MovieDbHelper.getInstance(activity);
         serverManager = new ServerManager(activity, null);
-        serverManager.updateServers();
+        // todo: serverManager.updateServers();
         searchView = findViewById(R.id.searchView);
         recyclerView = findViewById(R.id.recyclerView);
 
@@ -103,92 +102,174 @@ public class MobileHomepageActivity extends AppCompatActivity {
     private void loadCategoriesInBackground() {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
-//            Log.d(TAG, "loadHomepageRaws a ");
+//            AbstractServer server = new MyCimaServer(activity, null);
+//            ArrayList<Movie> movies = server.getHomepageMovies();
+//
+//            Category category = new Category(server.getLabel(), movies);
+//            handler.post(new Runnable() {
+//                @Override
+//                public void run() {
+//                    categoryList.add(category);
+//                    categoryAdapter.notifyItemInserted(categoryList.size() - 1);
+//                }
+//            });
+
+
+            Log.d(TAG, "loadHomepageRaws a ");
             for (AbstractServer server : serverManager.getServers()) {
 
+                Log.d(TAG, "loadHomepageRaws server: " + server.getServerId());
 //                if (server == null || server.getConfig() == null|| !server.getConfig().isActive()){
 //                    continue;
 //                }
-                if (
-                        server instanceof OldAkwamServer ||
-                                server instanceof CimaClubServer ||
-//                                    server instanceof FaselHdController ||
-                                    server instanceof AkwamServer ||
-                                    server instanceof ArabSeedServer ||
-                                    server instanceof IptvServer ||
-                                    server instanceof MyCimaServer
-                ) {
-                    continue;
-                }
+//                if (
+//                        server instanceof OldAkwamServer ||
+//                                server instanceof CimaClubServer ||
+////                                    server instanceof FaselHdController ||
+//                                    server instanceof AkwamServer ||
+//                                    server instanceof ArabSeedServer ||
+//                                    server instanceof IptvServer ||
+//                                    server instanceof MyCimaServer
+//                ) {
+//                    continue;
+//                }
                 // Update the RecyclerView on the main thread
-                ArrayList<Movie> movies = server.getHomepageMovies();
+                ArrayList<Movie> movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                    @Override
+                    public void onSuccess(ArrayList<Movie> result) {
+
+                    }
+
+                    @Override
+                    public void onInvalidCookie(ArrayList<Movie> result) {
+
+                    }
+
+                    @Override
+                    public void onInvalidLink(ArrayList<Movie> result) {
+
+                    }
+
+                    @Override
+                    public void onInvalidLink(String message) {
+
+                    }
+                });
 
                 if (movies == null || movies.isEmpty()) {
                     continue;
                 }
 
-                Category category = new Category(server.getLabel(), movies);
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        categoryList.add(category);
-                        categoryAdapter.notifyItemInserted(categoryList.size() - 1);
-                    }
-                });
+                generateCategory(server.getLabel(), movies);
             }
         });
         executor.shutdown();
     }
 
-
-    //                Intent intent = new Intent(context, MobileMovieDetailActivity.class);
-    //                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_TITLE, movie.getTitle());
-    //                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_IMAGE_URL, movie.getCardImageUrl());
-    //                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_CATEGORY, "Action"); // Replace "Action" with the actual category
-    //                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_RATING, movie.getRate());
-    //                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_STUDIO, movie.getStudio());
-    //                context.startActivity(intent);
-
+    private void generateCategory(String title, ArrayList<Movie> movies) {
+        Category category = new Category(title, movies);
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                categoryList.add(category);
+                categoryAdapter.notifyItemInserted(categoryList.size() - 1);
+            }
+        });
+    }
 
     public class MovieItemClickListener implements OnMovieClickListener {
         Activity activity;
 
         CategoryAdapter categoryAdapter;
 
-        public MovieItemClickListener(Activity activity){
+        public MovieItemClickListener(Activity activity) {
             this.activity = activity;
         }
+
         public void onMovieClick(Movie movie, int position, HorizontalMovieAdapter horizontalMovieAdapter) {
-// Check if the clicked movie matches the criteria to extend the category
-//            Log.d(TAG, "onMovieClick: "+ categoryAdapter.getItemCount());
+            // Check if the clicked movie matches the criteria to extend the category
+            //            Log.d(TAG, "onMovieClick: "+ categoryAdapter.getItemCount());
             clickedHorizontalMovieAdapter = horizontalMovieAdapter;
-            if (movie.getState() == Movie.COOKIE_STATE){
-                Log.d(TAG, "onMovieClick: COOKIE_STATE");
-                fetchCookie(movie);
-                return;
-            }
+            clickedMovieIndex = position;
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            executor.submit(() -> {
+                AbstractServer server = ServerManager.determineServer(movie, null, activity, null);
 
-            if (shouldExtendCategory(movie)) {
-                extendMovieListForCategory(movie, position, categoryAdapter, horizontalMovieAdapter);
-            } else {
-                // Handle normal click event (e.g., open detail activity)
-                Intent intent = new Intent(activity, MobileMovieDetailActivity.class);
-//                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_TITLE, movie.getTitle());
-//                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_IMAGE_URL, movie.getCardImageUrl());
-//                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_RATING, movie.getRate());
-//                intent.putExtra(MobileMovieDetailActivity.EXTRA_MOVIE_STUDIO, movie.getStudio());
-                intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-                startActivity(intent);
+                if (movie.getState() == Movie.COOKIE_STATE){
+                    Log.d(TAG, "onMovieClick: COOKIE_STATE-0");
+                    MovieFetchProcess fetchProcess = server.fetch(
+                            movie,
+                            movie.getState(),
+                            new ServerInterface.ActivityCallback<Movie>() {
+                                @Override
+                                public void onSuccess(Movie result) {
+                                    // todo: analyse case
+                                    Log.d(TAG, "onMovieClick: COOKIE_STATE onSuccess");
+                                    Util.openBrowserIntent(result, activity, false, true);
+                                }
+
+                                @Override
+                                public void onInvalidCookie(Movie result) {
+                                    Log.d(TAG, "onMovieClick: COOKIE_STATE onInvalidCookie: ");
+                                    result.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+                                    Util.openBrowserIntent(result, activity, true, true);
+                                }
+
+                                @Override
+                                public void onInvalidLink(Movie result) {
+                                    Log.d(TAG, "onMovieClick: COOKIE_STATE onInvalidLink: ");
+                                }
+
+                                @Override
+                                public void onInvalidLink(String message) {
+
+                                }
+                            }
+                    );
+//                    Log.d(TAG, "onMovieClick: COOKIE_STATE");
+//                    if (fetchProcess.stateCode == MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE) {
+//                        Util.openBrowserIntent(movie, activity, false, true);
+//                        return;
+//                    }
+                }
+                else if (movie.getStudio().equals(Movie.SERVER_IPTV)){
+                    Log.d(TAG, "onMovieClick: Movie.SERVER_IPTV");
+                    handleIptvClickedItem(movie, position, horizontalMovieAdapter);
+                }
+                else {
+                    Log.d(TAG, "onMovieClick: openMobileDetailsIntent");
+                    // Handle normal click event (e.g., open detail activity)
+                    Util.openMobileDetailsIntent(movie, activity, true);
+                }
+
+//                if (shouldExtendCategory(movie)) {
+//                    Log.d(TAG, "onMovieClick: shouldExtendCategory");
+//                    extendMovieListForCategory(movie, position, categoryAdapter, horizontalMovieAdapter);
+//                } else {
+//                    Log.d(TAG, "onMovieClick: openMobileDetailsIntent");
+//                    // Handle normal click event (e.g., open detail activity)
+//                    Util.openMobileDetailsIntent(movie, activity, true);
+//                }
+            });
+            executor.shutdown();
+        }
+
+        private void handleIptvClickedItem(Movie movie, int position, HorizontalMovieAdapter horizontalMovieAdapter) {
+            if (movie.getState() == Movie.PLAYLIST_STATE) {
+               // Todo: generateCategories for a specific iptv list
+            }
+            else {
+                Util.openExoPlayer(movie, activity, true);
             }
         }
 
-        private void fetchCookie(Movie movie) {
-            AbstractServer server = Util.determineServer(movie, null, activity, null);
-            if (server == null){
-                return;
-            }
-            server.fetch(movie);
-        }
+//        private void fetchCookie(Movie movie) {
+//            AbstractServer server = ServerManager.determineServer(movie, null, activity, null);
+//            if (server == null) {
+//                return;
+//            }
+//            server.fetch(movie, movie.getState());
+//        }
 
         public CategoryAdapter getCategoryAdapter() {
             return categoryAdapter;
@@ -196,23 +277,6 @@ public class MobileHomepageActivity extends AppCompatActivity {
 
         public void setCategoryAdapter(CategoryAdapter categoryAdapter) {
             this.categoryAdapter = categoryAdapter;
-        }
-
-        private void extendMovieListForCategory(Movie movie, int position, CategoryAdapter categoryAdapter, HorizontalMovieAdapter horizontalMovieAdapter)
-        {
-          Log.d(TAG, "extendMovieListForCategory: p:"+ position+ ", s:"+horizontalMovieAdapter.getItemCount());
-          Movie movie1 = horizontalMovieAdapter.getMovieList().get(0);
-            horizontalMovieAdapter.getMovieList().add(movie1);
-
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-//                    categoryList.add(category);
-//                    categoryAdapter.notifyItemInserted(categoryList.size() - 1);
-//                    horizontalMovieAdapter.notifyItemInserted(categoryList.size() - 1);
-                    horizontalMovieAdapter.notifyDataSetChanged();
-                }
-            });
         }
 
         private boolean shouldExtendCategory(Movie movie) {
@@ -231,11 +295,37 @@ public class MobileHomepageActivity extends AppCompatActivity {
         // 5.Movie.REQUEST_CODE_MOVIE_LIST to extend the movie list in row
         // should update:
         // 1.movie list
-//
-//        if (resultCode != Activity.RESULT_OK || data == null) {
-//            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
-//            return;
-//        }
+
+        // returned from Browser result:
+        // 1. in case it doesnt start with "##"
+        //  - in case its COOKIE_STATE
+        //  - and its not COOKIE_STATE
+
+
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
+            return;
+        }
+
+        if (requestCode == Movie.REQUEST_CODE_EXOPLAYER){
+            Movie resultMovie = (Movie) data.getParcelableExtra(DetailsActivity.MOVIE);
+            if (resultMovie == null){
+                return;
+            }
+            Util.openExoPlayer(resultMovie, activity, true);
+            // todo: handle dbHelper
+            updateRelatedMovieItem(clickedHorizontalMovieAdapter, clickedMovieIndex, resultMovie);
+            dbHelper.addMainMovieToHistory(clickedHorizontalMovieAdapter.getMovieList().get(clickedMovieIndex));
+            return;
+        }
+
+
+
+
+        ArrayList<Movie> resultMovieSublist = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
+        if (resultMovieSublist != null && !resultMovieSublist.isEmpty()){
+            updateMovieListOfHorizontalMovieAdapter(resultMovieSublist);
+        }
 //        Gson gson = new Gson();
 //
 //        Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
@@ -288,4 +378,29 @@ public class MobileHomepageActivity extends AppCompatActivity {
 ////        updateRelatedMovieAdapter(mSelectedMovie);
         super.onActivityResult(requestCode, resultCode, data);
     }
+
+    private void updateRelatedMovieItem(HorizontalMovieAdapter horizontalMovieAdapter, int clickedMovieIndex, Movie resultMovie) {
+        horizontalMovieAdapter.getMovieList().set(clickedMovieIndex, resultMovie);
+        horizontalMovieAdapter.notifyItemChanged(clickedMovieIndex);
+    }
+    private void updateMovieListOfHorizontalMovieAdapter(ArrayList<Movie> resultMovieSublist) {
+        if (clickedHorizontalMovieAdapter != null){
+            extendMovieListOfHorizontalMovieAdapter(resultMovieSublist, clickedHorizontalMovieAdapter);
+        }
+    }
+
+    private void extendMovieListOfHorizontalMovieAdapter(ArrayList<Movie> resultMovieSublist, HorizontalMovieAdapter horizontalMovieAdapter) {
+        Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: p:"  + ", s:" + horizontalMovieAdapter.getItemCount());
+        horizontalMovieAdapter.getMovieList().addAll(resultMovieSublist);
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+//                    categoryList.add(category);
+//                    categoryAdapter.notifyItemInserted(categoryList.size() - 1);
+//                    horizontalMovieAdapter.notifyItemInserted(categoryList.size() - 1);
+                horizontalMovieAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
 }

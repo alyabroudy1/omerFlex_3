@@ -1,48 +1,30 @@
 package com.omerflex.server;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.util.Log;
-import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
-import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.service.ServerConfigManager;
-import com.omerflex.service.database.MovieDbHelper;
-import com.omerflex.view.BrowserActivity;
-import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
-import java.io.Serializable;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 public abstract class AbstractServer implements ServerInterface {
 
     private static final String TAG = "AbstractServer";
-    private boolean cookieRefreshed = false;
 
-    /**
-     * Search for the query and add the result to movieList
-     *
-     * @param query name to search for
-     * @return
-     */
-    public ArrayList<Movie> search(String query) {
+    @Override
+    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
         Log.i(getLabel(), "search: " + query);
         String url = query;
         if (!query.contains("http")) {
@@ -56,15 +38,78 @@ public abstract class AbstractServer implements ServerInterface {
         return this.getSearchMovieList(doc);
     }
 
-    protected abstract ArrayList<Movie> getSearchMovieList(Document doc);
+    @Override
+    public MovieFetchProcess fetch(Movie movie, int action, ActivityCallback<Movie> activityCallback) {
+        if (movie == null) {
+            Log.d(TAG, "fetch: invalid link");
+            activityCallback.onInvalidLink("invalid link");
+            return null;
+        }
+        switch (action) {
+            case Movie.GROUP_OF_GROUP_STATE:
+            case Movie.GROUP_STATE:
+                Log.d(TAG, "fetch: fetchSeriesAction");
+                return fetchSeriesAction(movie, action, activityCallback);
+//            case Movie.ITEM_STATE:
+//                return fetchItem(movie, Movie.ITEM_STATE);
+//            case Movie.BROWSER_STATE:
+//                return fetchItem(movie, Movie.BROWSER_STATE);
+//            case Movie.RESOLUTION_STATE:
+//                if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE){
+//                    return movie;
+//                }
+//                return fetchResolutions(movie);
+//            case Movie.VIDEO_STATE:
+//                return fetchVideo(movie);
+//            case Movie.COOKIE_STATE:
+//                return fetchCookie(movie);
+            default:
+                Log.d(TAG, "fetch: default fetchItemAction: "+ action+ "m: "+ movie);
+              return fetchItemAction(movie, action, activityCallback);
+        }
+    }
+    protected ServerConfig getConfig(){
+        return ServerConfigManager.getConfig(getServerId());
+    }
+    public boolean shouldOverrideUrlLoading(Movie movie, WebView view, WebResourceRequest request){
+        boolean result = false;
+        String url = request.getUrl().toString();
+        String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
 
+        if (getConfig() != null) {
+            if (newUrl.contains(getConfig().getUrl())) {
+                return false;
+            }
+            Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: " + getConfig().getUrl() + ", u: " + url);
+        }
+
+        if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false, false))) {
+//                Log.d(TAG, "shouldOverrideUrlLoading:0 false: domain: " + Util.extractDomain(url, false, false) + ", u: " + url);
+            return false;
+        }
+
+        if (url.contains("embed")) {
+//                if (url.contains("embed") || sameSite) {
+            view.loadUrl(url);
+            Log.d(TAG, "shouldOverrideUrlLoading:1 false: " + url);
+            return false;
+        }
+
+        return true;
+    }
+    /**
+     * @param url request link
+     * @return Document or null if an exception occurs
+     */
     protected Document getRequestDoc(String url) {
         Document doc = null;
+        ServerConfig config = getConfig();
+        Log.d(TAG, "getRequestDoc: "+config);
         try {
             doc = Jsoup.connect(url)
 //                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                    .headers(this.getHeaders())
-                    .cookies(this.getMappedCookies())
+                    .headers(config.getHeaders())
+                    .cookies(config.getMappedCookies())
 //                    .userAgent("Android 7")
 //                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
                     .followRedirects(true)
@@ -82,140 +127,15 @@ public abstract class AbstractServer implements ServerInterface {
         } catch (IOException e) {
             //builder.append("Error : ").append(e.getMessage()).append("\n");
             Log.i(TAG, "error: " + e.getMessage());
-            String errorMessage = "error: " +getServerId() + ": "+e.getMessage();
-            showToastMessage(errorMessage);
+            String errorMessage = "error: " + getServerId() + ": " + e.getMessage();
+            Util.showToastMessage(errorMessage, getActivity());
         }
         return doc;
     }
 
-    public void showToastMessage(String message) {
-        if (getActivity() != null){
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(getActivity(), message,Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-    }
-
-
-    protected Document getRequestDoc(String url, Movie movie, int operation) {
-        Document doc = null;
-        try {
-            doc = Jsoup.connect(url)
-//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                    .headers(this.getHeaders())
-//                    .userAgent("Android 7")
-//                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .ignoreContentType(true)
-                    .timeout(16000)
-                    .get();
-
-            String docTitle = doc.title();
-            Log.d(TAG, "getRequestDoc: " + docTitle);
-            if (docTitle.contains("Just a moment")) {
-                return fetchDocUsingWebView(url, movie, operation);
-            }
-
-        } catch (IOException e) {
-            //builder.append("Error : ").append(e.getMessage()).append("\n");
-            Log.i(TAG, "error: " + e.getMessage());
-        }
-        return doc;
-    }
-
-    private Document fetchDocUsingWebView(String url, Movie selectedMovie, int operation) {
-        Log.d(TAG, "fetchDocUsingWebView: " + url);
-        if (getActivity() != null && getFragment() != null) {
-
-            Movie movie = Movie.clone(selectedMovie);
-            movie.setVideoUrl(url);
-            movie.setStudio(getServerId());
-//            movie.setState(Movie.HTML_STATE);
-            movie.setVideoUrl(url);
-            movie.setFetch(Movie.REQUEST_CODE_FETCH_HTML);
-
-            Intent browse = new Intent(getActivity(), BrowserActivity.class);
-            browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-//            browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-            Log.d(TAG, "getResultFromWeb: activity:" + getFragment().getClass().getName());
-            //activity.startActivity(browse);
-            getFragment().startActivityForResult(browse, movie.getFetch());
-        }
-        // return null to stop further steps and let webview return the result to the activity
-        return null;
-    }
-
-    public abstract String getServerId();
-
-    protected abstract Fragment getFragment();
-
-    protected abstract Activity getActivity();
-
-    protected abstract String getSearchUrl(String query);
-
-    public abstract String getLabel();
-
-    /**
-     * fetch a url and return its items
-     *
-     * @param movie Movie object to fetch its url
-     */
-    public Movie fetch(Movie movie) {
-        if (movie == null) {
-            return null;
-        }
-        switch (movie.getState()) {
-            case Movie.GROUP_OF_GROUP_STATE:
-                return fetchGroupOfGroup(movie);
-            case Movie.GROUP_STATE:
-                return fetchGroup(movie);
-            case Movie.ITEM_STATE:
-                return fetchItem(movie);
-            case Movie.BROWSER_STATE:
-                return fetchBrowseItem(movie);
-            case Movie.RESOLUTION_STATE:
-                return fetchResolutions(movie);
-            case Movie.VIDEO_STATE:
-                return fetchVideo(movie);
-            case Movie.COOKIE_STATE:
-                return fetchCookie(movie);
-            default:
-                return null;
-        }
-    }
-
-    public Movie fetchVideo(Movie movie) {
-//        if (movie != null && movie.getVideoUrl() != null) {
-//            String type = "video/*"; // It works for all video application
-//            String url = movie.getVideoUrl();
-//            url = url.trim().replace(" ", "");
-//            //  url = url.replace("/video.mp4", "");
-//            Uri uri = Uri.parse(url + "");
-//            Intent videoIntent = new Intent(Intent.ACTION_VIEW, uri);
-//            videoIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-//            //  in1.setPackage("org.videolan.vlc");
-//            videoIntent.setDataAndType(uri, type);
-//            Log.i("video started", uri.toString() + "");
-//        }
-
-        return movie;
-    }
-
-    public abstract Movie fetchBrowseItem(Movie movie);
-
-    /**
-     * fetch next action
-     *
-     * @param movie Movie object to fetch its url
-     * @return
-     */
     public int fetchNextAction(Movie movie) {
-        Log.d(TAG, "fetchNextAction: "+ (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) );
-        if (movie == null || movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) {
+//        Log.d(TAG, "fetchNextAction: "+ (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) );
+        if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) {
             return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
         }
         switch (movie.getState()) {
@@ -229,253 +149,35 @@ public abstract class AbstractServer implements ServerInterface {
         return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
     }
 
-    public Movie fetchToWatchLocally(Movie movie) {
-        Movie resolution = Movie.clone(movie);
-        resolution.setState(Movie.VIDEO_STATE);
-        if (movie.getSubList() == null) {
-            movie.setSubList(new ArrayList<>());
-        }
-        movie.addSubList(resolution);
-        return movie;
-    }
-
-    /**
-     * fetch a url and return its group item
-     *
-     * @param movie Movie object to fetch its url if it's a series of group
-     * @return
-     */
-    public abstract Movie fetchGroupOfGroup(Movie movie);
-
-    /**
-     * fetch a url and return its episode items
-     *
-     * @param movie Movie object to fetch its url if it's a group of episodes
-     * @return
-     */
-    public abstract Movie fetchGroup(Movie movie);
-
-    /**
-     * fetch a url and return its serverLinks or resolution links
-     *
-     * @param movie Movie object to fetch its url
-     * @return
-     */
-    public abstract Movie fetchItem(Movie movie);
-
-    public abstract void fetchWebResult(Movie movie);
-
-    /**
-     * fetch a url and return its serverLinks
-     *
-     * @param movie Movie object to fetch its url
-     */
-    public abstract void fetchServerList(Movie movie);
-
-    /**
-     * fetch a url and return its resolution links
-     *
-     * @param movie Movie object to fetch its url
-     * @return
-     */
-    public abstract Movie fetchResolutions(Movie movie);
-
-    /**
-     * starts a video intent
-     *
-     * @param url String url to run video intent
-     */
-    public abstract void startVideo(String url);
-
-    /**
-     * starts a browserActivity
-     *
-     * @param url String url of the video
-     */
-    public abstract void startBrowser(String url);
-
-    public abstract Movie fetchCookie(Movie movie);
-
-    /**
-     * check if movie url an item or group
-     *
-     * @param movie Movie object to check its url
-     * @return true if is series link
-     */
-    public abstract boolean isSeries(Movie movie);
-
-    public void updateDomain(String movieLink, MovieDbHelper dbHelper){
-        ServerConfig config = getConfig();
-        String newDomain = Util.extractDomain(movieLink, true, false);
-        boolean equal = config.getUrl().contains(newDomain);
-        Log.d(TAG, "updateDomain: old: "+getConfig().getUrl() + ", new: "+ newDomain + ", = "+ (equal));
-        if (!equal){
-            config.setUrl(newDomain);
-            config.setReferer(newDomain + "/");
-            setConfig(config);
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            Log.d(TAG, "addServerConfigsToDB: ");
-            Date date = null;
-            try {
-                date = format.parse("2024-02-22T12:30:00");
-            } catch (ParseException e) {
-                date = new Date();
-            }
-            dbHelper.saveServerConfigAsCookieDTO(getConfig(), date);
+    public String determineRelatedMovieLabel(Movie movie) {
+        switch (movie.getState()){
+            case Movie.GROUP_OF_GROUP_STATE:
+                return "المواسم";
+            case Movie.GROUP_STATE:
+                return "الحلقات";
+            case Movie.ITEM_STATE:
+                return "الجودة";
+            default:
+                return "الروابط";
         }
     }
 
-    public void setCookies(String cookies){
-        ServerConfig config = getConfig();
-        if (config != null){
-            config.setStringCookies(cookies);
-            ServerConfigManager.updateConfig(config);
-        }
-    }
+    public abstract void shouldInterceptRequest(WebView view, WebResourceRequest request);
 
-    public String getCookies(){
-        if (getConfig() != null){
-            return getConfig().getStringCookies();
-        }
-        return "";
-    }
+    protected abstract Activity getActivity();
+    protected abstract Fragment getFragment();
 
-    public Map<String, String> getMappedCookies(){
-        if (getConfig() != null){
-            return getConfig().getMappedCookies();
-        }
-        return new HashMap<>();
-    }
+    protected abstract String getSearchUrl(String query);
 
-    public void setHeaders(Map<String, String> headers){
-        ServerConfig config = getConfig();
-        if (config != null){
-            config.setHeaders(headers);
-            ServerConfigManager.updateConfig(config);
-        }
-    };
+    protected abstract ArrayList<Movie> getSearchMovieList(Document doc);
 
-    public Map<String, String> getHeaders(){
-        if (getConfig() != null){
-//            Log.d(TAG, "getHeaders: "+getConfig());
-            return getConfig().getHeaders();
-        }
-        return new HashMap<>();
-    }
+    protected abstract MovieFetchProcess fetchSeriesAction(Movie movie, int action, ActivityCallback<Movie> activityCallback);
 
-    public abstract boolean onLoadResource(Activity activity, WebView view, String url, Movie movie);
-
+    protected abstract MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback);
     public abstract int detectMovieState(Movie movie);
-
-    public void setReferer(String referer){
-        ServerConfig config = getConfig();
-        if (config != null){
-            config.setReferer(referer);
-            ServerConfigManager.updateConfig(config);
-        }
-    }
-
-    public String getReferer(){
-        if (getConfig() != null){
-            return getConfig().getReferer();
-        }
-        return null;
-    }
 
     public abstract String getWebScript(int mode, Movie movie);
 
-    public void setConfig(ServerConfig serverConfig){
-        ServerConfig config = getConfig();
-        if (config != null){
-            ServerConfigManager.updateConfig(serverConfig);
-        }else {
-            ServerConfigManager.addConfig(serverConfig);
-        }
-    }
-
-    public ServerConfig getConfig(){
-        return ServerConfigManager.getConfig(getServerId());
-    }
-
-    /**
-     * @return ArrayList<Movie> of movies to be in homepage
-     */
-    public abstract ArrayList<Movie> getHomepageMovies();
-
-    public void handleJSWebResult(Activity activity, Movie movie, String jsResult) {
-        Log.d(TAG, "handleJSWebResult - "+movie);
-
-            Intent intent = new Intent();
-//            intent.putExtra("result", jsResult);
-            intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-
-            intent.putExtra(DetailsActivity.MOVIE_SUBLIST, (Serializable) jsResult);
-            activity.setResult(Activity.RESULT_OK, intent);
-            Log.d(TAG, "handleJSWebResult - 2" );
-            activity.finish();
-    }
-
-    public Movie handleOnActivityResultHtml(String html, Movie m) {
-        Movie movie = Movie.clone(m);
-        Document doc = Jsoup.parse(html);
-
-        return movie;
-    }
-
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request, MovieDbHelper dbHelper) {
-//        String url = "https://wecima.show/watch/%d9%85%d8%b4%d8%a7%d9%87%d8%af%d8%a9-%d9%85%d8%b3%d9%84%d8%b3%d9%84-fox-spirit-matchmaker-love-in-pavilion-%d9%85%d9%88%d8%b3%d9%85-1-%d8%ad%d9%84%d9%82%d8%a9-10/";
-
-        ServerConfig config = getConfig();
-        if (config == null || config.getUrl() == null){
-            return;
-        }
-
-        String cookieTest = CookieManager.getInstance().getCookie(config.getUrl());
-        if (cookieTest == null){
-            return;
-        }
-            //                String url = "https://www.faselhd.link/account/login";
-            Connection connection = Jsoup.connect(config.getUrl());//.sslSocketFactory(getSSLSocketFactory());
-            connection.ignoreHttpErrors(true);
-            connection.ignoreContentType(true);
-            connection.headers(request.getRequestHeaders());
-            // String cookie = CookieManager.getInstance().getCookie("https://shahid4uu.cam");
-            connection.cookies(Util.getMapCookies(cookieTest));
 
 
-            // new cookie already refreshed
-            if (isCookieRefreshed()){
-                Log.d(TAG, "shouldInterceptRequest: refresh cookie: refreshed");
-                return;
-            }
-
-            Document doc = null;
-            try {
-                doc = connection.get();
-                String title = doc.title();
-                Log.d(TAG, "testCookie shouldInterceptRequest: cookie test title:"+title);
-                if (!title.contains("moment")){
-                    Log.d(TAG, "testCookie shouldInterceptRequest: success headers:"+request.getRequestHeaders().toString());
-                    Log.d(TAG, "testCookie shouldInterceptRequest: success cookies:"+cookieTest);
-                    setCookies(cookieTest);
-                    setHeaders(request.getRequestHeaders());
-                    dbHelper.saveHeadersAndCookies(this, getServerId());
-                    setCookieRefreshed(true);
-                }
-            } catch (IOException e) {
-//            throw new RuntimeException(e);
-                //Document doc = Jsoup.parse(htmlContent);
-                Log.d(TAG, "testCookie: error: "+e.getMessage());
-
-            }
-
-    }
-
-    public boolean isCookieRefreshed() {
-        return cookieRefreshed;
-    }
-
-    public void setCookieRefreshed(boolean refreshed) {
-        this.cookieRefreshed = refreshed;
-    }
 }

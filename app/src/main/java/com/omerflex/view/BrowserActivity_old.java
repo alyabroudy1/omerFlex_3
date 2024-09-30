@@ -40,7 +40,6 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
@@ -589,7 +588,7 @@ public class BrowserActivity_old extends AppCompatActivity {
                 Toast.makeText(this, "Press back 2 time to exit", Toast.LENGTH_SHORT).show();
         }
         backPressedTime = System.currentTimeMillis();
-
+super.onBackPressed();
     }
 
     /**
@@ -814,7 +813,7 @@ public class BrowserActivity_old extends AppCompatActivity {
 //            if (elementJson.startsWith("<html>")){
             if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE){
                 Log.d(TAG, "myMethod: html contents: "+ elementJson);
-                server.handleJSWebResult(activity, movie, elementJson);
+//                server.handleJSWebResult(activity, movie, elementJson);
                 return;
             }else if (elementJson.equals("click")) {
 //                mouseArrow.setX(screenHeight / 2);
@@ -845,7 +844,7 @@ public class BrowserActivity_old extends AppCompatActivity {
                     //  if (server.getReferer() == null){4
                     //String ref = getValidReferer(movie.)
                     //  }
-                    Log.d(TAG, "myMethod: xxx referer:" + server.getReferer());
+//                    Log.d(TAG, "myMethod: xxx referer:" + server.getReferer());
 
                     try {
                         // Parse the JSON string to a JSONArray
@@ -857,10 +856,10 @@ public class BrowserActivity_old extends AppCompatActivity {
                         // Extract the videoUrl value
                         String videoUrl = jsonObject.getString("videoUrl");
                         String movieReferer = urlExtractor(videoUrl);
-                        if (null == movieReferer) {
-                            movieReferer = server.getReferer();
-                        }
-                        server.setReferer(movieReferer);
+//                        if (null == movieReferer) {
+//                            movieReferer = server.getReferer();
+//                        }
+//                        server.setReferer(movieReferer);
 
                         // Print the extracted URL
                         Log.d(TAG, "Extracted URL: " + movieReferer);
@@ -899,11 +898,11 @@ public class BrowserActivity_old extends AppCompatActivity {
 
                         //this case only for akwam as the valid referer already fetched by search method
                         String movieReferer = Util.getValidReferer(movie.getVideoUrl());
-                        ServerConfig config = server.getConfig();
-                        config.setReferer(movieReferer);
-                        config.setUrl(movieReferer);
+//                        ServerConfig config = server.getConfig();
+//                        config.setReferer(movieReferer);
+//                        config.setUrl(movieReferer);
 
-                        server.setConfig(config);
+//                        server.setConfig(config);
                         dbHelper.saveHeadersAndCookies(server, server.getServerId());
 
 
@@ -1106,7 +1105,7 @@ public class BrowserActivity_old extends AppCompatActivity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
 //            Log.d(TAG, "shouldInterceptRequest: "+request.getUrl());
-            server.shouldInterceptRequest(view, request, dbHelper);
+//            server.shouldInterceptRequest(view, request, dbHelper);
 //            testCookie(view, request);
             if (
                     movie.getStudio().equals(Movie.SERVER_ARAB_SEED) ||
@@ -1135,9 +1134,9 @@ public class BrowserActivity_old extends AppCompatActivity {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             headers.replace("Referer", validReferer);
                         }
-                        server.setReferer(validReferer);
-                        server.setHeaders(request.getRequestHeaders());
-                        server.setCookies(cookie);
+//                        server.setReferer(validReferer);
+//                        server.setHeaders(request.getRequestHeaders());
+//                        server.setCookies(cookie);
 
                         cookieFound = true;
                         Log.d(TAG, "shouldInterceptRequest: response: headers:" + request.getRequestHeaders().toString());
@@ -1180,12 +1179,12 @@ public class BrowserActivity_old extends AppCompatActivity {
             }
 
 //            Log.d(TAG, "shouldOverrideUrlLoading: contains config url : "+ newUrl.contains(server.getConfig().url) + ", "+server.getConfig().url);
-            if (server.getConfig() != null) {
-                if (url.contains(server.getConfig().getUrl())){
-                    return false;
-                }
-                Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: "+server.getConfig().getUrl() + ", u: " +url);
-            }
+//            if (server.getConfig() != null) {
+//                if (url.contains(server.getConfig().getUrl())){
+//                    return false;
+//                }
+//                Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: "+server.getConfig().getUrl() + ", u: " +url);
+//            }
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
                 if (url.contains("/e/")){
                     Log.d(TAG, "shouldOverrideUrlLoading:0b false: "+url);
@@ -1539,9 +1538,9 @@ public class BrowserActivity_old extends AppCompatActivity {
         boolean result = false;
         referer = Util.getValidReferer(referer);
         if (referer != null) {
-            if (server.getConfig() != null && referer.contains(server.getConfig().getUrl())) {
-                return true;
-            }
+//            if (server.getConfig() != null && referer.contains(server.getConfig().getUrl())) {
+//                return true;
+//            }
             Pattern pattern = Pattern.compile("fas[ei]|shah[ei]d|c[ie]{0,2}m|ak[waom]{0,2}");
             Matcher matcher = pattern.matcher(referer);
             result = matcher.find();

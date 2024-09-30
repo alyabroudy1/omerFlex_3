@@ -1,12 +1,16 @@
 package com.omerflex.service;
 
+import android.util.Log;
+
 import com.omerflex.entity.ServerConfig;
+import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
 
 public class ServerConfigManager {
 
     static ArrayList<ServerConfig> serversConfigs = new ArrayList<>();
+    private static final String TAG  = "ServerConfigManager";
 
     public static ServerConfig getConfig(String serverId){
         for (ServerConfig config : serversConfigs) {
@@ -25,6 +29,14 @@ public class ServerConfigManager {
                 return config; // Return the old config
             }
         }
+
+        return null;
+    }
+
+    public static ServerConfig updateConfig(ServerConfig newConfig, MovieDbHelper dbHelper){
+        updateConfig(newConfig);
+        Log.d(TAG, "updateConfig: "+ newConfig);
+        dbHelper.saveServerConfig(newConfig);
         return null;
     }
 

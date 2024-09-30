@@ -31,6 +31,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
@@ -47,7 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class FaselHdController extends AbstractServer {
+public class FaselHdServer extends AbstractServer {
 
     static String TAG = "FaselHd";
     static String WEBSITE_NAME = ".faselhd.";
@@ -58,30 +59,14 @@ public class FaselHdController extends AbstractServer {
     static boolean STOP_BROWSER_CODE = false;
     static int RESULT_COUNTER = 0;
 
-    private static FaselHdController instance;
-
-    private FaselHdController(Fragment fragment, Activity activity) {
+    public FaselHdServer(Fragment fragment, Activity activity) {
         // Private constructor to prevent instantiation
         this.fragment = fragment;
         this.activity = activity;
     }
 
-    public static synchronized FaselHdController getInstance(Fragment fragment, Activity activity) {
-        if (instance == null) {
-            instance = new FaselHdController(fragment, activity);
-        } else {
-            if (activity != null) {
-                instance.activity = activity;
-            }
-            if (fragment != null) {
-                instance.fragment = fragment;
-            }
-        }
-        return instance;
-    }
-
     @Override
-    public ArrayList<Movie> search(String query) {
+    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
         Log.i(TAG, "search: " + query);
         String searchContext = query;
         String queryName = query;
@@ -113,79 +98,13 @@ public class FaselHdController extends AbstractServer {
 
         Document doc = this.getRequestDoc(url);
         if (doc == null) {
+            activityCallback.onInvalidLink("Invalid link");
             return null;
         }
 
         Log.d(TAG, "result stop title: " + doc.title());
-
-        if (!doc.title().contains("moment")) {
-
-            //Elements links = doc.select("a[href]");
-            Elements lis = doc.getElementsByClass("postDiv");
-            for (Element li : lis) {
-                Log.i(TAG, "Fasel element found: ");
-
-                Movie a = new Movie();
-                a.setStudio(Movie.SERVER_FASELHD);
-                Element videoUrlElem = li.getElementsByAttribute("href").first();
-                if (videoUrlElem != null) {
-                    String videoUrl = videoUrlElem.attr("href");
-
-                    Element titleElem = li.getElementsByAttribute("alt").first();
-                    String title = "";
-                    if (titleElem != null) {
-                        title = titleElem.attr("alt");
-                    }
-
-                    Element imageElem = li.getElementsByAttribute("data-src").first();
-                    String image = "";
-                    if (imageElem != null) {
-                        image = imageElem.attr("data-src");
-                    }
-                    String rate = "";
-                    Elements spans = li.getElementsByTag("span");
-                    for (Element span : spans) {
-                        if (!span.hasAttr("class")) {
-                            rate = span.text();
-                            break;
-                        }
-                    }
-                    if (rate.equals("")) {
-                        Element rateElem = li.getElementsByClass("pImdb").first();
-                        if (rateElem != null) {
-                            rate = rateElem.text();
-                        }
-                    }
-
-                    a.setTitle(title);
-                    a.setVideoUrl(videoUrl);
-                    a.setCardImageUrl(image);
-
-                    if (isSeries(a)) {
-                        a.setState(Movie.GROUP_OF_GROUP_STATE);
-                    } else {
-                        a.setState(Movie.ITEM_STATE);
-                    }
-                    final Movie m = new Movie();
-                    m.setTitle(title);
-                    m.setDescription("");
-                    m.setStudio(Movie.SERVER_FASELHD);
-                    m.setVideoUrl(videoUrl);
-                    m.setCardImageUrl(image);
-                    m.setBackgroundImageUrl(image);
-                    m.setBgImageUrl(image);
-                    m.setState(a.getState());
-                    m.setRate(rate);
-                    m.setSearchContext(searchContext);
-                    m.setCreatedAt(Calendar.getInstance().getTime().toString());
-                    m.setMainMovie(m);
-                    movieList.add(m);
-                }
-
-            }
-        } else {
-
-            setCookieRefreshed(false);
+        if (doc.title().contains("moment")) {
+//            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";
             String title = searchContext;
@@ -207,8 +126,76 @@ public class FaselHdController extends AbstractServer {
             m.setSearchContext(searchContext);
             m.setCreatedAt(Calendar.getInstance().getTime().toString());
             movieList.add(m);
+
+            activityCallback.onInvalidCookie(movieList);
+            return movieList;
         }
 
+
+        //Elements links = doc.select("a[href]");
+        Elements lis = doc.getElementsByClass("postDiv");
+        for (Element li : lis) {
+            Log.i(TAG, "Fasel element found: ");
+
+            Movie a = new Movie();
+            a.setStudio(Movie.SERVER_FASELHD);
+            Element videoUrlElem = li.getElementsByAttribute("href").first();
+            if (videoUrlElem != null) {
+                String videoUrl = videoUrlElem.attr("href");
+
+                Element titleElem = li.getElementsByAttribute("alt").first();
+                String title = "";
+                if (titleElem != null) {
+                    title = titleElem.attr("alt");
+                }
+
+                Element imageElem = li.getElementsByAttribute("data-src").first();
+                String image = "";
+                if (imageElem != null) {
+                    image = imageElem.attr("data-src");
+                }
+                String rate = "";
+                Elements spans = li.getElementsByTag("span");
+                for (Element span : spans) {
+                    if (!span.hasAttr("class")) {
+                        rate = span.text();
+                        break;
+                    }
+                }
+                if (rate.equals("")) {
+                    Element rateElem = li.getElementsByClass("pImdb").first();
+                    if (rateElem != null) {
+                        rate = rateElem.text();
+                    }
+                }
+
+                a.setTitle(title);
+                a.setVideoUrl(videoUrl);
+                a.setCardImageUrl(image);
+
+                if (isSeries(a)) {
+                    a.setState(Movie.GROUP_OF_GROUP_STATE);
+                } else {
+                    a.setState(Movie.ITEM_STATE);
+                }
+                Movie m = new Movie();
+                m.setTitle(title);
+                m.setDescription("");
+                m.setStudio(Movie.SERVER_FASELHD);
+                m.setVideoUrl(videoUrl);
+                m.setCardImageUrl(image);
+                m.setBackgroundImageUrl(image);
+                m.setBgImageUrl(image);
+                m.setState(detectMovieState(m));
+                m.setRate(rate);
+                m.setSearchContext(searchContext);
+                m.setCreatedAt(Calendar.getInstance().getTime().toString());
+                m.setMainMovie(m);
+                movieList.add(m);
+            }
+
+        }
+        activityCallback.onSuccess(movieList);
         return movieList;
     }
 
@@ -259,59 +246,105 @@ public class FaselHdController extends AbstractServer {
         return "فاصل";
     }
 
-    @Override
-    public Movie fetch(Movie movie) {
-        Log.d(TAG, "fetch: " + movie.getVideoUrl());
-        switch (movie.getState()) {
-            case Movie.GROUP_OF_GROUP_STATE:
-                Log.i(TAG, "onItemClick. GROUP_OF_GROUP_STATE" + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                return fetchGroupOfGroup(movie);
-            //return startWebForResultActivity(movie);
-            //return movie;
-            case Movie.GROUP_STATE:
-                Log.i(TAG, "onItemClick. GROUP_STATE" + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                return fetchGroup(movie);
-            //return startWebForResultActivity(movie);
-            //return movie;
-            case Movie.ITEM_STATE:
-                Log.i(TAG, "onItemClick. ITEM_STATE" + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                //fetchItem(movie);
-                // movie.setVideoUrl(movie.getVideoUrl() + "#vihtml");
-                //return startWebForResultActivity(movie);
-                return fetchItem(movie);
-            case Movie.RESOLUTION_STATE:
-                Log.i(TAG, "onItemClick. RESOLUTION_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                Movie clonedMovie = Movie.clone(movie);
-                clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
-                return fetchResolutions(clonedMovie);
-            case Movie.BROWSER_STATE:
-                Log.i(TAG, "onItemClick. BROWSER_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                //startBrowser(movie.getVideoUrl());
-                break;
-            case Movie.COOKIE_STATE:
-                Log.i(TAG, "onItemClick. COOKIE_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                Movie clonedMovie2 = Movie.clone(movie);
-                clonedMovie2.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-                startWebForResultActivity(clonedMovie2);
-                activity.finish();
-                return movie;
-            case Movie.RESULT_STATE:
-                Log.i(TAG, "onItemClick. RESULT_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                startWebForResultActivity(movie);
-                activity.finish();
-                return movie;
-            case Movie.VIDEO_STATE:
-                Log.i(TAG, "onItemClick. VIDEO_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
-                return movie;
-            default:
-                return fetchResolutions(movie);
+//    public Movie fetch(Movie movie) {
+//        Log.d(TAG, "fetch: " + movie.getVideoUrl());
+//        switch (movie.getState()) {
+//            case Movie.GROUP_OF_GROUP_STATE:
+//                Log.i(TAG, "onItemClick. GROUP_OF_GROUP_STATE" + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                return fetchGroupOfGroup(movie);
+//            //return startWebForResultActivity(movie);
+//            //return movie;
+//            case Movie.GROUP_STATE:
+//                Log.i(TAG, "onItemClick. GROUP_STATE" + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                return fetchGroup(movie);
+//            //return startWebForResultActivity(movie);
+//            //return movie;
+//            case Movie.ITEM_STATE:
+//                Log.i(TAG, "onItemClick. ITEM_STATE" + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                //fetchItem(movie);
+//                // movie.setVideoUrl(movie.getVideoUrl() + "#vihtml");
+//                //return startWebForResultActivity(movie);
+//                return fetchItem(movie);
+//            case Movie.RESOLUTION_STATE:
+//                Log.i(TAG, "onItemClick. RESOLUTION_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                Movie clonedMovie = Movie.clone(movie);
+//                clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+//                return fetchResolutions(clonedMovie);
+//            case Movie.BROWSER_STATE:
+//                Log.i(TAG, "onItemClick. BROWSER_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                //startBrowser(movie.getVideoUrl());
+//                break;
+//            case Movie.COOKIE_STATE:
+//                Log.i(TAG, "onItemClick. COOKIE_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                Movie clonedMovie2 = Movie.clone(movie);
+//                clonedMovie2.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//                startWebForResultActivity(clonedMovie2);
+//                activity.finish();
+//                return movie;
+//            case Movie.RESULT_STATE:
+//                Log.i(TAG, "onItemClick. RESULT_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                startWebForResultActivity(movie);
+//                activity.finish();
+//                return movie;
+//            case Movie.VIDEO_STATE:
+//                Log.i(TAG, "onItemClick. VIDEO_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                return movie;
+//            default:
+//                return fetchResolutions(movie);
+//        }
+//        return movie;
+//    }
+
+    protected MovieFetchProcess fetchSeriesAction(Movie movie, int action, ActivityCallback<Movie> activityCallback){
+        if (action == Movie.GROUP_OF_GROUP_STATE){
+            return fetchGroupOfGroup(movie, activityCallback);
         }
-        return movie;
+        return fetchGroup(movie, activityCallback);
+    }
+    public MovieFetchProcess fetchBrowseItem(Movie movie) {
+        Movie clonedMovie = Movie.clone(movie);
+        clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+        // to do nothing and wait till result returned to activity only the first fetch
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
     }
 
+    private MovieFetchProcess fetchCookie(Movie movie, ActivityCallback<Movie> activityCallback) {
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
+    }
+    private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
+//        Log.d(TAG, "fetchWatchLocally: "+movie);
+        if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE ){
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
+//            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
+            activityCallback.onInvalidCookie(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
+        }
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_EXOPLAYER, movie);
+    }
     @Override
-    public Movie fetchBrowseItem(Movie movie) {
-        return null;
+    protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback){
+        Log.d(TAG, "fetchItemAction: ");
+        switch (action) {
+            case Movie.BROWSER_STATE:
+                Log.d(TAG, "fetchItemAction: BROWSER_STATE");
+                return fetchBrowseItem(movie);
+            case Movie.COOKIE_STATE:
+                Log.d(TAG, "fetchItemAction: COOKIE_STATE");
+                activityCallback.onInvalidCookie(movie);
+                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
+            case Movie.ACTION_WATCH_LOCALLY:
+                Log.d(TAG, "fetchItemAction: ACTION_WATCH_LOCALLY");
+                return fetchWatchLocally(movie, activityCallback);
+            case Movie.RESOLUTION_STATE:
+                return fetchResolutions(movie, activityCallback);
+//            case Movie.VIDEO_STATE:
+//                return fetchVideo(movie);
+            default:
+                Log.d(TAG, "fetchItemAction: default fetchItem");
+                return fetchItem(movie, activityCallback);
+        }
     }
 
     private Movie startWebForResultActivity(Movie movie) {
@@ -330,10 +363,10 @@ public class FaselHdController extends AbstractServer {
         Intent browse = new Intent(activity, BrowserActivity.class);
         browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
         browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-        Log.d(TAG, "startWebForResultActivity: fragment: "+ movie);
-        if (fragment == null){
+        Log.d(TAG, "startWebForResultActivity: fragment: " + movie);
+        if (fragment == null) {
             activity.startActivityForResult(browse, movie.getFetch());
-        }else {
+        } else {
             fragment.startActivityForResult(browse, movie.getFetch());
         }
         return movie;
@@ -341,6 +374,7 @@ public class FaselHdController extends AbstractServer {
 
     @Override
     public int fetchNextAction(Movie movie) {
+        Log.d(TAG, "fetchNextAction: "+movie);
         switch (movie.getState()) {
             case Movie.GROUP_OF_GROUP_STATE:
             case Movie.GROUP_STATE:
@@ -352,20 +386,18 @@ public class FaselHdController extends AbstractServer {
         return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY; // not to open any activity;
     }
 
-    @Override
-    public Movie fetchToWatchLocally(Movie movie) {
-        Log.d(TAG, "fetchToWatchLocally: " + movie.getVideoUrl());
-        if (movie.getState() == Movie.VIDEO_STATE) {
-            return movie;
-        }
-        Movie clonedMovie = Movie.clone(movie);
-        clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
-        fetchResolutions(clonedMovie);
-        return null; // to do nothing till result returned to the fragment/activity
-    }
+//    public Movie fetchToWatchLocally(Movie movie) {
+//        Log.d(TAG, "fetchToWatchLocally: " + movie.getVideoUrl());
+//        if (movie.getState() == Movie.VIDEO_STATE) {
+//            return movie;
+//        }
+//        Movie clonedMovie = Movie.clone(movie);
+//        clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
+//        fetchResolutions(clonedMovie);
+//        return null; // to do nothing till result returned to the fragment/activity
+//    }
 
-    @Override
-    public Movie fetchGroupOfGroup(final Movie movie) {
+    private MovieFetchProcess fetchGroupOfGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
 
 
@@ -379,14 +411,18 @@ public class FaselHdController extends AbstractServer {
 
         Document doc = this.getRequestDoc(movie.getVideoUrl());
         if (doc == null) {
-            return movie;
+            activityCallback.onInvalidLink(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
+
         }
         Log.i(TAG, "result stop title: " + doc.title());
         if (doc.title().contains("moment")) {
-            setCookieRefreshed(false);
-            Movie clonedMovie = Movie.clone(movie);
-            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-            return startWebForResultActivity(clonedMovie);
+//            setCookieRefreshed(false);
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+            activityCallback.onInvalidCookie(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
         }
 
         Element posterImg = doc.selectFirst(".posterImg");
@@ -465,17 +501,18 @@ public class FaselHdController extends AbstractServer {
             movie.addSubList(a);
         }
 
-
-        return movie;
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
-    @Override
-    public Movie fetchGroup(Movie movie) {
+    private MovieFetchProcess fetchGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
         Document doc = this.getRequestDoc(movie.getVideoUrl());
         if (doc == null) {
-            return movie;
+            activityCallback.onInvalidLink(movie);
+
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
         }
 
 //            Document doc = Jsoup.connect(movie.getVideoUrl())
@@ -488,68 +525,71 @@ public class FaselHdController extends AbstractServer {
         Log.i(TAG, doc.title());
 
         if (doc.title().contains("moment")) {
-            Movie clonedMovie = Movie.clone(movie);
-            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-            return startWebForResultActivity(clonedMovie);
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+            activityCallback.onInvalidCookie(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
+//            return startWebForResultActivity(clonedMovie);
         }
 
-            Element posterImg = doc.selectFirst(".posterImg");
-            String backgroundImage = "";
+        Element posterImg = doc.selectFirst(".posterImg");
+        String backgroundImage = "";
 
-            String description = "";
-            if (posterImg != null) {
-                Element bgImage = posterImg.selectFirst("img");
-                if (bgImage != null) {
-                    backgroundImage = bgImage.attr("src");
-                }
-
+        String description = "";
+        if (posterImg != null) {
+            Element bgImage = posterImg.selectFirst("img");
+            if (bgImage != null) {
+                backgroundImage = bgImage.attr("src");
             }
 
-            Element singleDesc = doc.selectFirst(".singleDesc");
-            if (singleDesc != null) {
-                Element desElement = singleDesc.selectFirst("p");
-                if (desElement != null) {
-                    description = desElement.text();
-                } else {
-                    description = singleDesc.text();
-                }
+        }
+
+        Element singleDesc = doc.selectFirst(".singleDesc");
+        if (singleDesc != null) {
+            Element desElement = singleDesc.selectFirst("p");
+            if (desElement != null) {
+                description = desElement.text();
+            } else {
+                description = singleDesc.text();
             }
+        }
 
-            movie.setDescription(description);
-            movie.setBackgroundImageUrl(backgroundImage);
+        movie.setDescription(description);
+        movie.setBackgroundImageUrl(backgroundImage);
 
-            Element episodeContainer = doc.selectFirst(".epAll");
-            Log.d(TAG, "fetchGroup: xxx epAll ");
+        Element episodeContainer = doc.selectFirst(".epAll");
+        Log.d(TAG, "fetchGroup: xxx epAll ");
 //                Log.d(TAG+"xxx", "fetchGroup: xxx epAll2 " + episodeContainer);
-            if (episodeContainer != null) {
-                Elements episodeList = episodeContainer.getElementsByTag("a");
+        if (episodeContainer != null) {
+            Elements episodeList = episodeContainer.getElementsByTag("a");
 //                    Log.d(TAG+"xxx", "fetchGroup: xxx epAll3 " + episodeList.size());
 //                    Log.d(TAG, "fetchGroup: xxx episode " + episodeList.size());
-                for (Element episodeDiv : episodeList) {
-                    Log.i(TAG, "Fasel episode element found: ");
+            for (Element episodeDiv : episodeList) {
+                Log.i(TAG, "Fasel episode element found: ");
 
-                    Movie a = Movie.clone(movie);
-                    String title = episodeDiv.text();
-                    String link = episodeDiv.attr("href");
+                Movie a = Movie.clone(movie);
+                String title = episodeDiv.text();
+                String link = episodeDiv.attr("href");
 
-                    a.setTitle(title);
-                    a.setVideoUrl(link);
-                    a.setCardImageUrl(movie.getCardImageUrl());
-                    a.setRate(movie.getRate());
-                    a.setState(Movie.ITEM_STATE);
-                    a.setTrailerUrl(movie.getTrailerUrl());
-                    a.setDescription(description);
-                    a.setStudio(Movie.SERVER_FASELHD);
-                    a.setBackgroundImageUrl(backgroundImage);
-                    if (movie.getSubList() == null) {
-                        movie.setSubList(new ArrayList<>());
-                    }
-                    movie.addSubList(a);
+                a.setTitle(title);
+                a.setVideoUrl(link);
+                a.setCardImageUrl(movie.getCardImageUrl());
+                a.setRate(movie.getRate());
+                a.setState(Movie.ITEM_STATE);
+                a.setTrailerUrl(movie.getTrailerUrl());
+                a.setDescription(description);
+                a.setStudio(Movie.SERVER_FASELHD);
+                a.setBackgroundImageUrl(backgroundImage);
+                if (movie.getSubList() == null) {
+                    movie.setSubList(new ArrayList<>());
                 }
+                movie.addSubList(a);
             }
+        }
 
         Log.d(TAG, "fetchGroup: result movie: " + movie.getSubList());
-        return movie;
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
     @NonNull
@@ -585,89 +625,90 @@ public class FaselHdController extends AbstractServer {
         return webView;
     }
 
-    @Override
-    public Movie fetchItem(Movie movie) {
+    private MovieFetchProcess fetchItem(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
 
         Document doc = this.getRequestDoc(movie.getVideoUrl());
         if (doc == null) {
-            return movie;
+            Log.d(TAG, "fetchItem: onInvalidLink ");
+            activityCallback.onInvalidLink(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
         }
         Log.i(TAG, "result stop title: " + doc.title());
 
         if (doc.title().contains("moment")) {
             Movie clonedMovie = Movie.clone(movie);
             clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-            return startWebForResultActivity(clonedMovie);
+//            return startWebForResultActivity(clonedMovie);
+            Log.d(TAG, "fetchItem: moment");
+            activityCallback.onInvalidCookie(clonedMovie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
         }
-            Element posterImg = doc.selectFirst(".posterImg");
-            String backgroundImage = "";
 
-            String description = "";
-            if (posterImg != null) {
-                Element bgImage = posterImg.selectFirst("img");
-                if (bgImage != null) {
-                    backgroundImage = bgImage.attr("src");
-                }
+        Element posterImg = doc.selectFirst(".posterImg");
+        String backgroundImage = "";
 
+        String description = "";
+        if (posterImg != null) {
+            Element bgImage = posterImg.selectFirst("img");
+            if (bgImage != null) {
+                backgroundImage = bgImage.attr("src");
             }
 
-            Element singleDesc = doc.selectFirst(".singleDesc");
-            if (singleDesc != null) {
-                Element desElement = singleDesc.selectFirst("p");
-                if (desElement != null) {
-                    description = desElement.text();
-                } else {
-                    description = singleDesc.text();
-                }
+        }
+
+        Element singleDesc = doc.selectFirst(".singleDesc");
+        if (singleDesc != null) {
+            Element desElement = singleDesc.selectFirst("p");
+            if (desElement != null) {
+                description = desElement.text();
+            } else {
+                description = singleDesc.text();
             }
+        }
 
-            movie.setDescription(description);
-            movie.setBackgroundImageUrl(backgroundImage);
+        movie.setDescription(description);
+        movie.setBackgroundImageUrl(backgroundImage);
 
-            Element resolutionsTab = doc.selectFirst(".signleWatch");
-            if (resolutionsTab != null) {
-                Elements episodeList = resolutionsTab.getElementsByTag("li");
-                for (Element episodeDiv : episodeList) {
+        Element resolutionsTab = doc.selectFirst(".signleWatch");
+        if (resolutionsTab != null) {
+            Elements episodeList = resolutionsTab.getElementsByTag("li");
+            for (Element episodeDiv : episodeList) {
 
-                    Movie a = Movie.clone(movie);
+                Movie a = Movie.clone(movie);
 
-                    String title = "";
-                    Element titleElem = episodeDiv.selectFirst("a");
-                    if (titleElem != null) {
-                        title = titleElem.text();
-                    }
-
-                    String link = "";
-                    String linkElem = episodeDiv.attr("onclick");
-                    if (linkElem != null) {
-                        link = linkElem.replace("player_iframe.location.href = ", "").replace("'", "");
-                        link = link + Util.generateHeadersForVideoUrl(getConfig().getHeaders());
-                    }
-
-                    Log.i(TAG, "Fasel server element found: " + link);
-
-                    a.setTitle(title);
-                    a.setVideoUrl(link);
-                    a.setCardImageUrl(movie.getCardImageUrl());
-                    a.setRate(movie.getRate());
-                    a.setState(Movie.RESOLUTION_STATE);
-                    a.setTrailerUrl(movie.getTrailerUrl());
-                    a.setDescription(description);
-                    a.setStudio(Movie.SERVER_FASELHD);
-                    a.setBackgroundImageUrl(backgroundImage);
-                    if (movie.getSubList() == null) {
-                        movie.setSubList(new ArrayList<>());
-                    }
-                    movie.addSubList(a);
+                String title = "";
+                Element titleElem = episodeDiv.selectFirst("a");
+                if (titleElem != null) {
+                    title = titleElem.text();
                 }
-            }
-        return movie;
-    }
 
-    @Override
-    public void fetchServerList(Movie movie) {
-        Log.i(TAG, "fetchServerList: " + movie.getVideoUrl());
+                String link = "";
+                String linkElem = episodeDiv.attr("onclick");
+                if (linkElem != null) {
+                    link = linkElem.replace("player_iframe.location.href = ", "").replace("'", "");
+                    link = link + Util.generateHeadersForVideoUrl(getConfig().getHeaders());
+                }
+
+                Log.i(TAG, "Fasel server element found: " + link);
+
+                a.setTitle(title);
+                a.setVideoUrl(link);
+                a.setCardImageUrl(movie.getCardImageUrl());
+                a.setRate(movie.getRate());
+                a.setState(Movie.RESOLUTION_STATE);
+                a.setTrailerUrl(movie.getTrailerUrl());
+                a.setDescription(description);
+                a.setStudio(Movie.SERVER_FASELHD);
+                a.setBackgroundImageUrl(backgroundImage);
+                if (movie.getSubList() == null) {
+                    movie.setSubList(new ArrayList<>());
+                }
+                movie.addSubList(a);
+            }
+        }
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
     /**
@@ -676,16 +717,19 @@ public class FaselHdController extends AbstractServer {
      * @param movie Movie object to fetch its url
      * @return
      */
-    @Override
-    public Movie fetchResolutions(final Movie movie) {
+    private MovieFetchProcess fetchResolutions(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchResolutions: " + movie.getVideoUrl());
-
-        startWebForResultActivity(movie);
-
-        return null;
+        if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE ){
+            Movie clonedMovie = Movie.clone(movie);
+            clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+//            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
+            activityCallback.onInvalidCookie(clonedMovie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
+        }
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
-    @Override
     public void startVideo(String url) {
         Log.i(TAG, "startVideo: " + url);
         //for now as the web site require security check.
@@ -698,22 +742,17 @@ public class FaselHdController extends AbstractServer {
         fragment.startActivity(in1);
     }
 
-    @Override
+
     public void startBrowser(String url) {
         Log.i(TAG, "startBrowser: " + url);
         //   FaselHdController.CURRENT_VIDEO_URL = "";
-        FaselHdController.START_BROWSER_CODE = false;
+        FaselHdServer.START_BROWSER_CODE = false;
         WebView simpleWebView = fragment.getActivity().findViewById(R.id.webView);
         simpleWebView.loadUrl(url);
     }
 
-    @Override
-    public Movie fetchCookie(Movie movie) {
-        return null;
-    }
 
-    @Override
-    public boolean isSeries(Movie movie) {
+    private boolean isSeries(Movie movie) {
         String u = movie.getVideoUrl();
         String n = movie.getTitle();
         return u.contains("/seasons") || n.contains("مسلسل");
@@ -767,7 +806,6 @@ public class FaselHdController extends AbstractServer {
 
     }
 
-    @Override
     public boolean onLoadResource(Activity activity, WebView webView, String url, Movie movie) {
     /*    CookieManager cookieManager = CookieManager.getInstance();
         Log.d(TAG, "onLoadResource: Fasel:" + url + ", movie:" + movie.getVideoUrl());
@@ -930,11 +968,18 @@ public class FaselHdController extends AbstractServer {
     }
 
     @Override
+    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
+        //todo implement or optimize
+//        headers = request.getRequestHeaders();
+//        Log.d(TAG, "shouldInterceptRequest: headers:" + headers.toString());
+//        super.shouldInterceptRequest(view, request);
+    }
+
     public void fetchWebResult(Movie movie) {
 //        WebView webView = activity.findViewById(R.id.webView);
 //        webView.loadUrl(movie.getVideoUrl());
         WebView webView = getWebView();
-        FaselHdController.RESULT_COUNTER = 0;
+        FaselHdServer.RESULT_COUNTER = 0;
         //WebView webView = MyApplication.getWebView();
         int counter = 0;
 
@@ -977,8 +1022,8 @@ public class FaselHdController extends AbstractServer {
                         // webView.removeAllViews();
                         // Destroy the WebView
                         //   webView.destroy();
-                        setCookies(cookieManager.getCookie(movie.getVideoUrl()));
-                        setHeaders(headers);
+//          Hiiir              setCookies(cookieManager.getCookie(movie.getVideoUrl()));
+//               Hiiir         setHeaders(headers);
                         Intent returnIntent = new Intent(activity, DetailsActivity.class);
                         movie.setFetch(0); //tell next activity not to fetch movie on start
                         Gson gson = new Gson();
@@ -1016,7 +1061,7 @@ public class FaselHdController extends AbstractServer {
                                     Log.d(TAG, "onReceiveValue:tempValue1: " + value.length() + ", " + value);
                                     view.stopLoading();
                                     webView.stopLoading();
-                                    callBack.onCallback(value, FaselHdController.RESULT_COUNTER++);
+                                    callBack.onCallback(value, FaselHdServer.RESULT_COUNTER++);
 //                                        setCookies(cookieManager.getCookie(movie.getVideoUrl()));
 //                                        setHeaders(headers);
 //                                        Intent returnIntent = new Intent();
@@ -1154,7 +1199,7 @@ public class FaselHdController extends AbstractServer {
 //            cookieManager.setAcceptThirdPartyCookies(webView, true);
 //            CookieSyncManager.createInstance(activity);
             CookieSyncManager.getInstance().startSync();
-            setCookies(cookieManager.getCookie(FaselHdController.WEBSITE_URL));
+//         Hiiiir   setCookies(cookieManager.getCookie(FaselHdController.WEBSITE_URL));
         }
 
         @Override
@@ -1162,9 +1207,9 @@ public class FaselHdController extends AbstractServer {
             //return super.shouldOverrideUrlLoading(view, request);
             String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
             Log.d(TAG, "shouldOverrideUrlLoading: " + newUrl);
-            if (!BrowserActivity.shouldOverride(newUrl)) {
-                view.loadUrl(request.getUrl().toString());
-            }
+//  Hiir          if (!BrowserActivity.shouldOverride(newUrl)) {
+//                view.loadUrl(request.getUrl().toString());
+//            }
             return true;
         }
 
@@ -1195,7 +1240,7 @@ public class FaselHdController extends AbstractServer {
                 if (movie.getSearchContext() != null) {
                     searchContext = movie.getSearchContext();
                 }
-                setHeaders(headers);
+//     Hiir           setHeaders(headers);
                 //inject js code
                 // server.onLoadResource(activity, webView, url, movie);
                 //clean webpage from ads
@@ -1299,16 +1344,16 @@ public class FaselHdController extends AbstractServer {
             String cookies = cookieManager.getCookie(url);
             Log.d(TAG, "onPageFinished: " + url + ", Cookies:" + cookies);
             if (cookies == null) {
-                cookieManager.setCookie(url, getCookies());
+//         Hiiir       cookieManager.setCookie(url, getCookies());
             } else {
-                if (getCookies() == null) {
-                    setCookies(cookies);
-                } else {
-                    if (!getCookies().contains(cookies)) {
-                        // Add the cookie to the string
-                        setCookies(getCookies() + "; " + cookies);
-                    }
-                }
+//    Hiiir            if (getCookies() == null) {
+//                    setCookies(cookies);
+//                } else {
+//                    if (!getCookies().contains(cookies)) {
+//                        // Add the cookie to the string
+//                        setCookies(getCookies() + "; " + cookies);
+//                    }
+//                }
             }
             Log.d(TAG, "onPageFinished: cookie:" + cookies);
         }
@@ -1347,14 +1392,22 @@ public class FaselHdController extends AbstractServer {
                         "    post.bgImageUrl = post.cardImageUrl;" +
                         "    post.backgroundImageUrl = post.cardImageUrl;" +
                         "    post.studio = '" + Movie.SERVER_FASELHD + "';" +
-                        "    post.state = 0;" +
+                        "    let u = post.videoUrl;" +
+                        "    let n = post.title;" +
+                        "    let series = u.includes(\"/seasons\") || n.includes(\"مسلسل\");\n" +
+                        "    if (series) {\n" +
+                        "       post.state = " +Movie.GROUP_OF_GROUP_STATE +";\n" +
+                        "    } else {\n" +
+                        "       post.state = " +Movie.ITEM_STATE +";\n" +
+                        "    }" +
                         "    postList.push(post);" +
                         "}" +
                         //"postList;"+
                         "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
                         "}" +
                         "});";
-            } else if (movie.getState() == Movie.GROUP_OF_GROUP_STATE) {
+            }
+            else if (movie.getState() == Movie.GROUP_OF_GROUP_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED GROUP_OF_GROUP_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
                         "var seasons = document.querySelectorAll('.seasonDiv');" +
@@ -1382,7 +1435,8 @@ public class FaselHdController extends AbstractServer {
                         "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
                         "}" +
                         "});";
-            } else if (movie.getState() == Movie.GROUP_STATE) {
+            }
+            else if (movie.getState() == Movie.GROUP_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED GROUP_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
                         "const description = document.getElementsByClassName('singleDesc')[0].innerHTML.replace(/<.*?>/g, '').replace(/(\\\\\\\\r\\\\\\\\n|\\\\\\\\n|\\\\\\\\r)/gm,'');\n" +
@@ -1428,7 +1482,8 @@ public class FaselHdController extends AbstractServer {
                         "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
                         // "MyJavaScriptInterface.myMethod(postList.length);" +
                         "});";
-            } else if (movie.getState() == Movie.ITEM_STATE) {
+            }
+            else if (movie.getState() == Movie.ITEM_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED ITEM_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
                         "var iframe = document.querySelector('iframe[src]:not([src=\"about:blank\"])');" +
@@ -1477,10 +1532,9 @@ public class FaselHdController extends AbstractServer {
         return script;
     }
 
-
     @Override
-    public ArrayList<Movie> getHomepageMovies() {
-        return search(getConfig().getUrl() + "/most_recent");
+    public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
+        return search(getConfig().getUrl() + "/most_recent", activityCallback);
     }
 
 }

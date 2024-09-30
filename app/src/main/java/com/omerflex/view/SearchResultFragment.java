@@ -42,6 +42,7 @@ import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.ServerInterface;
 import com.omerflex.service.ServerManager;
 
 import java.io.Serializable;
@@ -168,7 +169,27 @@ public class SearchResultFragment extends BrowseSupportFragment {
             ExecutorService executor = Executors.newSingleThreadExecutor();
             executor.submit(() -> {
                 try {
-                    ArrayList<Movie> movies = server.search(query);
+                    ArrayList<Movie> movies = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                        @Override
+                        public void onSuccess(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidCookie(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidLink(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidLink(String message) {
+
+                        }
+                    });
                     // it done in new thread
                     Log.d(TAG, "loadHomepageRaws: " + server.getLabel() + ", " + movies.size());
 
@@ -358,7 +379,27 @@ public class SearchResultFragment extends BrowseSupportFragment {
 
             ExecutorService executor = Executors.newSingleThreadExecutor();
             executor.submit(() -> {
-                List<Movie> finalMovieList = server.search(query);
+                List<Movie> finalMovieList = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                    @Override
+                    public void onSuccess(ArrayList<Movie> result) {
+
+                    }
+
+                    @Override
+                    public void onInvalidCookie(ArrayList<Movie> result) {
+
+                    }
+
+                    @Override
+                    public void onInvalidLink(ArrayList<Movie> result) {
+
+                    }
+
+                    @Override
+                    public void onInvalidLink(String message) {
+
+                    }
+                });
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -416,7 +457,27 @@ public class SearchResultFragment extends BrowseSupportFragment {
                             executor.submit(() -> {
                                 AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
                                 //server
-                                List<Movie> nextList = server.search(movie.getVideoUrl());
+                                List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                                    @Override
+                                    public void onSuccess(ArrayList<Movie> result) {
+
+                                    }
+
+                                    @Override
+                                    public void onInvalidCookie(ArrayList<Movie> result) {
+
+                                    }
+
+                                    @Override
+                                    public void onInvalidLink(ArrayList<Movie> result) {
+
+                                    }
+
+                                    @Override
+                                    public void onInvalidLink(String message) {
+
+                                    }
+                                });
                                 Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
 
                                 ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
@@ -443,7 +504,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
                             Thread t = new Thread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Movie movie = server.fetch((Movie) item);
+//                                    Movie movie = server.fetch((Movie) item, ((Movie) item).getState()).movie;
                                 }
                             });
                             t.start();
@@ -625,7 +686,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //                            movie.setTitle(query);
 //                            movie.setStudio(result);
 
-                            Log.d(TAG, "run: after renewing the cookie:" + server.getHeaders());
+//                            Log.d(TAG, "run: after renewing the cookie:" + server.getHeaders());
                             //List<Movie> movies = server.search(query);
                             Gson gson = new Gson();
                             Type movieListType = new TypeToken<List<Movie>>() {
@@ -679,7 +740,27 @@ public class SearchResultFragment extends BrowseSupportFragment {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    List<Movie> movies = server.search(clickedMovie.getTitle());
+                    List<Movie> movies = server.search(clickedMovie.getTitle(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                        @Override
+                        public void onSuccess(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidCookie(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidLink(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidLink(String message) {
+
+                        }
+                    });
                     if (movies.size() > 0) {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override

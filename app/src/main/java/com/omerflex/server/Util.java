@@ -3,28 +3,29 @@ package com.omerflex.server;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Parcelable;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
-import androidx.leanback.widget.ArrayObjectAdapter;
 
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.omerflex.entity.Movie;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.ExoplayerMediaPlayer;
+import com.omerflex.view.VideoDetailsFragment;
 import com.omerflex.view.mobile.MobileMovieDetailActivity;
 
-import java.io.Serializable;
-import java.lang.reflect.Type;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -134,35 +135,107 @@ public class Util {
         return "";
     }
 
-    public static void openDetailsIntent(Movie movie, Activity activity) {
-        Intent exoIntent = generateIntent(movie, new Intent(activity, MobileMovieDetailActivity.class));
+    public static boolean shouldOverrideUrlLoading(String url) {
+
+        boolean result =
+                url.contains("gamezone") ||
+                        url.contains("cim")
+                        || url.contains("faselhd")
+                        || url.contains("/sharon")
+                        || url.contains("/d000")
+                        || url.contains("/dooo")
+                        || url.contains("fas")
+                        || url.contains("cem")
+                        || url.contains("akwam")
+                        || url.contains("club")
+                        || url.contains("clup")
+                        || url.contains("ciima")
+                        || url.contains("challenge")
+                        || url.contains("akoam")
+                        || url.contains("shahed")
+                        || url.contains("arab")
+                        || url.contains("seed")
+                        || url.contains("review")
+                        || url.contains("tech")
+                        || url.contains("youtube.com")
+                        || url.startsWith("##")
+                        || url.contains("shahid");
+        return !result;
+    }
+
+    public static void openMobileDetailsIntent(Movie movie, Activity activity, boolean withSubList) {
+        Intent exoIntent = generateIntent(movie, new Intent(activity, MobileMovieDetailActivity.class), withSubList);
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 
-    public static void openBrowserIntent(Movie movie, Activity activity) {
-        Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class));
+    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult) {
+        Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class), withSubList);
+        if (openForResult) {
+            Objects.requireNonNull(activity).startActivityForResult(exoIntent, movie.getFetch());
+            return;
+        }
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 
     @NonNull
-    private static Intent generateIntent(Movie movie, Intent intent) {
-        intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-        intent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-        if (movie.getSubList() != null) {
-            intent.putExtra(DetailsActivity.MOVIE_SUBLIST, (Serializable) movie.getSubList());
+    private static Intent generateIntent(Movie movie, Intent intent, boolean withSubList) {
+        intent.putExtra(DetailsActivity.MOVIE, (Parcelable) movie);
+        intent.putExtra(DetailsActivity.MAIN_MOVIE, (Parcelable) movie.getMainMovie());
+        if (withSubList && movie.getSubList() != null) {
+            intent.putParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST, (ArrayList<Movie>) movie.getSubList());  // Pass sublist as Parcelable ArrayList
         }
         return intent;
     }
 
-    public static void openExoPlayer(Movie movie, Activity activity) {
-        Intent exoIntent = generateIntent(movie, new Intent(activity, ExoplayerMediaPlayer.class));
+    @NonNull
+    public static String generateMaxPlayerHeaders(String url, Map<String, String> headers) {
+        String headerString = "";
+        if (headers != null && !headers.isEmpty()) {
+            try {
+                StringBuilder sb = new StringBuilder();
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+//                                if (entry.getKey().equals("User-Agent")){
+//                                    continue;
+//                                }
+                    sb.append(entry.getKey());
+                    sb.append("=");
+                    sb.append(entry.getValue());
+                    sb.append("&");
+                }
+                // Remove the last "&" character
+                sb.deleteCharAt(sb.length() - 1);
+                headerString = sb.toString();
+            } catch (Exception e) {
+                Log.d(TAG, "onLoadResource: error building headers for the video: " + e.getMessage());
+            }
+        }
+
+        if (!headerString.isEmpty()) {
+            return url + "|" + headerString;
+        }
+        return url;
+    }
+
+    public static void openExoPlayer(Movie movie, Activity activity, boolean withSubList) {
+        Intent exoIntent = generateIntent(movie, new Intent(activity, ExoplayerMediaPlayer.class), withSubList);
         Objects.requireNonNull(activity).startActivity(exoIntent);
+    }
+
+    public static void showToastMessage(String message, Activity activity) {
+        if (activity != null) {
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
 
     public static Movie recieveSelectedMovie(Activity activity) {
         Intent intent = activity.getIntent();
-        Movie movie = (Movie) intent.getSerializableExtra(DetailsActivity.MOVIE);
+        Movie movie = (Movie) intent.getParcelableExtra(DetailsActivity.MOVIE);
 
         if (movie == null) {
             movie = new Movie();
@@ -170,13 +243,14 @@ public class Util {
             return movie;
         }
 
-        Movie mSelectedMovieMainMovie = (Movie) intent.getSerializableExtra(DetailsActivity.MAIN_MOVIE);
+        Movie mSelectedMovieMainMovie = (Movie) intent.getParcelableExtra(DetailsActivity.MAIN_MOVIE);
+        ArrayList<Movie> movieSublist = intent.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
 
-        String movieJson = intent.getStringExtra(DetailsActivity.MOVIE_SUBLIST);
-//        Gson gson = new Gson();
-        Type type = new TypeToken<List<Movie>>() {
-        }.getType();
-        List<Movie> movieSublist = gson.fromJson(movieJson, type);
+//        String movieJson = intent.getStringExtra(DetailsActivity.MOVIE_SUBLIST);
+////        Gson gson = new Gson();
+//        Type type = new TypeToken<List<Movie>>() {
+//        }.getType();
+//        List<Movie> movieSublist = gson.fromJson(movieJson, type);
 //        Log.d(TAG, "onCreate: subList:" + movieSublist);
 
 
@@ -190,13 +264,13 @@ public class Util {
         return movie;
     }
 
-    private static Movie fetchMovieAtStart(Movie movie, Activity activity) {
-        AbstractServer server = determineServer(movie, null, activity, null);
-        if (server != null) {
-            return server.fetch(movie);
-        }
-        return movie;
-    }
+//    private static MovieFetchProcess fetchMovieAtStart(Movie movie, Activity activity) {
+//        AbstractServer server = ServerManager.determineServer(movie, null, activity, null);
+//        if (server != null) {
+//            return server.fetch(movie, movie.getState());
+//        }
+//        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
+//    }
 
     public static void openExternalVideoPlayer(Movie movie, Activity activity) {
         if (movie != null && movie.getVideoUrl() != null) {
@@ -222,35 +296,30 @@ public class Util {
         }
     }
 
-    public static AbstractServer determineServer(Movie movie, ArrayObjectAdapter listRowAdapter, Activity activity, Fragment fragment) {
-        switch (movie.getStudio()) {
-            case Movie.SERVER_MyCima:
-                return MyCimaServer.getInstance(activity, fragment);
-            case Movie.SERVER_AKWAM:
-                return AkwamServer.getInstance(activity, fragment);
-            case Movie.SERVER_OLD_AKWAM:
-                return OldAkwamServer.getInstance(activity, fragment);
-            case Movie.SERVER_FASELHD:
-                return FaselHdController.getInstance(fragment, activity);
-//            case Movie.SERVER_CIMA4U:
-//                return Cima4uController.getInstance(fragment, activity);
-//            case Movie.SERVER_SHAHID4U:
-//                return Shahid4uController.getInstance(fragment, activity);
-//            case Movie.SERVER_SERIES_TIME:
-//                return new SeriesTimeController(listRowAdapter, activity);
-            case Movie.SERVER_CIMA_CLUB:
-                return CimaClubServer.getInstance(fragment, activity);
-            case Movie.SERVER_ARAB_SEED:
-                return ArabSeedServer.getInstance(fragment, activity);
-            case Movie.SERVER_IPTV:
-                return IptvServer.getInstance(activity, fragment);
-            case Movie.SERVER_OMAR:
-                return OmarServer.getInstance(activity, fragment);
-//            case Movie.SERVER_WATAN_FLIX:
-//                return WatanFlixController.getInstance(fragment, activity);
-//            case Movie.SERVER_KOORA_LIVE:
-//                return new KooraLiveController(listRowAdapter, activity);
-        }
-        return null;
+
+    public static Intent generateIntentResult(Movie movie) {
+        return generateIntent(movie, new Intent(), true);
     }
+
+    public static void openVideoDetailsIntent(Movie movie, Activity activity) {
+        Intent exoIntent = generateIntent(movie, new Intent(activity, VideoDetailsFragment.class), true);
+        Objects.requireNonNull(activity).startActivity(exoIntent);
+    }
+
+    public static HashMap<String, String> convertJsonToHashMap(String jsonString) throws JSONException {
+        HashMap<String, String> map = new HashMap<>();
+        if (jsonString == null){
+            return map;
+        }
+        JSONObject jsonObject = new JSONObject(jsonString);
+
+        Iterator<String> keys = jsonObject.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            map.put(key, jsonObject.getString(key));
+        }
+
+        return map;  // Return the HashMap
+    }
+
 }

@@ -1,20 +1,21 @@
 package com.omerflex.view;
 
 import android.graphics.drawable.Drawable;
-
-import androidx.leanback.widget.ImageCardView;
-import androidx.leanback.widget.Presenter;
-import androidx.core.content.ContextCompat;
-
 import android.util.Log;
 import android.view.ViewGroup;
+
+import androidx.core.content.ContextCompat;
+import androidx.leanback.widget.ImageCardView;
+import androidx.leanback.widget.Presenter;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.model.LazyHeaders;
-import com.omerflex.entity.Movie;
 import com.omerflex.R;
+import com.omerflex.entity.Movie;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.ServerManager;
 
 import java.util.Map;
@@ -89,18 +90,19 @@ public class CardPresenter extends Presenter {
 //                    .into(cardView.getMainImageView());
 
             AbstractServer server = ServerManager.determineServer(movie, null, null, null);
-            if (server != null && server.getHeaders() != null && server.getHeaders().size() > 0){
+            ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+            if (config != null && config.getHeaders() != null && !config.getHeaders().isEmpty()){
 
-                String cookies = server.getCookies();
+                String cookies = config.getStringCookies();
                 if (cookies == null){
                     cookies = "";
                 }
                 Log.d(TAG, "onBindViewHolder: cookies: "+ cookies);
-                Log.d(TAG, "onBindViewHolder: headers: "+ server.getHeaders());
+                Log.d(TAG, "onBindViewHolder: headers: "+ config.getHeaders());
                 LazyHeaders.Builder builder = new LazyHeaders.Builder()
                         .addHeader("Cookie", cookies);
 
-                for(Map.Entry<String, String> entry :  server.getHeaders().entrySet()) {
+                for(Map.Entry<String, String> entry :  config.getHeaders().entrySet()) {
                     builder.addHeader(entry.getKey(), entry.getValue());
                 }
 

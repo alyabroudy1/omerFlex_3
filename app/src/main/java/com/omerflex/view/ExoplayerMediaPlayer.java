@@ -95,9 +95,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
        // player.setPlayWhenReady(true);
         //leanbackPlayerAdapter = new LeanbackPlayerAdapter(this, player, 0);
         dbHelper = MovieDbHelper.getInstance(this);
-         movie =(Movie) getIntent().getSerializableExtra(DetailsActivity.MOVIE);
-        Movie movieMainMovie =(Movie) getIntent().getSerializableExtra(DetailsActivity.MAIN_MOVIE);
-        movie.setMainMovie(movieMainMovie);
+         movie = com.omerflex.server.Util.recieveSelectedMovie(this);
 
         leanbackPlayerAdapter = new LeanbackPlayerAdapter(this.getApplicationContext(), player, 16);
 
@@ -232,7 +230,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
                     Log.d("TAG", "onPlayerError: movie deleted: "+movie.toString());
                     dbHelper.deleteMovie(movie);
                 }
-
+                Toast.makeText(ExoplayerMediaPlayer.this, "فشل في تشغيل الرابط", Toast.LENGTH_SHORT).show();
                 Player.Listener.super.onPlayerError(error);
             }
 

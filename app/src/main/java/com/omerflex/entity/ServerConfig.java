@@ -17,11 +17,9 @@ public class ServerConfig {
     private String stringCookies;
     private String referer;
     private Map<String, String> headers;
-    private Map<String, String> mappedCookies;
 
     public ServerConfig (){
         headers = new HashMap<>();
-        mappedCookies = new HashMap<>();
     }
 
     @Override
@@ -37,7 +35,6 @@ public class ServerConfig {
                 ", date='" + date + '\'' +
                 ", headers=" + headers +
                 ", stringCookies='" + stringCookies + '\'' +
-                ", mappedCookies=" + mappedCookies +
                 '}';
     }
 
@@ -104,7 +101,7 @@ public class ServerConfig {
     public void setStringCookies(String stringCookies) {
         if (stringCookies != null && !stringCookies.isEmpty()){
             this.stringCookies = stringCookies;
-            this.mappedCookies = Util.getMapCookies(stringCookies);
+//            this.mappedCookies = Util.getMapCookies(stringCookies);
         }
     }
 
@@ -125,10 +122,11 @@ public class ServerConfig {
     }
 
     public Map<String, String> getMappedCookies() {
-        return mappedCookies;
-    }
-
-    public void setMappedCookies(Map<String, String> mappedCookies) {
-        this.mappedCookies = mappedCookies;
+        return Util.getMapCookies(stringCookies);
+//        try {
+//            return Util.convertJsonToHashMap(stringCookies);
+//        } catch (JSONException e) {
+//            return Util.getMapCookies(stringCookies);
+//        }
     }
 }

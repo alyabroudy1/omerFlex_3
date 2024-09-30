@@ -13,10 +13,16 @@
 
     <TextView
         android:id="@+id/movieTitleTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:ellipsize="marquee"
+        android:singleLine="true"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:scrollHorizontally="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
         android:text="Movie Title"
-        android:textSize="16sp"
+        android:textSize="18sp"
         android:textStyle="bold"
         android:paddingTop="8dp" />
 
@@ -24,7 +30,7 @@
         android:id="@+id/movieRatingTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
+        android:textSize="16sp"
         android:paddingTop="4dp" />
 
     <TextView

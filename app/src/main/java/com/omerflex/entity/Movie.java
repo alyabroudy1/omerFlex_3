@@ -10,7 +10,6 @@ import androidx.room.PrimaryKey;
 
 import com.omerflex.service.database.MovieDbHelper;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -20,9 +19,9 @@ import java.util.List;
  * Movie class represents video entity with title, description, image thumbs and video url.
  */
 @Entity(tableName = "movies")
-public class Movie implements Serializable, Parcelable {
+public class Movie implements Parcelable {
     public static final String SERVER_OMAR = "omar";
-    static final long serialVersionUID = 727566175075960653L;
+//    static final long serialVersionUID = 727566175075960653L;
     public final static String SERVER_AKWAM = "akwam";
     public final static String SERVER_OLD_AKWAM = "old_Akwam";
     public final static String SERVER_AFLAM_PRO = "AflamPro";
@@ -58,6 +57,7 @@ public class Movie implements Serializable, Parcelable {
     public static final int HTML_STATE = 15;
     public static final int FETCH_MOVIE_AT_START = 16;
     public static final int NO_FETCH_MOVIE_AT_START = 17;
+    public static final int ACTION_WATCH_LOCALLY = 18;
     private static int count = 0;
     private String searchContext;
 

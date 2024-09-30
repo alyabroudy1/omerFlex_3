@@ -3,11 +3,13 @@ package com.omerflex.server;
 import android.app.Activity;
 import android.content.Intent;
 import android.util.Log;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 
 import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
@@ -21,65 +23,23 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 public class MyCimaServer extends AbstractServer {
-    private static MyCimaServer instance;
     static String TAG = "MyCima";
 
     Activity activity;
 
     Fragment fragment;
-
     public static String WEBSITE_URL = "https://mycima.io";
 
-    private MyCimaServer(Activity activity, Fragment fragment) {
+    public MyCimaServer(Activity activity, Fragment fragment) {
         // Private constructor to prevent instantiation
         this.activity = activity;
         this.fragment = fragment;
     }
 
-    public static synchronized MyCimaServer getInstance(Activity activity, Fragment fragment) {
-        if (instance == null) {
-            instance = new MyCimaServer(activity, fragment);
-        } else {
-            if (activity != null) {
-                instance.activity = activity;
-            }
-            if (fragment != null) {
-                instance.fragment = fragment;
-            }
-        }
-        return instance;
-    }
-
-    public Movie fetch(Movie movie) {
-        if (movie == null) {
-            return null;
-        }
-        switch (movie.getState()) {
-            case Movie.GROUP_OF_GROUP_STATE:
-                return fetchGroupOfGroup(movie);
-            case Movie.GROUP_STATE:
-                return fetchGroup(movie);
-            case Movie.ITEM_STATE:
-                return fetchItem(movie);
-            case Movie.BROWSER_STATE:
-                    fetchBrowseItem(movie);
-                    return null;
-            case Movie.RESOLUTION_STATE:
-                if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE){
-                    return movie;
-                }
-                return fetchResolutions(movie);
-            case Movie.VIDEO_STATE:
-                return fetchVideo(movie);
-            case Movie.COOKIE_STATE:
-                return fetchCookie(movie);
-            default:
-                return null;
-        }
-    }
-
-    public ArrayList<Movie> search(String query) {
+    @Override
+    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
         Log.i(getLabel(), "search: " + query);
+        String searchContext = query;
         String url = query;
         boolean multiSearch = false;
         if (!query.contains("http")) {
@@ -89,11 +49,39 @@ public class MyCimaServer extends AbstractServer {
 
         Document doc = this.getRequestDoc(url);
         if (doc == null) {
+            activityCallback.onInvalidLink("Invalid link");
             return null;
+        }
+        ArrayList<Movie> movieList = new ArrayList<>();
+
+        if (doc.title().contains("moment")) {
+//            setCookieRefreshed(false);
+            //**** default
+            // String title = "ابحث في موقع فاصل ..";
+            String title = searchContext;
+            //int imageResourceId = R.drawable.default_image;
+            // String cardImageUrl = "android.resource://" + activity.getPackageName() + "/" + imageResourceId;
+            String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
+            String backgroundImageUrl = "http://commondatastorage.googleapis.com/android-tv/Sample%20videos/April%20Fool's%202013/Introducing%20Google%20Nose/bg.jpg";
+            Movie m = new Movie();
+            m.setTitle(title);
+            m.setDescription("نتائج البحث في الاسفل...");
+            m.setStudio(Movie.SERVER_MyCima);
+            m.setVideoUrl(url);
+            //  m.setVideoUrl("https://www.google.com/");
+            m.setState(Movie.COOKIE_STATE);
+            // m.setState(Movie.RESULT_STATE);
+            m.setCardImageUrl(cardImageUrl);
+            m.setBackgroundImageUrl(backgroundImageUrl);
+            m.setRate("");
+            m.setSearchContext(searchContext);
+            movieList.add(m);
+
+            activityCallback.onInvalidCookie(movieList);
+            return movieList;
         }
 
 
-        ArrayList<Movie> movieList = new ArrayList<>();
         Elements lis = null;
         if (query.contains("http")) {
             Elements box = doc.getElementsByClass("Grid--WecimaPosts");
@@ -125,7 +113,13 @@ public class MyCimaServer extends AbstractServer {
             movieList.add(nextPage);
         }
 
+        activityCallback.onSuccess(movieList);
         return movieList;
+    }
+
+    @Override
+    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
+
     }
 
     protected String getSearchUrl(String query) {
@@ -283,11 +277,12 @@ public class MyCimaServer extends AbstractServer {
         return movie;
     }
 
-    public Movie fetchBrowseItem(Movie movie) {
+    public MovieFetchProcess fetchBrowseItem(Movie movie) {
         Movie clonedMovie = Movie.clone(movie);
         clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
         // to do nothing and wait till result returned to activity only the first fetch
-        return startWebForResultActivity(clonedMovie);
+//        return startWebForResultActivity(clonedMovie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
     }
 
     private void addMovieToHistory(Movie movie) {
@@ -314,6 +309,42 @@ public class MyCimaServer extends AbstractServer {
 
     }
 
+    protected MovieFetchProcess fetchSeriesAction(Movie movie, int action, ActivityCallback<Movie> activityCallback){
+        if (action == Movie.GROUP_OF_GROUP_STATE){
+            return fetchGroupOfGroup(movie, activityCallback);
+        }
+        return fetchGroup(movie, activityCallback);
+    }
+
+    protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback){
+//        Log.d(TAG, "fetchItemAction: 55");
+        switch (action) {
+            case Movie.BROWSER_STATE:
+                return fetchBrowseItem(movie);
+            case Movie.COOKIE_STATE:
+                return fetchCookie(movie);
+            case Movie.ACTION_WATCH_LOCALLY:
+                return fetchWatchLocally(movie, activityCallback);
+//            case Movie.RESOLUTION_STATE:
+//                return fetchResolutions(movie);
+//            case Movie.VIDEO_STATE:
+//                return fetchVideo(movie);
+            default:
+               return fetchItem(movie, activityCallback);
+        }
+    }
+
+    private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
+        if (movie.getState() == Movie.BROWSER_STATE){
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
+//            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
+            activityCallback.onInvalidCookie(movie);
+        }
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_EXOPLAYER, movie);
+    }
+
     @Override
     public int detectMovieState(Movie movie) {
         String u = movie.getVideoUrl();
@@ -331,49 +362,48 @@ public class MyCimaServer extends AbstractServer {
         return Movie.ITEM_STATE;
     }
 
-    @Override
-    public void fetchWebResult(Movie movie) {
+    public String determineRelatedMovieLabel(Movie movie) {
+        switch (movie.getState()){
+            case Movie.GROUP_OF_GROUP_STATE:
+                return "المواسم/الحلقات";
+            case Movie.GROUP_STATE:
+                return "الحلقات";
+            case Movie.ITEM_STATE:
+                return "الجودة";
+            default:
+                return "الروابط";
+        }
     }
-
-    @Override
-    public void fetchServerList(Movie movie) {
-
-    }
-
-    @Override
-    public boolean onLoadResource(Activity activity, WebView view, String url, Movie movie) {
-        return false;
-    }
-
-    @Override
-    public Movie fetchGroupOfGroup(final Movie movie) {
+    private MovieFetchProcess fetchGroupOfGroup(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
         Log.i(TAG, "ur:" + url);
         Document doc = getRequestDoc(url);
         if (doc == null) {
+            activityCallback.onInvalidLink(movie);
             return null;
         }
         if (doc.title().contains("Just a moment")) {
-            Movie clonedMovie = Movie.clone(movie);
-            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-            return startWebForResultActivity(clonedMovie);
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+            activityCallback.onInvalidCookie(movie);
         }
 
-        return generateGroupOfGroupMovie(doc, movie);
+        return generateGroupOfGroupMovie(doc, movie, activityCallback);
     }
 
-    private Movie startWebForResultActivity(Movie movie) {
+    private MovieFetchProcess startWebForResultActivity(Movie movie) {
         Log.d(TAG, "startWebForResultActivity: " + movie);
         Intent browse = new Intent(activity, BrowserActivity.class);
         browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
         browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
 
         fragment.startActivityForResult(browse, movie.getFetch());
-        return movie;
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
     }
 
-    private Movie generateGroupOfGroupMovie(Document doc, Movie movie) {
+    private MovieFetchProcess generateGroupOfGroupMovie(Document doc, Movie movie, ActivityCallback<Movie> activityCallback) {
         //get link of episodes page
         Log.d(TAG, "generateGroupOfGroupMovie: " + doc.title());
         Element descElem = doc.getElementsByClass("PostItemContent").first();
@@ -391,7 +421,7 @@ public class MyCimaServer extends AbstractServer {
             if (movie.getVideoUrl() == null) {
                 return null;
             }
-            return fetchGroup(movie);
+            return fetchGroup(movie, activityCallback);
         }
 
         for (Element box : boxs) {
@@ -412,12 +442,11 @@ public class MyCimaServer extends AbstractServer {
                 movie.addSubList(episode);
             }
         }
-
-        return movie;
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
-    @Override
-    public Movie fetchGroup(final Movie movie) {
+    private MovieFetchProcess fetchGroup(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
         String url = movie.getVideoUrl();
@@ -434,19 +463,22 @@ public class MyCimaServer extends AbstractServer {
         Document doc = getRequestDoc(url);
         if (doc == null) {
             Log.d(TAG, "fetchGroup: error doc is null ");
-            return movie;
+            activityCallback.onInvalidLink(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
         }
 
         if (doc.title().contains("Just a moment")) {
-            Movie clonedMovie = Movie.clone(movie);
-            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-            return startWebForResultActivity(clonedMovie);
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+            activityCallback.onInvalidCookie(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
         }
 
-        return generateGroupMovie(doc, movie);
+        return generateGroupMovie(doc, movie, activityCallback);
     }
 
-    private Movie generateGroupMovie(Document doc, Movie movie) {
+    private MovieFetchProcess generateGroupMovie(Document doc, Movie movie, ActivityCallback<Movie> activityCallback) {
         //get link of episodes page
         Element descElem = doc.getElementsByClass("PostItemContent").first();
         String desc = "";
@@ -479,11 +511,11 @@ public class MyCimaServer extends AbstractServer {
                 movie.addSubList(episode);
             }
         }
-        return movie;
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
-    @Override
-    public Movie fetchItem(final Movie movie) {
+    private MovieFetchProcess fetchItem(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
 //            Document doc = Jsoup.connect(url).header(
@@ -497,43 +529,25 @@ public class MyCimaServer extends AbstractServer {
 
         Document doc = getRequestDoc(url);
         if (doc == null) {
-            return movie;
+            activityCallback.onInvalidLink(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
         }
 
         if (doc.title().contains("Just a moment")) {
-            Movie clonedMovie = Movie.clone(movie);
-            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-            return startWebForResultActivity(clonedMovie);
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+            activityCallback.onInvalidCookie(movie);
         }
 
-        return generateItemMovie(doc, movie);
+        return generateItemMovie(doc, movie, activityCallback);
     }
 
-    @Override
-    public Movie fetchResolutions(Movie movie) {
-//        Log.i(TAG, "fetchResolutions: " + movie.getVideoUrl());
-//        startWebForResultActivity(movie);
-        return movie;
+    private MovieFetchProcess fetchCookie(Movie movie) {
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
     }
 
-    @Override
-    public void startVideo(String url) {
-
-    }
-
-    @Override
-    public void startBrowser(String url) {
-
-    }
-
-    @Override
-    public Movie fetchCookie(Movie movie) {
-
-        return movie;
-    }
-
-    @Override
-    public boolean isSeries(Movie movie) {
+    private boolean isSeries(Movie movie) {
         String u = movie.getVideoUrl();
         String n = movie.getTitle();
         // Log.d(TAG, "isSeries: title:" + n + ", url=" + u);
@@ -723,13 +737,13 @@ public class MyCimaServer extends AbstractServer {
     }
 
 
-    public void handleJSWebResult__(Activity activity, Movie movie, String jsResult) {
+    private void handleJSWebResult__(Activity activity, Movie movie, String jsResult, ActivityCallback<Movie> activityCallback) {
         Log.d(TAG, "handleJSWebResult - " + movie);
         if (jsResult != null && jsResult.startsWith("<html>")) {
 
             Document doc = Jsoup.parse(jsResult);
 
-            Movie newMovie = generateGroupOfGroupMovie(doc, movie);
+            Movie newMovie = generateGroupOfGroupMovie(doc, movie, activityCallback).movie;
 
             Log.d(TAG, "handleJSWebResult: sublist; " + movie.getSubList().size());
             Intent intent = new Intent();
@@ -748,10 +762,9 @@ public class MyCimaServer extends AbstractServer {
         }
     }
 
-    @Override
-    public Movie handleOnActivityResultHtml(String html, Movie m) {
+    public MovieFetchProcess handleOnActivityResultHtml(String html, Movie m, ActivityCallback<Movie> activityCallback) {
         if (html == null) {
-            return m;
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, m);
         }
         Document doc = Jsoup.parse(html);
         Log.d(TAG, "handleOnActivityResultHtml: s: ");
@@ -761,16 +774,16 @@ public class MyCimaServer extends AbstractServer {
             m.setSubList(new ArrayList<>());
         }
         if (m.getState() == Movie.GROUP_OF_GROUP_STATE) {
-            return generateGroupOfGroupMovie(doc, m);
+            return generateGroupOfGroupMovie(doc, m, activityCallback);
         } else if (m.getState() == Movie.GROUP_STATE) {
-            return generateGroupMovie(doc, m);
+            return generateGroupMovie(doc, m, activityCallback);
         } else if (m.getState() == Movie.ITEM_STATE) {
-            return generateItemMovie(doc, m);
+            return generateItemMovie(doc, m, activityCallback);
         }
-        return m;
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, m);
     }
 
-    private Movie generateItemMovie(Document doc, Movie movie) {
+    private MovieFetchProcess generateItemMovie(Document doc, Movie movie, ActivityCallback<Movie> activityCallback) {
 
         //get link of episodes page
         Element descElem = doc.getElementsByClass("StoryMovieContent").first();
@@ -848,11 +861,14 @@ public class MyCimaServer extends AbstractServer {
             Log.d(TAG, "generateItemMovie: " + movie);
             break;
         }
-        return movie;
+        activityCallback.onSuccess(movie);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
-    public ArrayList<Movie> getHomepageMovies() {
-        return search("ratched");
+    @Override
+    public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
+        return search("sonic", activityCallback);
+//        return search("ratched");
 //        return search(getConfig().getUrl() + "/movies/");
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);

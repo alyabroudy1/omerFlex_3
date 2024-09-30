@@ -51,6 +51,7 @@ public class HorizontalMovieAdapter extends RecyclerView.Adapter<HorizontalMovie
         Glide.with(context).load(movie.getCardImageUrl()).into(holder.movieImageView);
 
         // Set an OnClickListener to open the detailed activity when a movie card is clicked
+        holder.movieTitleTextView.setText(movie.getTitle());
         holder.movieRatingTextView.setText(movie.getRate());
         holder.movieStudioTextView.setText(movie.getStudio());
 

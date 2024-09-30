@@ -16,10 +16,13 @@ import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.CookieDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.contract.CookieContract.CookieTable;
 import com.omerflex.service.database.contract.IptvContract.IptvTable;
 import com.omerflex.service.database.contract.MovieContract.MoviesTable;
 import com.omerflex.service.database.contract.MovieHistoryContract.MovieHistoryTable;
+
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -165,8 +168,13 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
     public void saveHeadersAndCookies(AbstractServer server, String serverName) {
         //.getHeaders(), server.getCookies(), movie.getStudio()
-        Map<String, String> headers = server.getHeaders();
-        String cookies = server.getCookies();
+        ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+        if (config == null){
+            return;
+        }
+
+        Map<String, String> headers = config.getHeaders();
+        String cookies = config.getStringCookies();
 
         SQLiteDatabase db = this.getWritableDatabase();
 //
@@ -179,14 +187,14 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 //        else if (headers.containsKey("Origin")){
 //            server.setReferer(headers.get("Origin"));
 //        }
-        Log.d(TAG, "saveHeadersAndCookies: " + server.getReferer());
+        Log.d(TAG, "saveHeadersAndCookies: " + config.getReferer());
         // Check if the server entry exists in the database
         Cursor cursor = db.query(CookieTable.TABLE_NAME, null, CookieTable.COLUMN_ID + " = ?", new String[]{serverName}, null, null, null);
 
         if (cursor.getCount() > 0) {
             // Server entry already exists, update the headers and cookies
             ContentValues values = new ContentValues();
-            values.put(CookieTable.COLUMN_REFERRER, server.getReferer());
+            values.put(CookieTable.COLUMN_REFERRER, config.getReferer());
             values.put(CookieTable.COLUMN_HEADER, headers.toString());
             values.put(CookieTable.COLUMN_CREATED_AT, new Date().getTime());
             values.put(CookieTable.COLUMN_COOKIE, cookies);
@@ -195,7 +203,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
             // Server entry does not exist, insert a new row
             ContentValues values = new ContentValues();
             values.put(CookieTable.COLUMN_ID, serverName);
-            values.put(CookieTable.COLUMN_REFERRER, server.getReferer());
+            values.put(CookieTable.COLUMN_REFERRER, config.getReferer());
             values.put(CookieTable.COLUMN_HEADER, headers.toString());
             values.put(CookieTable.COLUMN_COOKIE, cookies);
             db.insert(CookieTable.TABLE_NAME, null, values);
@@ -1473,6 +1481,42 @@ public class MovieDbHelper extends SQLiteOpenHelper {
             } while (c.moveToNext());
         }
         return servers;
+    }
+
+    public void saveServerConfig(ServerConfig serverConfig) {
+        ContentValues values = new ContentValues();
+
+
+        SQLiteDatabase db = this.getReadableDatabase();
+
+//        Log.d(TAG, "saveServerConfigAsCookieDTO: " + serverConfig);
+        String selection = CookieTable.COLUMN_ID + " = ?";
+        String[] selectionArgs = new String[]{serverConfig.getName()};
+        try (Cursor cursor = db.query(
+                CookieTable.TABLE_NAME, null,
+                selection, selectionArgs, null, null, null)) {
+
+//            Log.d(TAG, "saveServerConfigAsCookieDTO: cursor:" + cursor.getCount());
+
+
+            values.put(CookieTable.COLUMN_ID, serverConfig.getName());
+            values.put(CookieTable.COLUMN_REFERRER, serverConfig.getUrl());
+            values.put(CookieTable.COLUMN_CREATED_AT, System.currentTimeMillis());
+            values.put(CookieTable.COLUMN_HEADER, new JSONObject(serverConfig.getHeaders()).toString());
+            values.put(CookieTable.COLUMN_COOKIE, serverConfig.getStringCookies());
+
+            db = this.getWritableDatabase();
+            if (cursor.getCount() > 0) {
+                Log.d(TAG, "saveServerConfigAsCookieDTO: update: "+ values);
+                // Server entry already exists, update the headers and cookies
+
+                db.update(CookieTable.TABLE_NAME, values, CookieTable.COLUMN_ID + " = ?", new String[]{serverConfig.getName()});
+            } else {
+                // Server entry does not exist, insert a new row
+                Log.d(TAG, "saveServerConfigAsCookieDTO: insert: "+ values);
+                db.insert(CookieTable.TABLE_NAME, null, values);
+            }
+        }
     }
 
     public void saveServerConfigAsCookieDTO(ServerConfig serverConfig, Date date) {
