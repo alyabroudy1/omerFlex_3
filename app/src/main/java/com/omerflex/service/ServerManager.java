@@ -17,13 +17,12 @@ import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.FaselHdServer;
 import com.omerflex.server.MyCimaServer;
-import com.omerflex.server.Util;
+import com.omerflex.server.OmarServer;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,13 +44,12 @@ public class ServerManager {
     MovieDbHelper dbHelper;
     //    private static ServerManager instance;
 //
-    private ArrayList<AbstractServer> servers;
 
     public ServerManager(Activity activity, Fragment fragment) {
         this.activity = activity;
         this.fragment = fragment;
         this.dbHelper = MovieDbHelper.getInstance(activity);
-        this.servers = new ArrayList<>();
+//        this.servers = new ArrayList<>();
 //        if (servers == null){
 //            ExecutorService executor = Executors.newSingleThreadExecutor();
 //            executor.submit(() -> {
@@ -91,51 +89,9 @@ public class ServerManager {
 //        }
 //    }
 
-    private ArrayList<AbstractServer> initializeServersFromDB() {
-        Log.d(TAG, "initializeServersFromDB ");
-        ArrayList<CookieDTO> serverConfigs = dbHelper.getAllCookieDto();
-        if (serverConfigs.size() == 0) {
-            return addServerConfigsToDB();
-        }
-        return generateServers(serverConfigs);
-    }
 
-    private ArrayList<AbstractServer> generateServers(ArrayList<CookieDTO> serverConfigs) {
-        Log.d(TAG, "generateServers ");
-        for (CookieDTO serverCookie : serverConfigs) {
-            try {
-//                Log.d(TAG, "generateServers: server: "+serverCookie.name);
-                AbstractServer server = determineServer(serverCookie.name);
-                if (server == null) {
-                    continue;
-                }
-                ServerConfig config = new ServerConfig();
-                config.setUrl(serverCookie.referer);
-                config.setReferer(serverCookie.referer);
-                config.setName(serverCookie.name);
-                config.setDate(serverCookie.date.toString());
 
-//                config.setHeaders(getMappedHeaders(serverCookie.headers));
-                config.setHeaders(Util.convertJsonToHashMap(serverCookie.headers));
-                config.setStringCookies(serverCookie.cookie);
-                ServerConfigManager.addConfig(config);
-                Log.d(TAG, "generateServers: adding server:" + config);
-                this.servers.add(server);
-//                Log.d(TAG, "generateServers: after adding servers.size: "+servers.size());
-            } catch (Exception e) {
-                e.printStackTrace();
-                Log.d(TAG, "generateServers: error: " + e.getMessage());
-            }
-        }
-//        Log.d(TAG, "generateServers: servers.size: "+servers.size());
-        return this.servers;
-    }
 
-    private ArrayList<AbstractServer> addServerConfigsToDB() {
-        Log.d(TAG, "addServerConfigsToDB ");
-        this.servers = DefaultServersConfig.getDefaultServers(activity, fragment, dbHelper);
-        return this.servers;
-    }
 
     /**
      * initialize servers from remote servers.json
@@ -275,14 +231,7 @@ public class ServerManager {
         return null;
     }
 
-    public ArrayList<AbstractServer> getServers() {
-        Log.d(TAG, "getServers: " + servers.toString());
-        if (servers == null || servers.size() == 0) {
-//           return initializeServers();
-            return initializeServersFromDB();
-        }
-        return servers;
-    }
+
 
     public AbstractServer determineServer(String serverName) {
         if (serverName == null) {
@@ -291,9 +240,9 @@ public class ServerManager {
         Log.d(TAG, "determineServer: " + serverName);
         switch (serverName) {
             case Movie.SERVER_MyCima:
-                return new MyCimaServer(activity, fragment);
+                return new MyCimaServer();
             case Movie.SERVER_FASELHD:
-                return new FaselHdServer(fragment, activity);
+                return new FaselHdServer();
 //                return MyCimaServer.getInstance(activity, fragment);
 //            case Movie.SERVER_AKWAM:
 //                return AkwamServer.getInstance(activity, fragment);
@@ -324,9 +273,11 @@ public class ServerManager {
     public static AbstractServer determineServer(Movie movie, ArrayObjectAdapter listRowAdapter, Activity activity, Fragment fragment) {
         switch (movie.getStudio()) {
             case Movie.SERVER_MyCima:
-                return new MyCimaServer(activity, fragment);
+                return new MyCimaServer();
             case Movie.SERVER_FASELHD:
-                return new FaselHdServer(fragment, activity);
+                return new FaselHdServer();
+                        case Movie.SERVER_OMAR:
+                return new OmarServer();
 //            case Movie.SERVER_AKWAM:
 //                return AkwamServer.getInstance(activity, fragment);
 //            case Movie.SERVER_OLD_AKWAM:
@@ -343,15 +294,13 @@ public class ServerManager {
 //                return ArabSeedServer.getInstance(fragment, activity);
 //            case Movie.SERVER_IPTV:
 //                return IptvServer.getInstance(activity, fragment);
-//            case Movie.SERVER_OMAR:
-//                return OmarServer.getInstance(activity, fragment);
 //            case Movie.SERVER_WATAN_FLIX:
 //                return WatanFlixController.getInstance(fragment, activity);
 //            case Movie.SERVER_KOORA_LIVE:
 //                return new KooraLiveController(listRowAdapter, activity);
             //todo: very important handle unknown servers
             default:
-                return new MyCimaServer(activity, fragment);
+                return new MyCimaServer();
         }
     }
 }

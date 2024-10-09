@@ -43,7 +43,9 @@ import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.ServerManager;
+import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
@@ -92,7 +94,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //    private GeckoService geckoService;
     private boolean isBound = false;
     ServerManager serverManager;
-
+    public MovieDbHelper dbHelper;
     private boolean isInitialized = false;
 
     @Override
@@ -108,6 +110,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
         }
 
         activity = getActivity();
+        dbHelper = MovieDbHelper.getInstance(activity);
         serverManager = new ServerManager(activity, fragment);
 
         rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
@@ -155,7 +158,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
     }
 
     private void loadSearchResultRaws() {
-        for (AbstractServer server : serverManager.getServers()) {
+        for (AbstractServer server : ServerConfigManager.getServers(dbHelper)) {
             if (server == null) {
                 return;
             }
@@ -171,7 +174,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
                 try {
                     ArrayList<Movie> movies = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                         @Override
-                        public void onSuccess(ArrayList<Movie> result) {
+                        public void onSuccess(ArrayList<Movie> result, String title) {
 
                         }
 
@@ -381,7 +384,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
             executor.submit(() -> {
                 List<Movie> finalMovieList = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                     @Override
-                    public void onSuccess(ArrayList<Movie> result) {
+                    public void onSuccess(ArrayList<Movie> result, String title) {
 
                     }
 
@@ -459,7 +462,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
                                 //server
                                 List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                                     @Override
-                                    public void onSuccess(ArrayList<Movie> result) {
+                                    public void onSuccess(ArrayList<Movie> result, String title) {
 
                                     }
 
@@ -742,7 +745,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
                 public void run() {
                     List<Movie> movies = server.search(clickedMovie.getTitle(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                         @Override
-                        public void onSuccess(ArrayList<Movie> result) {
+                        public void onSuccess(ArrayList<Movie> result, String title) {
 
                         }
 

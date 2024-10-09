@@ -1,11 +1,8 @@
 package com.omerflex.server;
 
-import android.app.Activity;
 import android.util.Log;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
-
-import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
@@ -104,7 +101,7 @@ public abstract class AbstractServer implements ServerInterface {
     protected Document getRequestDoc(String url) {
         Document doc = null;
         ServerConfig config = getConfig();
-        Log.d(TAG, "getRequestDoc: "+config);
+//        Log.d(TAG, "getRequestDoc: "+config);
         try {
             doc = Jsoup.connect(url)
 //                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
@@ -128,7 +125,6 @@ public abstract class AbstractServer implements ServerInterface {
             //builder.append("Error : ").append(e.getMessage()).append("\n");
             Log.i(TAG, "error: " + e.getMessage());
             String errorMessage = "error: " + getServerId() + ": " + e.getMessage();
-            Util.showToastMessage(errorMessage, getActivity());
         }
         return doc;
     }
@@ -163,9 +159,6 @@ public abstract class AbstractServer implements ServerInterface {
     }
 
     public abstract void shouldInterceptRequest(WebView view, WebResourceRequest request);
-
-    protected abstract Activity getActivity();
-    protected abstract Fragment getFragment();
 
     protected abstract String getSearchUrl(String query);
 

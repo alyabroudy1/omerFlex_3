@@ -1498,12 +1498,23 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
 //            Log.d(TAG, "saveServerConfigAsCookieDTO: cursor:" + cursor.getCount());
 
+            if (serverConfig.getName() != null){
+                values.put(CookieTable.COLUMN_ID, serverConfig.getName());
+            }
 
-            values.put(CookieTable.COLUMN_ID, serverConfig.getName());
-            values.put(CookieTable.COLUMN_REFERRER, serverConfig.getUrl());
+            if (serverConfig.getUrl() != null){
+                values.put(CookieTable.COLUMN_REFERRER, serverConfig.getUrl());
+            }
+
             values.put(CookieTable.COLUMN_CREATED_AT, System.currentTimeMillis());
-            values.put(CookieTable.COLUMN_HEADER, new JSONObject(serverConfig.getHeaders()).toString());
-            values.put(CookieTable.COLUMN_COOKIE, serverConfig.getStringCookies());
+
+            if (!serverConfig.getHeaders().isEmpty()){
+                values.put(CookieTable.COLUMN_HEADER, new JSONObject(serverConfig.getHeaders()).toString());
+            }
+
+            if (serverConfig.getStringCookies() != null){
+                values.put(CookieTable.COLUMN_COOKIE, serverConfig.getStringCookies());
+            }
 
             db = this.getWritableDatabase();
             if (cursor.getCount() > 0) {

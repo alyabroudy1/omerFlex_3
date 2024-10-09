@@ -309,7 +309,31 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         }
         String url = movie.getVideoUrl();
         DataSource.Factory dataSourceFactory = new DefaultHttpDataSource.Factory();
-        if (url.contains("|")){
+        if (url.contains("||")){
+            String[] splitString = url.split("\\|\\|");
+            url = splitString[0];
+            dataSourceFactory = () -> {
+                DataSource.Factory  httpDataSourceFactory = new DefaultHttpDataSource.Factory();
+                // HttpDataSource dataSource = httpDataSourceFactory.createDataSource();
+                DataSource dataSource = httpDataSourceFactory.createDataSource();
+                if (splitString.length == 2){
+                    Log.d("TAG", "buildMediaSource: extracted headers ssss: "+splitString[1]);
+                    String[] headerParts = splitString[1].split("&");
+                    for (String headerPart : headerParts) {
+                        String[] keyValuePair = headerPart.split("=");
+                        if (keyValuePair.length == 2) {
+                            String key = keyValuePair[0];
+                            String value = keyValuePair[1];
+                            Log.d(TAG, "buildMediaSource: "+ key+", "+value);
+                            // Set a custom authentication request header.
+                            ((HttpDataSource) dataSource).setRequestProperty(key, value);
+                        }
+                    }
+                }
+
+                return dataSource;
+            };
+        } else if (url.contains("|")){
             String[] splitString = url.split("\\|");
             url = splitString[0];
             dataSourceFactory = () -> {
@@ -325,6 +349,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
                             String key = keyValuePair[0];
                             String value = keyValuePair[1];
                             // Set a custom authentication request header.
+
                             ((HttpDataSource) dataSource).setRequestProperty(key, value);
                         }
                     }
@@ -333,6 +358,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
                 return dataSource;
             };
         }
+        Log.d(TAG, "buildMediaSource: "+url);
         Uri uri = Uri.parse(url);
 
 

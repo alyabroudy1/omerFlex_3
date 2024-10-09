@@ -1,14 +1,11 @@
 package com.omerflex.service;
 
-import android.app.Activity;
 import android.util.Log;
-
-import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.FaselHdServer;
+import com.omerflex.server.IptvServer;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.text.ParseException;
@@ -19,8 +16,7 @@ import java.util.Date;
 public class DefaultServersConfig {
 
     private static final String TAG = "DefaultServersConfig";
-    public static ArrayList<AbstractServer> getDefaultServers(Activity activity, Fragment fragment, MovieDbHelper dbHelper){
-        ArrayList<AbstractServer> servers = new ArrayList<>();
+    public static ArrayList<AbstractServer> getDefaultServers(MovieDbHelper dbHelper){
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         Log.d(TAG, "addServerConfigsToDB: ");
         Date date = null;
@@ -33,27 +29,53 @@ public class DefaultServersConfig {
 //        Log.d(TAG, "addServerConfigsToDB: date: "+date.toString());
 
 
-//        //      //### mycima ###
+        //      //### mycima ###
 //        ServerConfig mycimaConfig = new ServerConfig();
 //        mycimaConfig.setName(Movie.SERVER_MyCima);
 //        mycimaConfig.setUrl("https://mycima.io");
 //        mycimaConfig.setReferer("https://mycima.io/");
-//        ServerConfigManager.addConfig(mycimaConfig);
+////        ServerConfigManager.addConfig(mycimaConfig);
 //
-//        AbstractServer mycima = new MyCimaServer(activity, fragment);
-//        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
-//        servers.add(mycima);
+//        AbstractServer mycima = new MyCimaServer();
+////        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
+//        ServerConfigManager.addConfig(mycimaConfig, dbHelper);
+//        ServerConfigManager.addServer(mycima);
+//
+//        //        ### fasel ###
+//        ServerConfig faselConfig = new ServerConfig();
+//        faselConfig.setActive(true);
+//        faselConfig.setName(Movie.SERVER_FASELHD);
+//        faselConfig.setUrl("https://faselhd.center");
+//        faselConfig.setReferer("https://faselhd.center/");
+//        ServerConfigManager.addConfig(faselConfig, dbHelper);
+//
+//        AbstractServer faselhd = new FaselHdServer();
+////        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
+//        ServerConfigManager.addConfig(faselConfig, dbHelper);
+//        ServerConfigManager.addServer(faselhd);
 
-        //        ### fasel ###
-        ServerConfig faselConfig = new ServerConfig();
-        faselConfig.setName(Movie.SERVER_FASELHD);
-        faselConfig.setUrl("https://faselhd.center");
-        faselConfig.setReferer("https://faselhd.center/");
-        ServerConfigManager.addConfig(faselConfig);
+        //### iptv ###
+        ServerConfig iptvConfig = new ServerConfig();
+        iptvConfig.setName(Movie.SERVER_IPTV);
+        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
+        iptvConfig.setReferer("https://drive.google.com/");
+        ServerConfigManager.addConfig(iptvConfig);
 
-        AbstractServer faselhd = new FaselHdServer(fragment, activity);
-        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
-        servers.add(faselhd);
+        AbstractServer iptv = new IptvServer();
+        ServerConfigManager.addConfig(iptvConfig, dbHelper);
+        ServerConfigManager.addServer(iptv);
+
+        //        // ### omar ###
+//        ServerConfig omarConfig = new ServerConfig();
+//        omarConfig.setName(Movie.SERVER_OMAR);
+//        omarConfig.setActive(true);
+//        omarConfig.setUrl("http://194.164.53.40/movie");
+//        omarConfig.setReferer("http://194.164.53.40/");
+////        ServerConfigManager.addConfig(omarConfig);
+//
+//        AbstractServer omarServer = new OmarServer();
+//        ServerConfigManager.addConfig(omarConfig, dbHelper);
+//        ServerConfigManager.addServer(omarServer);
 
         // ### akwam ###
 //        ServerConfig akwamConfig = new ServerConfig();
@@ -99,27 +121,9 @@ public class DefaultServersConfig {
 //        dbHelper.saveServerConfigAsCookieDTO(cimaclubConfig, date);
 //        servers.add(cimaclub);
 //
-//        // ### omar ###
-//        ServerConfig omarConfig = new ServerConfig();
-//        omarConfig.setName(Movie.SERVER_OMAR);
-//        omarConfig.setUrl("http://194.164.53.40/movie");
-//        omarConfig.setReferer("http://194.164.53.40/");
-//        ServerConfigManager.addConfig(omarConfig);
+
 //
-//        AbstractServer omar = OmarServer.getInstance(activity, fragment);
-//        dbHelper.saveServerConfigAsCookieDTO(omarConfig, date);
-//        servers.add(omar);
 //
-//        //### iptv ###
-//        ServerConfig iptvConfig = new ServerConfig();
-//        iptvConfig.setName(Movie.SERVER_IPTV);
-//        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
-//        iptvConfig.setReferer("https://drive.google.com/");
-//        ServerConfigManager.addConfig(iptvConfig);
-//
-//        AbstractServer iptv = IptvServer.getInstance(activity, fragment);
-//        dbHelper.saveServerConfigAsCookieDTO(iptvConfig, date);
-//        servers.add(iptv);
 
 //
 ////        //### watanflix ###
@@ -135,7 +139,7 @@ public class DefaultServersConfig {
 ////
 
 
-        Log.d(TAG, "addServerConfigsToDB: servers.size: "+servers.size());
-        return servers;
+//        Log.d(TAG, "addServerConfigsToDB: servers.size: "+ServerConfigManager.getServers().size());
+        return ServerConfigManager.getServers(dbHelper);
     }
 }

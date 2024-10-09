@@ -42,6 +42,8 @@ import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.FaselHdServer;
+import com.omerflex.server.IptvServer;
 import com.omerflex.server.MyCimaServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
@@ -49,15 +51,10 @@ import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
 
-import java.io.Serializable;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
@@ -153,12 +150,14 @@ public class MainFragment extends BrowseSupportFragment {
         CookieManager.getInstance().setAcceptCookie(true);
 
         // load rows of the home screen
+        setSelectedPosition(0);
+        setAdapter(rowsAdapter);
+
         loadHomepageRaws();
 
 //        test();
 
-        setSelectedPosition(0);
-        setAdapter(rowsAdapter);
+
     }
 
     private void loadHomepageRaws() {
@@ -168,8 +167,9 @@ public class MainFragment extends BrowseSupportFragment {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
 //            Log.d(TAG, "loadHomepageRaws a ");
-            for (AbstractServer server : serverManager.getServers()) {
-                Log.d(TAG, "loadHomepageRaws b: " + server.getLabel());
+            ArrayList<AbstractServer> serversList = ServerConfigManager.getServers(dbHelper);
+            for (AbstractServer server : serversList) {
+
 //                ExecutorService executor2 = Executors.newSingleThreadExecutor();
 //                executor2.submit(() -> {
                 try {
@@ -177,17 +177,29 @@ public class MainFragment extends BrowseSupportFragment {
 //                    if (server instanceof OmarServer) {
 ////                        loadOmarServerHomepage(server);
 //                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
-//                    } else if (
+//                    } else
+                    if (
 //                            server instanceof OldAkwamServer ||
 //                                    server instanceof CimaClubServer //||
-////                                    server instanceof FaselHdController ||
-////                                    server instanceof AkwamServer ||
-////                                    server instanceof ArabSeedServer //||
-////                                    server instanceof MyCimaServer
-//                    ) {
-//                        continue;
+                            server instanceof FaselHdServer ||
+//                                    server instanceof AkwamServer ||
+//                                    server instanceof ArabSeedServer //||
+                                    server instanceof MyCimaServer
+                    ) {
+                        continue;
+                    }
+                    Log.d(TAG, "loadHomepageRaws b: " + server.getLabel());
+//                    else
+
+//                    else {
+//                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
 //                    }
-//                    else if (server instanceof IptvServer) {
+
+                    ArrayList<Movie> movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                        @Override
+                        public void onSuccess(ArrayList<Movie> result, String title) {
+//                            generateCategory(title, result);
+//                            if (server instanceof IptvServer) {
 //                        //load history rows first
 //                        loadHomepageHistoryRaws();
 //
@@ -198,8 +210,27 @@ public class MainFragment extends BrowseSupportFragment {
 ////                                loadMoviesRow("tv", channels);
 ////                            }
 //                    } else {
-//                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
+                            loadMoviesRow(server, addRowToMainAdapter(title), result);
 //                    }
+                        }
+
+                        @Override
+                        public void onInvalidCookie(ArrayList<Movie> result) {
+                            Log.d(TAG, "onInvalidCookie: " + result);
+                            loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), result);
+                        }
+
+                        @Override
+                        public void onInvalidLink(ArrayList<Movie> result) {
+
+                        }
+
+                        @Override
+                        public void onInvalidLink(String message) {
+
+                        }
+                    });
+
 
                 } catch (Exception exception) {
                     Log.d(TAG, "loadHomepageRaws: error: " + exception.getMessage());
@@ -208,6 +239,23 @@ public class MainFragment extends BrowseSupportFragment {
 //                });
 //                executor2.shutdown();
             }
+
+
+            //load history rows first
+            try {
+                loadHomepageHistoryRaws();
+            } catch (Exception e) {
+                Log.d(TAG, "loadHomepageRaws: error loading historyRows: " + e.getMessage());
+            }
+
+
+//                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
+//                            //channel list
+//                            ArrayList<Movie> channels = dbHelper.getIptvHomepageChannels();
+//                            if (channels.size() > 0) {
+//                                loadMoviesRow("tv", channels);
+//                            }
+
         });
         executor.shutdown();
     }
@@ -215,7 +263,10 @@ public class MainFragment extends BrowseSupportFragment {
     private ArrayObjectAdapter addRowToMainAdapter(String label) {
         ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
         HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, label);
-        rowsAdapter.add(new ListRow(header, adapter));
+        new Handler(Looper.getMainLooper()).post(() -> {
+            rowsAdapter.add(new ListRow(header, adapter));
+        });
+
         return adapter;
     }
 
@@ -227,7 +278,7 @@ public class MainFragment extends BrowseSupportFragment {
             if (activity != null) {
                 ArrayList<Movie> movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                     @Override
-                    public void onSuccess(ArrayList<Movie> result) {
+                    public void onSuccess(ArrayList<Movie> result, String title) {
                         Map<String, List<Movie>> moviesByCategory = result.stream()
                                 .flatMap(movie -> movie.getCategories().stream()
                                         .map(category -> new AbstractMap.SimpleEntry<>(category, movie)))
@@ -269,50 +320,71 @@ public class MainFragment extends BrowseSupportFragment {
     private void loadMoviesRow(AbstractServer server, ArrayObjectAdapter adapter, ArrayList<Movie> moviesList) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
-            if (activity != null) {
-                final ArrayList<Movie> movies; // Declare as effectively final
-                if (moviesList == null && server != null) {
-                    movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
-                        @Override
-                        public void onSuccess(ArrayList<Movie> result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidCookie(ArrayList<Movie> result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidLink(ArrayList<Movie> result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidLink(String message) {
-
-                        }
-                    });
-                    Movie sampleMovie = movies.get(0);
+            if (activity == null) {
+                return;
+            }
+            final ArrayList<Movie> movies; // Declare as effectively final
+//                if (moviesList == null && server != null) {
+            if (server == null) {
+                return;
+            }
+            Log.d(TAG, "loadMoviesRow: " + server.getServerId());
+            movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                @Override
+                public void onSuccess(ArrayList<Movie> result, String title) {
+                    Log.d(TAG, "loadMoviesRow: onSuccess: " + result + ", " + title);
+                    if (result.isEmpty()) {
+                        return;
+                    }
+                    Movie sampleMovie = result.get(0);
                     if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
                         ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
-                        if (null != config){
+                        if (null != config) {
                             updateDomain(sampleMovie.getVideoUrl(), config, dbHelper);
                         }
                     }
-                } else {
-                    movies = moviesList;
-                }
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // String newName = rowName + ("(" + finalMovieList.size() + ")");
-                        if (movies != null && adapter != null) {
-                            adapter.addAll(0, movies);
-                        }
+
+                    if (adapter == null) {
+                        return;
                     }
-                });
-            }
+
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            adapter.addAll(0, result);
+                            rowsAdapter.notifyArrayItemRangeChanged(0, rowsAdapter.size());
+//                            adapter.notifyItemRangeChanged(0, adapter.size());
+                        });
+//                                adapter.notifyItemRangeInserted(0, result.size());
+
+                }
+
+                @Override
+                public void onInvalidCookie(ArrayList<Movie> result) {
+                    Log.d(TAG, "loadMoviesRow: onInvalidCookie: " + result.size());
+                    if (result.isEmpty()) {
+                        return;
+                    }
+
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // String newName = rowName + ("(" + finalMovieList.size() + ")");
+                            if (adapter != null) {
+                                adapter.addAll(0, result);
+                            }
+                        }
+                    });
+                }
+
+                @Override
+                public void onInvalidLink(ArrayList<Movie> result) {
+                    Log.d(TAG, "loadMoviesRow: onInvalidLink: " + result);
+                }
+
+                @Override
+                public void onInvalidLink(String message) {
+                    Log.d(TAG, "loadMoviesRow: onInvalidLink: " + message);
+                }
+            });
 
         });
 
@@ -320,24 +392,25 @@ public class MainFragment extends BrowseSupportFragment {
     }
 
     //todo clarify and optimize
-    private void updateDomain(String movieLink, ServerConfig config, MovieDbHelper dbHelper){
+    private void updateDomain(String movieLink, ServerConfig config, MovieDbHelper dbHelper) {
         String newDomain = Util.extractDomain(movieLink, true, false);
         boolean equal = config.getUrl().contains(newDomain);
-        Log.d(TAG, "updateDomain: old: "+config.getUrl() + ", new: "+ newDomain + ", = "+ (equal));
-        if (!equal){
+        Log.d(TAG, "updateDomain: old: " + config.getUrl() + ", new: " + newDomain + ", = " + (equal));
+        if (!equal) {
             config.setUrl(newDomain);
             config.setReferer(newDomain + "/");
-            ServerConfigManager.updateConfig(config);
+//            ServerConfigManager.updateConfig(config);
 
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            Log.d(TAG, "addServerConfigsToDB: ");
-            Date date = null;
-            try {
-                date = format.parse("2024-02-22T12:30:00");
-            } catch (ParseException e) {
-                date = new Date();
-            }
-            dbHelper.saveServerConfigAsCookieDTO(config, date);
+//            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+//            Log.d(TAG, "addServerConfigsToDB: ");
+//            Date date = null;
+//            try {
+//                date = format.parse("2024-02-22T12:30:00");
+//            } catch (ParseException e) {
+//                date = new Date();
+//            }
+//            dbHelper.saveServerConfigAsCookieDTO(config, date);
+            ServerConfigManager.updateConfig(config, dbHelper);
         }
     }
 
@@ -622,145 +695,180 @@ public class MainFragment extends BrowseSupportFragment {
     }
 
     private void handleItemClicked(Presenter.ViewHolder itemViewHolder, Object item, Row row) {
-        if (item instanceof Movie) {
-            Movie movie = (Movie) item;
-            Log.d(TAG, "onItemClicked: " + item.toString());
-            if (movie.getStudio().equals(Movie.SERVER_IPTV)) {
-                if (movie.getState() == Movie.PLAYLIST_STATE) {
-                    if (!iptvList.isEmpty()) {
-                        int rowSize = rowsAdapter.size() - 1;
-                        int defaultHeaders = rowSize - IPTV_HEADER_ROWS_COUNTER;
-                        Log.d(TAG, "handleItemClicked: defaultHeaders:" + defaultHeaders);
-
-//                        Log.d(TAG, "handleItemClicked: iptvStartIndex: "+iptvStartIndex);
-                        if (rowSize >= IPTV_HEADER_ROWS_COUNTER) {
-
-                            while (rowSize > defaultHeaders) {
-//                                Log.d(TAG, "onItemClicked: remove row:" + iptvLastIndex);
-                                try {
-                                    rowsAdapter.remove(
-                                            rowsAdapter.get((rowSize--)
-                                            ));
-                                } catch (Exception exception) {
-                                    Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
-                                }
-
-                            }
-                            iptvList.clear();
-                            IPTV_HEADER_ROWS_COUNTER = 0;
-                        }
-                    }
-                    //      try {
-                    //   showProgressDialog();
-                    //todo
-//                    IptvServer iptvServer = IptvServer.getInstance(activity, fragment);
-//
-//                    CompletableFuture<Map<String, List<Movie>>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie);
-//                    Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
-//
-//                    futureGroupedMovies.thenAcceptAsync(groupedMovies -> {
-//                        for (Map.Entry<String, List<Movie>> entry : groupedMovies.entrySet()) {
-//                            String group = entry.getKey();
-//                            List<Movie> groupMovies = entry.getValue();
-//                            // Creating a movie magic show with your UI update!
-//                            getActivity().runOnUiThread(() -> {
-//                                ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
-//                                iptvList.addAll(groupMovies);
-//                                listRowAdapter.addAll(0, groupMovies);
-//                                HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, group);
-//                                IPTV_HEADER_ROWS_COUNTER++;
-//                                rowsAdapter.add(new ListRow(header, listRowAdapter));
-//                            });
-//                        }
-//                    }).exceptionally(e -> {
-//                        // Handle any exceptions with grace (and maybe a touch of humor!)
-//                        Log.e(TAG, "Something went wrong: " + e.getMessage());
-//                        return null;
-//                    });
-
-
-// This line waits for the completion of the future
-                    //  hideProgressDialog();
-                    // } catch (ExecutionException | InterruptedException e) {
-                }
-                else {
-                    Intent intent = new Intent(getActivity(), ExoplayerMediaPlayer.class);
-                    intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-                    Objects.requireNonNull(getActivity()).startActivity(intent);
-                }
-
-                //exist method after handling
-                return;
-            }
-
-            if (movie.getState() == Movie.NEXT_PAGE_STATE) {
-                //todo: add info to say if next already clicked, and handle the rest
-                if (movie.getDescription().equals("0")) {
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
-                            //server
-                            List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
-                                @Override
-                                public void onSuccess(ArrayList<Movie> result) {
-
-                                }
-
-                                @Override
-                                public void onInvalidCookie(ArrayList<Movie> result) {
-
-                                }
-
-                                @Override
-                                public void onInvalidLink(ArrayList<Movie> result) {
-
-                                }
-
-                                @Override
-                                public void onInvalidLink(String message) {
-
-                                }
-                            });
-                            Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
-
-                            ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
-                            Log.d(TAG, "onItemClicked: adapter :" + adapter.toString());
-                            getActivity().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    adapter.addAll(adapter.size(), nextList);
-                                }
-                            });
-
-                            //flag that its already clicked
-                            movie.setDescription("1");
-                        }
-                    }).start();
-
-                }
-
-            } else {
-                Intent intent = new Intent(getActivity(), DetailsActivity.class);
-                intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-                intent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-
-                Bundle bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                                getActivity(),
-                                ((ImageCardView) itemViewHolder.view).getMainImageView(),
-                                DetailsActivity.SHARED_ELEMENT_NAME)
-                        .toBundle();
-                getActivity().startActivity(intent, bundle);
-            }
-
-        } else if (item instanceof String) {
+        if (item instanceof String) {
             if (((String) item).contains(getString(R.string.error_fragment))) {
                 Intent intent = new Intent(getActivity(), BrowseErrorActivity.class);
                 startActivity(intent);
             } else {
                 Toast.makeText(getActivity(), ((String) item), Toast.LENGTH_SHORT).show();
             }
+            return;
         }
+        if (!(item instanceof Movie)) {
+            Toast.makeText(getActivity(), "handleItemClicked clicked item not is instanceof Movie ", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Movie movie = (Movie) item;
+        Log.d(TAG, "onItemClicked: " + item.toString());
+        if (movie.getStudio().equals(Movie.SERVER_IPTV)) {
+            handleIptvClickedItem(movie);
+
+            //exist method after handling
+            return;
+        }
+
+        if (movie.getState() == Movie.NEXT_PAGE_STATE) {
+            //todo: add info to say if next already clicked, and handle the rest
+            if (movie.getDescription().equals("0")) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+//                            AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
+                        AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+                        if (server == null) {
+                            Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE run: unknown server:" + movie.getStudio());
+                            return;
+                        }
+                        //server
+                        ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
+//                            Log.d(TAG, "onItemClicked: adapter :" + adapter.toString());
+
+                        List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                            @Override
+                            public void onSuccess(ArrayList<Movie> result, String title) {
+                                Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE onSuccess");
+                                if (result.isEmpty()) {
+                                    return;
+                                }
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        adapter.addAll(adapter.size(), result);
+                                    }
+                                });
+
+                                //flag that its already clicked
+                                movie.setDescription("1");
+                            }
+
+                            @Override
+                            public void onInvalidCookie(ArrayList<Movie> result) {
+                                Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE onInvalidCookie");
+                                if (result.isEmpty()) {
+                                    return;
+                                }
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        adapter.addAll(adapter.size(), result);
+                                    }
+                                });
+                                //flag that its already clicked
+                                movie.setDescription("1");
+                            }
+
+                            @Override
+                            public void onInvalidLink(ArrayList<Movie> result) {
+
+                            }
+
+                            @Override
+                            public void onInvalidLink(String message) {
+
+                            }
+                        });
+//                            Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
+
+                    }
+                }).start();
+
+            }
+
+        } else {
+            Intent intent = Util.generateIntent(movie, new Intent(activity, DetailsActivity.class), true);
+
+            Bundle bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                            getActivity(),
+                            ((ImageCardView) itemViewHolder.view).getMainImageView(),
+                            DetailsActivity.SHARED_ELEMENT_NAME)
+                    .toBundle();
+            getActivity().startActivity(intent, bundle);
+        }
+
+    }
+
+    private void handleIptvClickedItem(Movie movie) {
+        if (movie.getState() != Movie.PLAYLIST_STATE) {
+            Log.d(TAG, "handleIptvClickedItem: not PLAYLIST_STATE but: " + movie.getState());
+            Util.openExoPlayer(movie, getActivity(), true);
+            return;
+        }
+
+        int rowSize = rowsAdapter.size() - 1;
+        int defaultHeaders = rowSize - IPTV_HEADER_ROWS_COUNTER;
+        Log.d(TAG, "handleItemClicked: defaultHeaders:" + defaultHeaders);
+
+//                        Log.d(TAG, "handleItemClicked: iptvStartIndex: "+iptvStartIndex);
+        if (rowSize >= IPTV_HEADER_ROWS_COUNTER) {
+//            if (iptvList.isEmpty()) {
+//                Log.d(TAG, "handleItemClicked: SERVER_IPTV PLAYLIST_STATE iptvList.isEmpty ");
+//                return;
+//            }
+            while (rowSize > defaultHeaders) {
+//                                Log.d(TAG, "onItemClicked: remove row:" + iptvLastIndex);
+                try {
+                    rowsAdapter.remove(
+                            rowsAdapter.get((rowSize--)
+                            ));
+                } catch (Exception exception) {
+                    Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
+                }
+
+            }
+            iptvList.clear();
+            IPTV_HEADER_ROWS_COUNTER = 0;
+        }
+
+              try {
+//           showProgressDialog();
+//        todo
+                    IptvServer iptvServer =(IptvServer) ServerConfigManager.getServer(Movie.SERVER_IPTV);
+                    if (iptvServer == null){
+                        return;
+                    }
+                    CompletableFuture<Map<String, List<Movie>>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
+                    Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
+
+                    futureGroupedMovies.thenAcceptAsync(groupedMovies -> {
+                        for (Map.Entry<String, List<Movie>> entry : groupedMovies.entrySet()) {
+                            String group = entry.getKey();
+                            List<Movie> groupMovies = entry.getValue();
+                            // Creating a movie magic show with your UI update!
+//                            getActivity().runOnUiThread(() -> {
+                           mHandler.post(new Runnable() {
+                               @Override
+                               public void run() {
+                                   ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
+                                   iptvList.addAll(groupMovies);
+                                   listRowAdapter.addAll(0, groupMovies);
+                                   HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, group);
+                                   IPTV_HEADER_ROWS_COUNTER++;
+                                   rowsAdapter.add(new ListRow(header, listRowAdapter));
+                               }
+                           });
+                        }
+                    }).exceptionally(e -> {
+                        // Handle any exceptions with grace (and maybe a touch of humor!)
+                        Log.e(TAG, "Something went wrong: " + e.getMessage());
+                        return null;
+                    });
+
+
+// This line waits for the completion of the future
+//          hideProgressDialog();
+         } catch (Exception e) {
+                  Log.d(TAG, "handleIptvClickedItem: " + e.getMessage());
+              }
     }
 
     private final class ItemViewSelectedListener implements OnItemViewSelectedListener {
@@ -780,8 +888,8 @@ public class MainFragment extends BrowseSupportFragment {
     private void prepareBackgroundManager() {
 
         Activity currentActivity = getActivity();
-         Context context = getContext();
-        if (currentActivity == null || context == null){
+        Context context = getContext();
+        if (currentActivity == null || context == null) {
             return;
         }
         mBackgroundManager = BackgroundManager.getInstance(currentActivity);
@@ -823,7 +931,7 @@ public class MainFragment extends BrowseSupportFragment {
     private void updateBackground(String uri) {
         int width = mMetrics.widthPixels;
         int height = mMetrics.heightPixels;
-        if (getActivity() == null){
+        if (getActivity() == null) {
             return;
         }
 
@@ -835,11 +943,11 @@ public class MainFragment extends BrowseSupportFragment {
                     @Override
                     public void onResourceReady(@NonNull Drawable drawable,
                                                 @Nullable Transition<? super Drawable> transition) {
-                        if (mBackgroundManager == null){
-                            return;
+                        if (mBackgroundManager != null) {
+                            mBackgroundManager.setDrawable(drawable);
                         }
 
-                        mBackgroundManager.setDrawable(drawable);
+
                     }
                 });
         mBackgroundTimer.cancel();

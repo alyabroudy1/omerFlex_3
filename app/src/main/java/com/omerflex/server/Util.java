@@ -16,6 +16,7 @@ import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.ExoplayerMediaPlayer;
 import com.omerflex.view.VideoDetailsFragment;
 import com.omerflex.view.mobile.MobileMovieDetailActivity;
+import com.omerflex.view.mobile.MobileSearchResultActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -178,7 +179,7 @@ public class Util {
     }
 
     @NonNull
-    private static Intent generateIntent(Movie movie, Intent intent, boolean withSubList) {
+    public static Intent generateIntent(Movie movie, Intent intent, boolean withSubList) {
         intent.putExtra(DetailsActivity.MOVIE, (Parcelable) movie);
         intent.putExtra(DetailsActivity.MAIN_MOVIE, (Parcelable) movie.getMainMovie());
         if (withSubList && movie.getSubList() != null) {
@@ -322,4 +323,10 @@ public class Util {
         return map;  // Return the HashMap
     }
 
+    public static void openSearchResultActivity(String query, Activity activity) {
+        Intent intent = new Intent(activity, MobileSearchResultActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(DetailsActivity.QUERY, query);
+        Objects.requireNonNull(activity).startActivity(intent);
+    }
 }

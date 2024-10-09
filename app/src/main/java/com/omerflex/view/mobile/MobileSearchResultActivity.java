@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.SearchView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -17,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
@@ -34,10 +36,10 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MobileHomepageActivity extends AppCompatActivity {
+public class MobileSearchResultActivity extends AppCompatActivity {
 
     private SearchView searchView;
-    public static String TAG = "MobileHomepageActivity";
+    public static String TAG = "MobileSearchResultActivity";
     private RecyclerView recyclerView;
     private CategoryAdapter categoryAdapter;
     private List<Category> categoryList;
@@ -47,12 +49,13 @@ public class MobileHomepageActivity extends AppCompatActivity {
     int clickedMovieIndex = 0;
     private Handler handler = new Handler();
     public MovieDbHelper dbHelper;
+    private String query;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_mobile_homepage);
+        setContentView(R.layout.activity_mobile_search_result);
 //        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
 //            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
 //            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -60,11 +63,11 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //        });
         activity = this;
         dbHelper = MovieDbHelper.getInstance(activity);
-        serverManager = new ServerManager(activity, null);
-
         // todo: serverManager.updateServers();
         searchView = findViewById(R.id.searchView);
         recyclerView = findViewById(R.id.recyclerView);
+        query = getIntent().getStringExtra(DetailsActivity.QUERY);
+        Log.d(TAG, "onCreate: "+query);
 
 //        // Set up the vertical RecyclerView
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -79,10 +82,6 @@ public class MobileHomepageActivity extends AppCompatActivity {
 
         // Load categories in the background
         loadCategoriesInBackground();
-//        String url = "https://airmax.boats/airmaxtv963/airmaxtv369/309.ts|User-Agent=airmaxtv&Accept-Encoding=identity&Host=airmax.boats&Connection=Keep-Alive&Icy-MetaData=1";
-//        Movie mov = new Movie();
-//        mov.setVideoUrl(url);
-//        Util.openExoPlayer(mov, activity, false);
 
         // todo: handle expired activity or device changed orientation
     }
@@ -105,6 +104,12 @@ public class MobileHomepageActivity extends AppCompatActivity {
             }
         };
     }
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Log.d(TAG, "onNewIntent: ");
+        setIntent(intent);
+        super.onNewIntent(intent);
+    }
 
     private void loadCategoriesInBackground() {
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -121,14 +126,16 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //                }
 //            });
 
+            query = getIntent().getStringExtra(DetailsActivity.QUERY);
+            Log.d(TAG, "loadHomepageRaws a "+query);
+            for (AbstractServer server : ServerConfigManager.getServers(dbHelper)) {
+                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
 
-            ArrayList<AbstractServer> serversList= ServerConfigManager.getServers(dbHelper);
-//            ArrayList<AbstractServer> serversList= new ArrayList<>();
-
-            Log.d(TAG, "loadHomepageRaws a "+serversList);
-            for (AbstractServer server : serversList) {
-
-                Log.d(TAG, "loadHomepageRaws server: " + server.getServerId());
+                Log.d(TAG, "loadHomepageRaws config: " + config);
+//                if (config == null || !config.isActive()){
+                if (config == null){
+                    return;
+                }
 //                if (server == null || server.getConfig() == null|| !server.getConfig().isActive()){
 //                    continue;
 //                }
@@ -144,31 +151,31 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //                    continue;
 //                }
                 // Update the RecyclerView on the main thread
-                ArrayList<Movie> movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                ArrayList<Movie> movies = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                     @Override
                     public void onSuccess(ArrayList<Movie> result, String title) {
-                        generateCategory(title, result);
-                    }
-
-                    @Override
-                    public void onInvalidCookie(ArrayList<Movie> result) {
                         generateCategory(server.getLabel(), result);
                     }
 
                     @Override
-                    public void onInvalidLink(ArrayList<Movie> result) {
+                    public void onInvalidCookie(ArrayList<Movie> result) {
+                        Log.d(TAG, "onInvalidCookie: ");
+                    }
 
+                    @Override
+                    public void onInvalidLink(ArrayList<Movie> result) {
+                        Log.d(TAG, "onInvalidLink: ");
                     }
 
                     @Override
                     public void onInvalidLink(String message) {
-
+                        Log.d(TAG, "onInvalidLink: ");
                     }
                 });
 
-//                if (movies == null || movies.isEmpty()) {
-//                    continue;
-//                }
+                if (movies == null || movies.isEmpty()) {
+                    continue;
+                }
 
 
             }
@@ -206,6 +213,9 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //                AbstractServer server = ServerManager.determineServer(movie, null, activity, null);
                 AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
 
+                if (server == null){
+                    Toast.makeText(activity, "Unknown Server", Toast.LENGTH_SHORT).show();
+                }
                 if (movie.getState() == Movie.COOKIE_STATE){
                     Log.d(TAG, "onMovieClick: COOKIE_STATE-0");
                     MovieFetchProcess fetchProcess = server.fetch(
@@ -246,9 +256,6 @@ public class MobileHomepageActivity extends AppCompatActivity {
                 else if (movie.getStudio().equals(Movie.SERVER_IPTV)){
                     Log.d(TAG, "onMovieClick: Movie.SERVER_IPTV");
                     handleIptvClickedItem(movie, position, horizontalMovieAdapter);
-                }else if (movie.getState() == Movie.VIDEO_STATE){
-                    Log.d(TAG, "onMovieClick: Movie.SERVER_IPTV");
-                    Util.openExoPlayer(movie, activity, false);
                 }
                 else {
                     Log.d(TAG, "onMovieClick: openMobileDetailsIntent");

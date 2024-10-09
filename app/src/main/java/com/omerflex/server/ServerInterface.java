@@ -19,11 +19,12 @@ public interface ServerInterface {
     //      -invalid movie link
 
     interface ActivityCallback<T> {
-        void onSuccess(T result);
+        void onSuccess(T result, String title);
         void onInvalidCookie(T result);
         void onInvalidLink(T result);
         void onInvalidLink(String message);
     }
+
 }
 
 

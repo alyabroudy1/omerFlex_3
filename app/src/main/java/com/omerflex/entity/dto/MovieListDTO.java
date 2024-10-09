@@ -4,4 +4,6 @@ import java.util.List;
 
 public class MovieListDTO {
     public List<MovieDTO> movies;
+
+
 }

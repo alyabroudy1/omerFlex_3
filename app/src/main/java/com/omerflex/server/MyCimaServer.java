@@ -6,8 +6,6 @@ import android.util.Log;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 
-import androidx.fragment.app.Fragment;
-
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
@@ -24,17 +22,9 @@ import java.util.ArrayList;
 
 public class MyCimaServer extends AbstractServer {
     static String TAG = "MyCima";
-
-    Activity activity;
-
-    Fragment fragment;
     public static String WEBSITE_URL = "https://mycima.io";
 
-    public MyCimaServer(Activity activity, Fragment fragment) {
-        // Private constructor to prevent instantiation
-        this.activity = activity;
-        this.fragment = fragment;
-    }
+    public MyCimaServer() { }
 
     @Override
     public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
@@ -113,7 +103,7 @@ public class MyCimaServer extends AbstractServer {
             movieList.add(nextPage);
         }
 
-        activityCallback.onSuccess(movieList);
+        activityCallback.onSuccess(movieList, getLabel());
         return movieList;
     }
 
@@ -173,16 +163,6 @@ public class MyCimaServer extends AbstractServer {
     @Override
     public String getServerId() {
         return Movie.SERVER_MyCima;
-    }
-
-    @Override
-    protected Fragment getFragment() {
-        return fragment;
-    }
-
-    @Override
-    protected Activity getActivity() {
-        return activity;
     }
 
     private Movie generateNextPageMovie(Document doc) {
@@ -277,11 +257,12 @@ public class MyCimaServer extends AbstractServer {
         return movie;
     }
 
-    public MovieFetchProcess fetchBrowseItem(Movie movie) {
+    public MovieFetchProcess fetchBrowseItem(Movie movie, ActivityCallback<Movie> activityCallback) {
         Movie clonedMovie = Movie.clone(movie);
         clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
         // to do nothing and wait till result returned to activity only the first fetch
 //        return startWebForResultActivity(clonedMovie);
+        activityCallback.onInvalidCookie(clonedMovie);
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
     }
 
@@ -320,7 +301,7 @@ public class MyCimaServer extends AbstractServer {
 //        Log.d(TAG, "fetchItemAction: 55");
         switch (action) {
             case Movie.BROWSER_STATE:
-                return fetchBrowseItem(movie);
+                return fetchBrowseItem(movie, activityCallback);
             case Movie.COOKIE_STATE:
                 return fetchCookie(movie);
             case Movie.ACTION_WATCH_LOCALLY:
@@ -341,7 +322,7 @@ public class MyCimaServer extends AbstractServer {
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
             activityCallback.onInvalidCookie(movie);
         }
-        activityCallback.onSuccess(movie);
+        activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_EXOPLAYER, movie);
     }
 
@@ -395,11 +376,11 @@ public class MyCimaServer extends AbstractServer {
 
     private MovieFetchProcess startWebForResultActivity(Movie movie) {
         Log.d(TAG, "startWebForResultActivity: " + movie);
-        Intent browse = new Intent(activity, BrowserActivity.class);
-        browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-        browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-
-        fragment.startActivityForResult(browse, movie.getFetch());
+//        Intent browse = new Intent(activity, BrowserActivity.class);
+//        browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
+//        browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
+//
+//        fragment.startActivityForResult(browse, movie.getFetch());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
     }
 
@@ -442,7 +423,7 @@ public class MyCimaServer extends AbstractServer {
                 movie.addSubList(episode);
             }
         }
-        activityCallback.onSuccess(movie);
+        activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
@@ -511,7 +492,7 @@ public class MyCimaServer extends AbstractServer {
                 movie.addSubList(episode);
             }
         }
-        activityCallback.onSuccess(movie);
+        activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
@@ -792,6 +773,7 @@ public class MyCimaServer extends AbstractServer {
             desc = descElem.text();
             movie.setDescription(desc);
         }
+        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
         Elements uls = doc.getElementsByClass("List--Download--Wecima--Single");
 //        Log.d(TAG, "generateItemMovie: html: " + doc.html());
 //        Log.d(TAG, "generateItemMovie: title: " + doc.title());
@@ -813,6 +795,9 @@ public class MyCimaServer extends AbstractServer {
                     Movie episode = Movie.clone(movie);
                     episode.setTitle(title);
                     episode.setDescription(desc);
+                    if (getConfig().getHeaders().containsKey("referer")){
+                        getConfig().getHeaders().put("referer", referer);
+                    }
                     episode.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(getConfig().getHeaders()));
                     episode.setState(Movie.RESOLUTION_STATE);
                     if (movie.getSubList() == null) {
@@ -823,7 +808,7 @@ public class MyCimaServer extends AbstractServer {
             }
             break;
         }
-        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
+
         uls = doc.getElementsByClass("WatchServersList");
         for (Element ul : uls) {
             Elements lis = ul.getElementsByAttribute("data-url");
@@ -861,7 +846,7 @@ public class MyCimaServer extends AbstractServer {
             Log.d(TAG, "generateItemMovie: " + movie);
             break;
         }
-        activityCallback.onSuccess(movie);
+        activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 

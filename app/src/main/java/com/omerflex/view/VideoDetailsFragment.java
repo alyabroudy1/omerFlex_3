@@ -140,11 +140,10 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             return;
         }
 
-        mSelectedMovie = (Movie) currentIntent.getSerializableExtra(DetailsActivity.MOVIE);
-        Movie mSelectedMovieMainMovie = (Movie) currentIntent.getSerializableExtra(DetailsActivity.MAIN_MOVIE);
+        mSelectedMovie = Util.recieveSelectedMovie(getActivity());
 
         if (mSelectedMovie != null) {
-            mSelectedMovie.setMainMovie(mSelectedMovieMainMovie);
+//            mSelectedMovie.setMainMovie(mSelectedMovieMainMovie);
 
             //very important to initialize all required
             initializeThings();
@@ -227,7 +226,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                     mSelectedMovie.getState(),
                     new ServerInterface.ActivityCallback<Movie>() {
                         @Override
-                        public void onSuccess(Movie result) {
+                        public void onSuccess(Movie result, String title) {
                             Log.d(TAG, "setupRowsAndServer: mSelectedMovie after first fetch:" + mSelectedMovie);
                             if (mSelectedMovie.getSubList() != null) {
                                 listRowAdapter.addAll(0, mSelectedMovie.getSubList());
@@ -640,7 +639,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             Movie.ACTION_WATCH_LOCALLY,
                             new ServerInterface.ActivityCallback<Movie>() {
                                 @Override
-                                public void onSuccess(Movie result) {
+                                public void onSuccess(Movie result, String title) {
                                     if (result != null && result.getVideoUrl() != null) {
                                         String type = "video/*";
                                         // Uri uri = Uri.parse(res.getSubList().get(0).getVideoUrl());
@@ -786,7 +785,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             ((Movie) item).getState(),
                             new ServerInterface.ActivityCallback<Movie>() {
                                 @Override
-                                public void onSuccess(Movie result) {
+                                public void onSuccess(Movie result, String title) {
                                     Log.d(TAG, "run: fetch only save movie 2");
 
                                     if (result != null && result.getVideoUrl() != null) {
@@ -843,7 +842,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             ((Movie) item).getState(),
                             new ServerInterface.ActivityCallback<Movie>() {
                                 @Override
-                                public void onSuccess(Movie result) {
+                                public void onSuccess(Movie result, String title) {
                                     Log.d(TAG, "handleItemClick: open No Activity: " + result);
                                     if (result != null) {
                                         getActivity().runOnUiThread(() -> {

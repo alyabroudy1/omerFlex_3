@@ -23,7 +23,7 @@ import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerManager;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.MovieDbHelper;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
@@ -74,7 +74,8 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
         dbHelper = MovieDbHelper.getInstance(activity);
 
         mSelectedMovie = Util.recieveSelectedMovie(activity);
-        server = ServerManager.determineServer(mSelectedMovie, null, activity, null);
+//        server = ServerManager.determineServer(mSelectedMovie, null, activity, null);
+        server = ServerConfigManager.getServer(mSelectedMovie.getStudio());
 
         initializeView(mSelectedMovie);
 
@@ -110,7 +111,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                         Movie.ACTION_WATCH_LOCALLY,
                         new ServerInterface.ActivityCallback<Movie>() {
                             @Override
-                            public void onSuccess(Movie result) {
+                            public void onSuccess(Movie result, String title) {
                                 Util.openExoPlayer(result, activity, true);
                             }
 
@@ -202,7 +203,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                     mSelectedMovie.getState(),
                     new ServerInterface.ActivityCallback<Movie>() {
                         @Override
-                        public void onSuccess(Movie result) {
+                        public void onSuccess(Movie result, String title) {
                             updateCurrentMovieView(result);
                             updateRelatedMovieAdapter((ArrayList<Movie>) result.getSubList());
                             evaluateWatchButton();
@@ -444,7 +445,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                 case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
                     MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
                         @Override
-                        public void onSuccess(Movie result) {
+                        public void onSuccess(Movie result, String title) {
                             Util.openExternalVideoPlayer(movie, activity);
                         }
 
