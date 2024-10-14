@@ -106,6 +106,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                 Log.d(TAG, "onClick: watch button");
                 Movie sampleMovie = relatedMoviesAdapter.getMovieList().get(0);
                 clickedMovieIndex = 0;
+                dbHelper.addMainMovieToHistory(mSelectedMovie);
                 MovieFetchProcess movieFetchProcess= server.fetch(
                         sampleMovie,
                         Movie.ACTION_WATCH_LOCALLY,
@@ -116,7 +117,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                             }
 
                             @Override
-                            public void onInvalidCookie(Movie result) {
+                            public void onInvalidCookie(Movie result, String title) {
                                 fetchCookie(result);
                             }
 
@@ -160,7 +161,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
         historyTextView.setText(history);
 
         categoryTextView.setText(server.determineRelatedMovieLabel(mSelectedMovie));
-        relatedMoviesAdapter = new HorizontalMovieAdapter(this, new ArrayList<>(), new RelatedMovieItemClickListener(this));
+        relatedMoviesAdapter = new HorizontalMovieAdapter(this, new ArrayList<>(), new RelatedMovieItemClickListener(this, dbHelper));
         relatedMoviesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         relatedMoviesRecyclerView.setAdapter(relatedMoviesAdapter);
     }
@@ -210,7 +211,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onInvalidCookie(Movie result) {
+                        public void onInvalidCookie(Movie result, String title) {
                             fetchCookie(result);
                         }
 
@@ -412,9 +413,11 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
         public String TAG = "RelatedMovieItemClickListener";
 
         CategoryAdapter categoryAdapter;
+        MovieDbHelper dbHelper;
 
-        public RelatedMovieItemClickListener(Activity activity) {
+        public RelatedMovieItemClickListener(Activity activity, MovieDbHelper dbHelper) {
             this.activity = activity;
+            this.dbHelper = dbHelper;
         }
 
         public void onMovieClick(Movie movie, int position, HorizontalMovieAdapter horizontalMovieAdapter) {
@@ -440,9 +443,11 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                     Util.openMobileDetailsIntent(movie, activity, false);
                     break;
                 case VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY:
+                    dbHelper.addMainMovieToHistory(movie);
                     Util.openExternalVideoPlayer(movie, activity);
                     break;
                 case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
+                    dbHelper.addMainMovieToHistory(movie);
                     MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
                         @Override
                         public void onSuccess(Movie result, String title) {
@@ -450,7 +455,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onInvalidCookie(Movie result) {
+                        public void onInvalidCookie(Movie result, String title) {
                             movie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
                             Util.openBrowserIntent(movie, activity, false, true);
                         }

@@ -30,23 +30,24 @@ public class IptvServer extends AbstractServer {
         this.contentFetcher = new M3U8ContentFetcher();
     }
 
-    public ArrayList<Movie> search(String query, MovieDbHelper dbHelper) {
-        ArrayList<Movie> tvChannelList = new ArrayList<>();
-//        if (MainFragment.iptvList != null){
-//            for (Movie movie : MainFragment.iptvList) {
-//                boolean titleCond = movie != null && movie.getTitle() != null && movie.getTitle().toLowerCase().contains(query.toLowerCase());
-//                boolean groupCond = movie != null && movie.getGroup() != null && movie.getGroup().toLowerCase().contains(query.toLowerCase());
-//                if (titleCond || groupCond ) {
-//                    tvChannelList.add(movie);
-//                }
-//            }
-//        }
-
-//        if (tvChannelList.size() == 0){
-        return dbHelper.findMovieBySearchContext(Movie.SERVER_IPTV, query);
-//        }
-//        return tvChannelList;
-    }
+//    @Override
+//    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
+//        ArrayList<Movie> tvChannelList = new ArrayList<>();
+////        if (MainFragment.iptvList != null){
+////            for (Movie movie : MainFragment.iptvList) {
+////                boolean titleCond = movie != null && movie.getTitle() != null && movie.getTitle().toLowerCase().contains(query.toLowerCase());
+////                boolean groupCond = movie != null && movie.getGroup() != null && movie.getGroup().toLowerCase().contains(query.toLowerCase());
+////                if (titleCond || groupCond ) {
+////                    tvChannelList.add(movie);
+////                }
+////            }
+////        }
+//
+////        if (tvChannelList.size() == 0){
+//        return dbHelper.findMovieBySearchContext(Movie.SERVER_IPTV, query);
+////        }
+////        return tvChannelList;
+//    }
 
     @Override
     protected ArrayList<Movie> getSearchMovieList(Document doc) {

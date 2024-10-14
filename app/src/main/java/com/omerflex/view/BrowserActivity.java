@@ -47,8 +47,6 @@ import com.omerflex.server.Util;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.MovieDbHelper;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -830,37 +828,38 @@ public class BrowserActivity extends AppCompatActivity {
                     List<Movie> movies = gson.fromJson(elementJson, movieListType);
                     //todo handle movie state of movies as it comes from js call without state
                     movie.setSubList(movies);
-                    setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
+                    Intent intent = new Intent();
+                    intent.putParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST, (ArrayList<Movie>) movies);
+                    setResult(Activity.RESULT_OK, intent);
 //                    Log.d(TAG, "myMethod: xxx referer:" + config.getReferer());
 
-                    try {
-                        // Parse the JSON string to a JSONArray
-                        JSONArray jsonArray = new JSONArray(elementJson);
-
-                        // Get the first JSONObject from the JSONArray
-                        JSONObject jsonObject = jsonArray.getJSONObject(0);
-
-                        // Extract the videoUrl value
-                        String videoUrl = jsonObject.getString("videoUrl");
-                        String movieReferer = urlExtractor(videoUrl);
-                        if (null == movieReferer) {
-                            movieReferer = config.getReferer();
-                        }
-                        config.setReferer(movieReferer);
-                        config.setUrl(movieReferer);
-
-                        ServerConfigManager.updateConfig(config);
-                        // Print the extracted URL
-                        Log.d(TAG, "Extracted URL: " + movieReferer);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-
-
-                    Log.d(TAG, "myMethod: xxx result:" + elementJson);
-                    ServerConfigManager.updateConfig(config, dbHelper);
-//                    dbHelper.saveHeadersAndCookies(server, movie.getStudio());
-
+//                    try {
+//                        // Parse the JSON string to a JSONArray
+//                        JSONArray jsonArray = new JSONArray(elementJson);
+//
+//                        // Get the first JSONObject from the JSONArray
+//                        JSONObject jsonObject = jsonArray.getJSONObject(0);
+//
+//                        // Extract the videoUrl value
+//                        String videoUrl = jsonObject.getString("videoUrl");
+//                        String movieReferer = urlExtractor(videoUrl);
+//                        if (null == movieReferer) {
+//                            movieReferer = config.getReferer();
+//                        }
+//                        config.setReferer(movieReferer);
+//                        config.setUrl(movieReferer);
+//
+//                        ServerConfigManager.updateConfig(config);
+//                        // Print the extracted URL
+//                        Log.d(TAG, "Extracted URL: " + movieReferer);
+//                    } catch (Exception e) {
+//                        e.printStackTrace();
+//                    }
+//
+//
+//                    Log.d(TAG, "myMethod: xxx result:" + elementJson);
+//                    ServerConfigManager.updateConfig(config, dbHelper);
+//                    dbHelper.saveHeadersAndCookies(server, movie.getStudio())
                     finish();
                 }
                 else {

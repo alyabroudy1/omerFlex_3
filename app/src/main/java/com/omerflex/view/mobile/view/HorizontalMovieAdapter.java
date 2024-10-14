@@ -3,7 +3,6 @@ package com.omerflex.view.mobile.view;
 // HorizontalMovieAdapter.java
 
 import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,9 +16,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
-import com.omerflex.view.mobile.MobileHomepageActivity;
-import com.omerflex.view.mobile.MobileMovieDetailActivity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class HorizontalMovieAdapter extends RecyclerView.Adapter<HorizontalMovieAdapter.MovieViewHolder> {
@@ -74,6 +72,10 @@ public class HorizontalMovieAdapter extends RecyclerView.Adapter<HorizontalMovie
     @Override
     public int getItemCount() {
         return movieList.size();
+    }
+
+    public boolean addAll(ArrayList<Movie> movies) {
+        return movieList.addAll(movies);
     }
 
 

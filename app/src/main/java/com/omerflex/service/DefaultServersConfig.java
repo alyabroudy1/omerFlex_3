@@ -1,35 +1,31 @@
 package com.omerflex.service;
 
-import android.util.Log;
-
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.IptvServer;
+import com.omerflex.server.OmarServer;
 import com.omerflex.service.database.MovieDbHelper;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 
 public class DefaultServersConfig {
 
     private static final String TAG = "DefaultServersConfig";
     public static ArrayList<AbstractServer> getDefaultServers(MovieDbHelper dbHelper){
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        Log.d(TAG, "addServerConfigsToDB: ");
-        Date date = null;
-        try {
-            date = format.parse("2024-02-22T12:30:00");
-        } catch (ParseException e) {
-            date = new Date();
-        }
+//        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+//        Log.d(TAG, "addServerConfigsToDB: ");
+//        Date date = null;
+//        try {
+//            date = format.parse("2024-02-22T12:30:00");
+//        } catch (ParseException e) {
+//            date = new Date();
+//        }
 
 //        Log.d(TAG, "addServerConfigsToDB: date: "+date.toString());
 
 
-        //      //### mycima ###
+//              //### mycima ###
 //        ServerConfig mycimaConfig = new ServerConfig();
 //        mycimaConfig.setName(Movie.SERVER_MyCima);
 //        mycimaConfig.setUrl("https://mycima.io");
@@ -65,17 +61,17 @@ public class DefaultServersConfig {
         ServerConfigManager.addConfig(iptvConfig, dbHelper);
         ServerConfigManager.addServer(iptv);
 
-        //        // ### omar ###
-//        ServerConfig omarConfig = new ServerConfig();
-//        omarConfig.setName(Movie.SERVER_OMAR);
-//        omarConfig.setActive(true);
-//        omarConfig.setUrl("http://194.164.53.40/movie");
-//        omarConfig.setReferer("http://194.164.53.40/");
-////        ServerConfigManager.addConfig(omarConfig);
-//
-//        AbstractServer omarServer = new OmarServer();
-//        ServerConfigManager.addConfig(omarConfig, dbHelper);
-//        ServerConfigManager.addServer(omarServer);
+                // ### omar ###
+        ServerConfig omarConfig = new ServerConfig();
+        omarConfig.setName(Movie.SERVER_OMAR);
+        omarConfig.setActive(true);
+        omarConfig.setUrl("http://194.164.53.40/movie");
+        omarConfig.setReferer("http://194.164.53.40/");
+//        ServerConfigManager.addConfig(omarConfig);
+
+        AbstractServer omarServer = new OmarServer();
+        ServerConfigManager.addConfig(omarConfig, dbHelper);
+        ServerConfigManager.addServer(omarServer);
 
         // ### akwam ###
 //        ServerConfig akwamConfig = new ServerConfig();

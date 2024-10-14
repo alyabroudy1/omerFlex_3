@@ -14,9 +14,7 @@ import com.bumptech.glide.load.model.LazyHeaders;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
-import com.omerflex.server.AbstractServer;
 import com.omerflex.service.ServerConfigManager;
-import com.omerflex.service.ServerManager;
 
 import java.util.Map;
 
@@ -79,7 +77,7 @@ public class CardPresenter extends Presenter {
 //        Log.d(TAG, "onBindViewHolder");
         if (movie.getCardImageUrl() != null) {
             cardView.setTitleText(movie.getTitle());
-            cardView.setContentText(movie.getRate() + ' '+ movie.getStudio());
+            cardView.setContentText(movie.getRate() + ' ' + movie.getStudio());
 
             cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);
 
@@ -89,41 +87,44 @@ public class CardPresenter extends Presenter {
 //                    .error(mDefaultCardImage)
 //                    .into(cardView.getMainImageView());
 
-            AbstractServer server = ServerManager.determineServer(movie, null, null, null);
-            ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
-            if (config != null && config.getHeaders() != null && !config.getHeaders().isEmpty()){
 
-                String cookies = config.getStringCookies();
-                if (cookies == null){
-                    cookies = "";
-                }
-                Log.d(TAG, "onBindViewHolder: cookies: "+ cookies);
-                Log.d(TAG, "onBindViewHolder: headers: "+ config.getHeaders());
-                LazyHeaders.Builder builder = new LazyHeaders.Builder()
-                        .addHeader("Cookie", cookies);
+            ServerConfig config = ServerConfigManager.getConfig(movie.getStudio());
 
-                for(Map.Entry<String, String> entry :  config.getHeaders().entrySet()) {
-                    builder.addHeader(entry.getKey(), entry.getValue());
-                }
-
-                GlideUrl glideUrl = new GlideUrl(movie.getCardImageUrl(), builder.build());
-
-                Glide.with(viewHolder.view.getContext())
-                        .load(glideUrl)
-                        .fitCenter()
-                        //.centerCrop()
-                        .error(mDefaultCardImage)
-                        .into(cardView.getMainImageView());
-
-            }
-            else {
+            boolean noHeaderCondition = config == null ||
+                    config.getHeaders() == null ||
+                    config.getHeaders().isEmpty();
+            if (noHeaderCondition) {
                 Glide.with(viewHolder.view.getContext())
                         .load(movie.getCardImageUrl())
                         .fitCenter()
                         //.centerCrop()
                         .error(mDefaultCardImage)
                         .into(cardView.getMainImageView());
+                return;
             }
+
+            String cookies = config.getStringCookies();
+            if (cookies == null) {
+                cookies = "";
+            }
+            Log.d(TAG, "onBindViewHolder: cookies: " + cookies);
+            Log.d(TAG, "onBindViewHolder: headers: " + config.getHeaders());
+            LazyHeaders.Builder builder = new LazyHeaders.Builder()
+                    .addHeader("Cookie", cookies);
+
+            for (Map.Entry<String, String> entry : config.getHeaders().entrySet()) {
+                builder.addHeader(entry.getKey(), entry.getValue());
+            }
+
+            GlideUrl glideUrl = new GlideUrl(movie.getCardImageUrl(), builder.build());
+
+            Glide.with(viewHolder.view.getContext())
+                    .load(glideUrl)
+                    .fitCenter()
+                    //.centerCrop()
+                    .error(mDefaultCardImage)
+                    .into(cardView.getMainImageView());
+
         }
     }
 

@@ -8,13 +8,13 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
 
 import com.google.gson.Gson;
 import com.omerflex.entity.Movie;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.ExoplayerMediaPlayer;
-import com.omerflex.view.VideoDetailsFragment;
 import com.omerflex.view.mobile.MobileMovieDetailActivity;
 import com.omerflex.view.mobile.MobileSearchResultActivity;
 
@@ -136,7 +136,28 @@ public class Util {
         return "";
     }
 
-    public static boolean shouldOverrideUrlLoading(String url) {
+    public static Map<String, String> extractHeaders(String url) {
+        Map<String, String> headersMap = new HashMap<>();
+//        Log.d(TAG, "extractHeaders: u: "+url.contains("|")+", "+url);
+        // Check if the URL contains headers part
+//        if (url.contains("|")) {
+//            String[] parts = url.split("\\|", 2);
+//            if (parts.length == 2) {
+//                String headersPart = parts[1];
+                String[] headers = url.split("&");
+                for (String header : headers) {
+                    String[] keyValue = header.split("=", 2);
+                    if (keyValue.length == 2) {
+                        Log.d(TAG, "extractHeaders: k: "+keyValue[0]+", v: "+ keyValue[1]);
+                        headersMap.put(keyValue[0], keyValue[1]);
+                    }
+                }
+//            }
+
+        return headersMap;
+    }
+
+                public static boolean shouldOverrideUrlLoading(String url) {
 
         boolean result =
                 url.contains("gamezone") ||
@@ -169,6 +190,11 @@ public class Util {
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 
+    public static void openMobileDetailsIntent(Movie movie, Fragment fragment, boolean withSubList) {
+        Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), MobileMovieDetailActivity.class), withSubList);
+        Objects.requireNonNull(fragment).startActivity(exoIntent);
+    }
+
     public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult) {
         Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class), withSubList);
         if (openForResult) {
@@ -176,6 +202,15 @@ public class Util {
             return;
         }
         Objects.requireNonNull(activity).startActivity(exoIntent);
+    }
+
+    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult) {
+        Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), BrowserActivity.class), withSubList);
+        if (openForResult) {
+            fragment.startActivityForResult(exoIntent, movie.getFetch());
+            return;
+        }
+        fragment.startActivity(exoIntent);
     }
 
     @NonNull
@@ -303,7 +338,8 @@ public class Util {
     }
 
     public static void openVideoDetailsIntent(Movie movie, Activity activity) {
-        Intent exoIntent = generateIntent(movie, new Intent(activity, VideoDetailsFragment.class), true);
+        Log.d(TAG, "openVideoDetailsIntent: Util");
+        Intent exoIntent = generateIntent(movie, new Intent(activity, DetailsActivity.class), false);
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 

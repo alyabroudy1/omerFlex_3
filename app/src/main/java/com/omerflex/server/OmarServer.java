@@ -244,7 +244,7 @@ public class OmarServer extends AbstractServer {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
         }
         activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_EXOPLAYER, movie);

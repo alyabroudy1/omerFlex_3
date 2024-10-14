@@ -24,7 +24,8 @@ public class MyCimaServer extends AbstractServer {
     static String TAG = "MyCima";
     public static String WEBSITE_URL = "https://mycima.io";
 
-    public MyCimaServer() { }
+    public MyCimaServer() {
+    }
 
     @Override
     public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
@@ -36,7 +37,7 @@ public class MyCimaServer extends AbstractServer {
             url = this.getSearchUrl(query);
             multiSearch = true;
         }
-
+        Log.d(TAG, "search: url: " + url);
         Document doc = this.getRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
@@ -67,7 +68,7 @@ public class MyCimaServer extends AbstractServer {
             m.setSearchContext(searchContext);
             movieList.add(m);
 
-            activityCallback.onInvalidCookie(movieList);
+            activityCallback.onInvalidCookie(movieList, getLabel());
             return movieList;
         }
 
@@ -85,7 +86,6 @@ public class MyCimaServer extends AbstractServer {
         if (lis == null) {
             lis = doc.getElementsByClass("GridItem");
         }
-
         for (Element li : lis) {
             Movie movie = this.generateMovieFromDocElement(li);
             if (movie != null) {
@@ -98,6 +98,7 @@ public class MyCimaServer extends AbstractServer {
 
         Movie nextPage = this.generateNextPageMovie(doc);
 
+        Log.d(TAG, "search: nextPage: " + nextPage);
 
         if (nextPage != null) {
             movieList.add(nextPage);
@@ -113,21 +114,21 @@ public class MyCimaServer extends AbstractServer {
     }
 
     protected String getSearchUrl(String query) {
-        String searchUrl = query;
+//        String searchUrl = query;
         if (query.contains("http")) {
             return query;
         }
+        String searchPart = "/search/";
         ServerConfig config = getConfig();
-        if (config.getUrl() != null && !config.getUrl().isEmpty()) {
-            if (config.getUrl().endsWith("/")) {
-                searchUrl = config.getUrl() + "search/" + query;
-            } else {
-                searchUrl = config.getUrl() + "/search/" + query;
-            }
-        } else {
-            searchUrl = WEBSITE_URL + "/search/" + query;
+        if (config.getUrl() == null || config.getUrl().isEmpty()) {
+            return WEBSITE_URL + searchPart + query;
         }
-        return searchUrl;
+
+        if (query.startsWith("/")) {
+            return config.getUrl() + query;
+        }
+
+        return config.getUrl() + searchPart + query;
     }
 
     private void getExtraSearchMovieList(String url, ArrayList<Movie> movies) {
@@ -262,7 +263,7 @@ public class MyCimaServer extends AbstractServer {
         clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
         // to do nothing and wait till result returned to activity only the first fetch
 //        return startWebForResultActivity(clonedMovie);
-        activityCallback.onInvalidCookie(clonedMovie);
+        activityCallback.onInvalidCookie(clonedMovie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
     }
 
@@ -290,14 +291,14 @@ public class MyCimaServer extends AbstractServer {
 
     }
 
-    protected MovieFetchProcess fetchSeriesAction(Movie movie, int action, ActivityCallback<Movie> activityCallback){
-        if (action == Movie.GROUP_OF_GROUP_STATE){
+    protected MovieFetchProcess fetchSeriesAction(Movie movie, int action, ActivityCallback<Movie> activityCallback) {
+        if (action == Movie.GROUP_OF_GROUP_STATE) {
             return fetchGroupOfGroup(movie, activityCallback);
         }
         return fetchGroup(movie, activityCallback);
     }
 
-    protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback){
+    protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback) {
 //        Log.d(TAG, "fetchItemAction: 55");
         switch (action) {
             case Movie.BROWSER_STATE:
@@ -311,16 +312,16 @@ public class MyCimaServer extends AbstractServer {
 //            case Movie.VIDEO_STATE:
 //                return fetchVideo(movie);
             default:
-               return fetchItem(movie, activityCallback);
+                return fetchItem(movie, activityCallback);
         }
     }
 
     private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
-        if (movie.getState() == Movie.BROWSER_STATE){
+        if (movie.getState() == Movie.BROWSER_STATE) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
         }
         activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_EXOPLAYER, movie);
@@ -331,7 +332,7 @@ public class MyCimaServer extends AbstractServer {
         String u = movie.getVideoUrl();
         String n = movie.getTitle();
         // Log.d(TAG, "isSeries: title:" + n + ", url=" + u);
-        boolean seriesCase =  n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
+        boolean seriesCase = n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
                 || u.contains("series");
         boolean itemCase = u.contains("/watch") || n.contains("حلقة") || n.contains("حلقه");
 
@@ -344,7 +345,7 @@ public class MyCimaServer extends AbstractServer {
     }
 
     public String determineRelatedMovieLabel(Movie movie) {
-        switch (movie.getState()){
+        switch (movie.getState()) {
             case Movie.GROUP_OF_GROUP_STATE:
                 return "المواسم/الحلقات";
             case Movie.GROUP_STATE:
@@ -355,6 +356,7 @@ public class MyCimaServer extends AbstractServer {
                 return "الروابط";
         }
     }
+
     private MovieFetchProcess fetchGroupOfGroup(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
@@ -368,7 +370,7 @@ public class MyCimaServer extends AbstractServer {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
         }
 
         return generateGroupOfGroupMovie(doc, movie, activityCallback);
@@ -452,7 +454,7 @@ public class MyCimaServer extends AbstractServer {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
         }
 
@@ -518,7 +520,7 @@ public class MyCimaServer extends AbstractServer {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
         }
 
         return generateItemMovie(doc, movie, activityCallback);
@@ -557,7 +559,7 @@ public class MyCimaServer extends AbstractServer {
 
             if (
                     movie.getState() == Movie.GROUP_OF_GROUP_STATE ||
-                    movie.getState() == Movie.GROUP_STATE
+                            movie.getState() == Movie.GROUP_STATE
             ) {
                 //Log.d(TAG, "getScript:mycima GROUP_OF_GROUP_STATE");
                 String itemBoxName = "List--Seasons--Episodes";
@@ -651,15 +653,15 @@ public class MyCimaServer extends AbstractServer {
                         "                                      }\n" +
                         "\n" +
                         "                                      post.description = desc;\n" +
-                        "                                                                         post.state = '"+Movie.RESOLUTION_STATE+"' ;\n" +
+                        "                                                                         post.state = '" + Movie.RESOLUTION_STATE + "' ;\n" +
                         "\n" +
                         "                                                                         // Clone 'movie' object\n" +
-                        "                                                                         post.studio = '"+ movie.getStudio() +"' ;\n" +
-                        "                                                                         post.fetch = '"+ movie.getFetch() +"' ;\n" +
-                        "                                                                         post.cardImageUrl = '"+ movie.getStudio()+"' ;\n" +
-                        "                                                                         post.backgroundImageUrl = '"+ movie.getBackgroundImageUrl() +"' ;\n" +
-                        "                                                                         post.cardImageUrl = '"+ movie.getCardImageUrl() +"' ;\n" +
-                        "                                                                         post.getMainMovieTitle = '"+ movie.getMainMovieTitle() +"' ;\n" +
+                        "                                                                         post.studio = '" + movie.getStudio() + "' ;\n" +
+                        "                                                                         post.fetch = '" + movie.getFetch() + "' ;\n" +
+                        "                                                                         post.cardImageUrl = '" + movie.getStudio() + "' ;\n" +
+                        "                                                                         post.backgroundImageUrl = '" + movie.getBackgroundImageUrl() + "' ;\n" +
+                        "                                                                         post.cardImageUrl = '" + movie.getCardImageUrl() + "' ;\n" +
+                        "                                                                         post.getMainMovieTitle = '" + movie.getMainMovieTitle() + "' ;\n" +
                         "                                                                         postList.push(post);\n" +
                         "                                 }\n" +
                         "                                }\n" +
@@ -693,15 +695,15 @@ public class MyCimaServer extends AbstractServer {
                         "                                      }\n" +
                         "\n" +
                         "                                      post.description = desc;\n" +
-                        "                                                                         post.state = '"+Movie.BROWSER_STATE+"' ;\n" +
+                        "                                                                         post.state = '" + Movie.BROWSER_STATE + "' ;\n" +
                         "\n" +
                         "                                                                         // Clone 'movie' object\n" +
-                        "                                                                         post.studio = '"+ movie.getStudio() +"' ;\n" +
-                        "                                                                         post.fetch = '"+ movie.getFetch() +"' ;\n" +
-                        "                                                                         post.cardImageUrl = '"+ movie.getCardImageUrl()+"' ;\n" +
-                        "                                                                         post.backgroundImageUrl = '"+ movie.getBackgroundImageUrl() +"' ;\n" +
-                        "                                                                         post.cardImageUrl = '"+ movie.getCardImageUrl() +"' ;\n" +
-                        "                                                                         post.getMainMovieTitle = '"+ movie.getMainMovieTitle() +"' ;\n" +
+                        "                                                                         post.studio = '" + movie.getStudio() + "' ;\n" +
+                        "                                                                         post.fetch = '" + movie.getFetch() + "' ;\n" +
+                        "                                                                         post.cardImageUrl = '" + movie.getCardImageUrl() + "' ;\n" +
+                        "                                                                         post.backgroundImageUrl = '" + movie.getBackgroundImageUrl() + "' ;\n" +
+                        "                                                                         post.cardImageUrl = '" + movie.getCardImageUrl() + "' ;\n" +
+                        "                                                                         post.getMainMovieTitle = '" + movie.getMainMovieTitle() + "' ;\n" +
                         "                                                                         postList.push(post);\n" +
                         "                                }\n" +
                         "                             }\n" +
@@ -795,7 +797,7 @@ public class MyCimaServer extends AbstractServer {
                     Movie episode = Movie.clone(movie);
                     episode.setTitle(title);
                     episode.setDescription(desc);
-                    if (getConfig().getHeaders().containsKey("referer")){
+                    if (!getConfig().getHeaders().containsKey("referer")) {
                         getConfig().getHeaders().put("referer", referer);
                     }
                     episode.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(getConfig().getHeaders()));
@@ -818,7 +820,7 @@ public class MyCimaServer extends AbstractServer {
                 if (videoUrl == null || videoUrl.equals("")) {
                     continue;
                 }
-                videoUrl = videoUrl + "||referer=" + referer;
+                videoUrl = videoUrl + "|referer=" + referer;
 //                videoUrl = videoUrl + Util.generateHeadersForVideoUrl(headers);
 
                 Element titleElem = li.getElementsByTag("strong").first();

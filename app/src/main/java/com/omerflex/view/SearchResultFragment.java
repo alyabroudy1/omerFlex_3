@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -18,14 +19,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityOptionsCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.app.BackgroundManager;
 import androidx.leanback.app.BrowseSupportFragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.HeaderItem;
-import androidx.leanback.widget.ImageCardView;
 import androidx.leanback.widget.ListRow;
 import androidx.leanback.widget.ListRowPresenter;
 import androidx.leanback.widget.OnItemViewClickedListener;
@@ -37,25 +36,17 @@ import androidx.leanback.widget.RowPresenter;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
-import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.ServerInterface;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
 
-import java.io.Serializable;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class SearchResultFragment extends BrowseSupportFragment {
     private static final String TAG = "SearchResultFragment";
@@ -77,7 +68,9 @@ public class SearchResultFragment extends BrowseSupportFragment {
     private int ROWS_COUNTER = 0;
     WebView webView;
     Movie clickedMovie;
-
+    int clickedMovieIndex = 0;
+    int defaultHeadersCounter = 0;
+    ArrayObjectAdapter clickedMovieAdapter;
     Fragment fragment = this;
     Activity activity;
     ArrayObjectAdapter faselAdapter;
@@ -88,6 +81,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
     ArrayObjectAdapter tvAdapter;
 
     String query;
+    private SearchViewControl searchViewControl;
     int requestCounter = 0;
     //    private GeckoBroadcastReceiver geckoReceiver;
 //
@@ -100,8 +94,8 @@ public class SearchResultFragment extends BrowseSupportFragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate");
-        super.onActivityCreated(savedInstanceState);
         start();
+        super.onActivityCreated(savedInstanceState);
     }
 
     public void start() {
@@ -110,11 +104,15 @@ public class SearchResultFragment extends BrowseSupportFragment {
         }
 
         activity = getActivity();
+        if (activity == null) {
+            Log.d(TAG, "start: fail to identify the activity of SearchResultFragment");
+            return;
+        }
         dbHelper = MovieDbHelper.getInstance(activity);
         serverManager = new ServerManager(activity, fragment);
 
         rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
-        webView = getActivity().findViewById(com.omerflex.R.id.webView_main);
+//        webView = getActivity().findViewById(com.omerflex.R.id.webView_main);
 
 //// Register the broadcast receiver
 //        geckoReceiver = new GeckoBroadcastReceiver();
@@ -133,8 +131,8 @@ public class SearchResultFragment extends BrowseSupportFragment {
 
     @Override
     public void onStart() {
-        super.onStart();
         start();
+        super.onStart();
     }
 
     @Override
@@ -143,7 +141,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
         if (null != mBackgroundTimer) {
             Log.d(TAG, "onDestroy: " + mBackgroundTimer.toString());
             mBackgroundTimer.cancel();
-            webView.stopLoading();
+//            webView.stopLoading();
             // webView.destroy();
         }
         // Unregister the broadcast receiver
@@ -153,135 +151,306 @@ public class SearchResultFragment extends BrowseSupportFragment {
     @Override
     public void onStop() {
         super.onStop();
-        webView.stopLoading();
+//        webView.stopLoading();
         //webView.destroy();
     }
 
-    private void loadSearchResultRaws() {
-        for (AbstractServer server : ServerConfigManager.getServers(dbHelper)) {
-            if (server == null) {
-                return;
-            }
+//    private ArrayObjectAdapter addRowToMainAdapter(String label, String serverId) {
+//        ArrayObjectAdapter adapter = getServerAdapter(serverId);
+//
+//        HeaderItem header = new HeaderItem(ROWS_COUNTER++, label);
+//        new Handler(Looper.getMainLooper()).post(() -> {
+//            rowsAdapter.add(new ListRow(header, adapter));
+//        });
+//
+//        return adapter;
+//    }
 
-            ArrayObjectAdapter adapter = getServerAdapter(server.getServerId());
-
-            HeaderItem header = new HeaderItem(ROWS_COUNTER++, server.getLabel());
-            rowsAdapter.add(new ListRow(header, adapter));
-
-
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            executor.submit(() -> {
-                try {
-                    ArrayList<Movie> movies = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
-                        @Override
-                        public void onSuccess(ArrayList<Movie> result, String title) {
-
-                        }
-
-                        @Override
-                        public void onInvalidCookie(ArrayList<Movie> result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidLink(ArrayList<Movie> result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidLink(String message) {
-
-                        }
-                    });
-                    // it done in new thread
-                    Log.d(TAG, "loadHomepageRaws: " + server.getLabel() + ", " + movies.size());
-
-                    if (!movies.isEmpty()) {
-                        if (activity != null) {
-                            activity.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    // String newName = rowName + ("(" + finalMovieList.size() + ")");
-                                    adapter.addAll(0, movies);
-                                }
-                            });
-                        }
-                    }
-                } catch (Exception exception) {
-                    Log.d(TAG, "loadHomepageRaws: error: " + server.getLabel() + ", " + exception.getMessage());
-                }
-
-            });
-            executor.shutdown();
-        }
-
-
-//        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
-//        AbstractServer iptvServer = IptvServer.getInstance(activity, fragment);
-//        HeaderItem header = new HeaderItem(ROWS_COUNTER++, iptvServer.getLabel());
-//        rowsAdapter.add(new ListRow(header, adapter));
+//    private void loadOmarServerResult(String query, AbstractServer server) {
 //
 //
+//        ExecutorService executor2 = Executors.newSingleThreadExecutor();
+//        executor2.submit(() -> {
+//            ArrayList<Movie> movies = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+//                @Override
+//                public void onSuccess(ArrayList<Movie> result, String title) {
+////                            generateCategory(title, result);
+////                            if (server instanceof IptvServer) {
+////                        //load history rows first
+////                        loadHomepageHistoryRaws();
+////
+////                        loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), null);
+//////                            //channel list
+//////                            ArrayList<Movie> channels = dbHelper.getIptvHomepageChannels();
+//////                            if (channels.size() > 0) {
+//////                                loadMoviesRow("tv", channels);
+//////                            }
+////                    } else {
+//                    if (result == null || result.isEmpty()){
+//                        Log.d(TAG, "onSuccess: search result is empty");
+//                        return;
+//                    }
+//                    ArrayObjectAdapter adapter = addRowToMainAdapter(title, server.getServerId());
+//                    activity.runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            // String newName = rowName + ("(" + finalMovieList.size() + ")");
+//                            adapter.addAll(0, result);
+//                        }
+//                    });
+////                    }
+//                }
+//
+//                @Override
+//                public void onInvalidCookie(ArrayList<Movie> result) {
+//                    Log.d(TAG, "onInvalidCookie: " + result);
+////                            loadMoviesRow(server, addRowToMainAdapter(server.getLabel()), result);
+//
+//                    if (result == null || result.isEmpty()){
+//                        Log.d(TAG, "onInvalidCookie: search result is empty");
+//                        return;
+//                    }
+//                    ArrayObjectAdapter adapter = addRowToMainAdapter(server.getLabel(), server.getServerId());
+//                    activity.runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            // String newName = rowName + ("(" + finalMovieList.size() + ")");
+//                            adapter.addAll(0, result);
+//                        }
+//                    });
+//                }
+//
+//                @Override
+//                public void onInvalidLink(ArrayList<Movie> result) {
+//
+//                }
+//
+//                @Override
+//                public void onInvalidLink(String message) {
+//                    Log.d(TAG, "onInvalidLink: loadOmarServerResult: "+ message);
+//                }
+//            });
+//
+//        });
+//        executor2.shutdown();
+//
+////        ExecutorService executor = Executors.newSingleThreadExecutor();
+////        executor.submit(() -> {
+////            if (activity != null) {
+////                ArrayList<Movie> movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+////                    @Override
+////                    public void onSuccess(ArrayList<Movie> result, String title) {
+////                        Map<String, List<Movie>> moviesByCategory = result.stream()
+////                                .flatMap(movie -> movie.getCategories().stream()
+////                                        .map(category -> new AbstractMap.SimpleEntry<>(category, movie)))
+////                                .collect(Collectors.groupingBy(
+////                                        Map.Entry::getKey,
+////                                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+////                                ));
+////
+////                        // Assuming you already have the 'moviesByCategory' map
+////                        for (Map.Entry<String, List<Movie>> entry : moviesByCategory.entrySet()) {
+////                            String category = entry.getKey();
+////                            List<Movie> moviesInCategory = entry.getValue();
+////                            Log.d(TAG, "loadOmarServerHomepage: " + category + ", " + moviesInCategory.size());
+////                            loadMoviesRow(server, addRowToMainAdapter(category), (ArrayList) moviesInCategory);
+////                        }
+////                    }
+////
+////                    @Override
+////                    public void onInvalidCookie(ArrayList<Movie> result) {
+////
+////                    }
+////
+////                    @Override
+////                    public void onInvalidLink(ArrayList<Movie> result) {
+////
+////                    }
+////
+////                    @Override
+////                    public void onInvalidLink(String message) {
+////
+////                    }
+////                });
+////
+////            }
+////
+////        });
+//    }
+
+
+//    private void loadSearchResultRaws() {
+//        Log.d(TAG, "loadSearchResultRaws ");
 //        ExecutorService executor = Executors.newSingleThreadExecutor();
 //        executor.submit(() -> {
-//            try {
-//                ArrayList<Movie> movies = iptvServer.search(query);
-//                // it done in new thread
-//                if (movies.size() > 0) {
-//                    if (activity != null) {
-//                        activity.runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                // String newName = rowName + ("(" + finalMovieList.size() + ")");
-//                                adapter.addAll(0, movies);
-//                            }
-//                        });
-//                    }
+//            for (AbstractServer server : ServerConfigManager.getServers(dbHelper)) {
+//                if (server == null) {
+//                    Log.d(TAG, "loadSearchResultRaws: unknown server");
+//                    continue;
 //                }
-//            } catch (Exception exception) {
-//                Log.d(TAG, "loadHomepageRaws: error: " + exception.getMessage());
+//
+//                try {
+//
+//                    if (server instanceof OmarServer) {
+//                        loadOmarServerResult(query, server);
+//                        continue;
+//                    }
+//
+//                    if (server instanceof IptvServer) {
+//                        loadIptvServerResult(query, server);
+//                        continue;
+//                    }
+//                    ArrayObjectAdapter adapter = addRowToMainAdapter(server.getLabel(), server.getServerId());
+//
+//                    ExecutorService executor2 = Executors.newSingleThreadExecutor();
+//                    executor2.submit(() -> {
+//                        try {
+//                            ArrayList<Movie> movies = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+//                                @Override
+//                                public void onSuccess(ArrayList<Movie> result, String title) {
+//                                    if (result == null || result.isEmpty()){
+//                                        Log.d(TAG, "onSuccess: search result is empty");
+//                                        return;
+//                                    }
+//                                    activity.runOnUiThread(new Runnable() {
+//                                        @Override
+//                                        public void run() {
+//                                            // String newName = rowName + ("(" + finalMovieList.size() + ")");
+//                                            adapter.addAll(0, result);
+//                                        }
+//                                    });
+//                                }
+//
+//                                @Override
+//                                public void onInvalidCookie(ArrayList<Movie> result) {
+//                                    Log.d(TAG, "onInvalidCookie: ");
+//                                    activity.runOnUiThread(new Runnable() {
+//                                        @Override
+//                                        public void run() {
+//                                            // String newName = rowName + ("(" + finalMovieList.size() + ")");
+//                                            adapter.addAll(0, result);
+//                                        }
+//                                    });
+//                                }
+//
+//                                @Override
+//                                public void onInvalidLink(ArrayList<Movie> result) {
+//
+//                                }
+//
+//                                @Override
+//                                public void onInvalidLink(String message) {
+//                                    Log.d(TAG, "onInvalidLink: "+ message);
+//                                }
+//                            });
+//                            // it done in new thread
+//                        } catch (Exception exception) {
+//                            Log.d(TAG, "loadHomepageRaws: error: " + server.getServerId() + ", " + exception.getMessage());
+//                        }
+//
+//                    });
+//                    executor2.shutdown();
+//                } catch (Exception exception) {
+//                    Log.d(TAG, "loadHomepageRaws: error: " + exception.getMessage());
+//                    exception.printStackTrace();
+//                }
 //            }
+//
 //        });
 //        executor.shutdown();
 //
-//        ExecutorService executor2 = Executors.newSingleThreadExecutor();
-//        //load iptv m3u8 file list from google drive
-//        executor2.submit(this::loadIptvGDriveFileList);
-//        executor2.shutdown();
-    }
+////        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
+////        AbstractServer iptvServer = IptvServer.getInstance(activity, fragment);
+////        HeaderItem header = new HeaderItem(ROWS_COUNTER++, iptvServer.getLabel());
+////        rowsAdapter.add(new ListRow(header, adapter));
+////
+////
+////        ExecutorService executor = Executors.newSingleThreadExecutor();
+////        executor.submit(() -> {
+////            try {
+////                ArrayList<Movie> movies = iptvServer.search(query);
+////                // it done in new thread
+////                if (movies.size() > 0) {
+////                    if (activity != null) {
+////                        activity.runOnUiThread(new Runnable() {
+////                            @Override
+////                            public void run() {
+////                                // String newName = rowName + ("(" + finalMovieList.size() + ")");
+////                                adapter.addAll(0, movies);
+////                            }
+////                        });
+////                    }
+////                }
+////            } catch (Exception exception) {
+////                Log.d(TAG, "loadHomepageRaws: error: " + exception.getMessage());
+////            }
+////        });
+////        executor.shutdown();
+////
+////        ExecutorService executor2 = Executors.newSingleThreadExecutor();
+////        //load iptv m3u8 file list from google drive
+////        executor2.submit(this::loadIptvGDriveFileList);
+////        executor2.shutdown();
+//    }
+
+//    private void loadIptvServerResult(String query, AbstractServer server) {
+//        ArrayList<Movie> tvChannelList = dbHelper.findMovieBySearchContext(Movie.SERVER_IPTV, query);
+//        if (tvChannelList == null || tvChannelList.isEmpty()){
+//            Log.d(TAG, "iptv channels search result is empty ");
+//            return;
+//        }
+//        ArrayObjectAdapter adapter = addRowToMainAdapter(server.getLabel(), server.getServerId());
+//        activity.runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                // String newName = rowName + ("(" + finalMovieList.size() + ")");
+//                adapter.addAll(0, tvChannelList);
+//            }
+//        });
+//
+//    }
 
 
-    private void loadMoviesRow(String label, ArrayList<Movie> movies) {
-        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
-        HeaderItem header = new HeaderItem(ROWS_COUNTER++, label);
-        rowsAdapter.add(new ListRow(header, adapter));
-
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.submit(() -> {
-            if (activity != null) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // String newName = rowName + ("(" + finalMovieList.size() + ")");
-                        adapter.addAll(0, movies);
-                    }
-                });
-            }
-
-        });
-
-        executor.shutdown();
-    }
+//    private void loadMoviesRow(String label, ArrayList<Movie> movies) {
+//        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
+//        HeaderItem header = new HeaderItem(ROWS_COUNTER++, label);
+//        rowsAdapter.add(new ListRow(header, adapter));
+//
+//        ExecutorService executor = Executors.newSingleThreadExecutor();
+//        executor.submit(() -> {
+//            if (activity != null) {
+//                activity.runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        // String newName = rowName + ("(" + finalMovieList.size() + ")");
+//                        adapter.addAll(0, movies);
+//                    }
+//                });
+//            }
+//
+//        });
+//
+//        executor.shutdown();
+//    }
 
     private void loadRows() {
-        query = Objects.requireNonNull(getActivity().getIntent().getStringExtra("query")).trim();
-        faselAdapter = new ArrayObjectAdapter(new CardPresenter());
-        cimaClubAdapter = new ArrayObjectAdapter(new CardPresenter());
-        cima4uAdapter = new ArrayObjectAdapter(new CardPresenter());
-        shahidAdapter = new ArrayObjectAdapter(new CardPresenter());
-        arabSeedAdapter = new ArrayObjectAdapter(new CardPresenter());
-        tvAdapter = new ArrayObjectAdapter(new CardPresenter());
-        loadSearchResultRaws();
+        query = activity.getIntent().getStringExtra("query");
+        if (query == null) {
+            Log.d(TAG, "loadRows: fail to receive the query");
+            return;
+        }
+        query = query.trim();
+
+//        faselAdapter = new ArrayObjectAdapter(new CardPresenter());
+//        cimaClubAdapter = new ArrayObjectAdapter(new CardPresenter());
+//        cima4uAdapter = new ArrayObjectAdapter(new CardPresenter());
+//        shahidAdapter = new ArrayObjectAdapter(new CardPresenter());
+//        arabSeedAdapter = new ArrayObjectAdapter(new CardPresenter());
+//        tvAdapter = new ArrayObjectAdapter(new CardPresenter());
+//        loadSearchResultRaws();
+//        hier
+//
+//
 //
 ////        AbstractServer omerServer = OmarServer.getInstance(getActivity(), fragment);
 ////        if (omerServer.getConfig() == null || omerServer.getConfig().isActive){
@@ -357,63 +526,163 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //        startActivityForResult(browse, 0);
 
         setAdapter(rowsAdapter);
+
+
+        searchViewControl = new SearchViewControl(activity, fragment, dbHelper) {
+            @Override
+            public <T> void handleMovieItemClick(Movie movie, int position, T rowsAdapter, T clickedRow, int defaultHeadersCounter) {
+                super.handleMovieItemClick(movie, position, rowsAdapter, clickedRow, defaultHeadersCounter);
+            }
+
+            @Override
+            protected void openDetailsActivity(Movie movie, Activity activity) {
+                Log.d(TAG, "openDetailsActivity: SearchResult");
+                Util.openVideoDetailsIntent(movie, activity);
+            }
+
+            @Override
+            protected <T> void removeRow(T rowsAdapter, int i) {
+                if (rowsAdapter instanceof ArrayObjectAdapter){
+                    try {
+                        ((ArrayObjectAdapter) rowsAdapter).remove(i);
+                    } catch (Exception exception) {
+                        Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
+                    }
+                }
+            }
+
+            @Override
+            public void loadCategoriesInBackground(String query) {
+                super.loadCategoriesInBackground(query);
+            }
+
+            @Override
+            protected <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie) {
+                // If you need to handle specific adapter types, use instanceof and cast
+                if (clickedAdapter instanceof ArrayObjectAdapter) {
+                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
+                    updateRelatedMovieItem(adapter, clickedMovieIndex, resultMovie);
+                }
+                // Handle other adapter types similarly
+            }
+
+
+            protected <T> void updateMovieListOfMovieAdapter(ArrayList<Movie> movies, T clickedAdapter) {
+//                updateMovieListOfHorizontalMovieAdapter(movies);
+                if (clickedAdapter instanceof ArrayObjectAdapter) {
+                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
+                    extendMovieListOfHorizontalMovieAdapter(movies, adapter);
+                }
+            }
+
+            protected <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader){
+                return (T) generateCategoryView(title, movies, isDefaultHeader);
+            }
+        };
+
+        searchViewControl.loadCategoriesInBackground(query);
     }
 
+    private ArrayObjectAdapter generateCategoryView(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
+        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
 
-    private void loadServerRow(String rowName, AbstractServer server, ArrayObjectAdapter adapter, String query) {
+        HeaderItem header = new HeaderItem(ROWS_COUNTER++, title);
 
-
-        if (server == null) {
-            Movie movie = new Movie();
-            movie.setTitle("ابحث في جوجل");
-            movie.setStudio(Movie.SERVER_GOOGLE);
-            movie.setVideoUrl(query);
-            movie.setCardImageUrl(String.valueOf(mDefaultBackground));
-            // adapter.add(0, movie);
-        } else {
-//            if (server instanceof FaselHdController){
-//                server.setListRowAdapter(adapter);
-//            }
-            Activity activity = getActivity();
-
-
-            HeaderItem header = new HeaderItem(ROWS_COUNTER++, rowName);
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (!movies.isEmpty()){
+                adapter.addAll(0, movies);
+            }
             rowsAdapter.add(new ListRow(header, adapter));
-
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            executor.submit(() -> {
-                List<Movie> finalMovieList = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
-                    @Override
-                    public void onSuccess(ArrayList<Movie> result, String title) {
-
-                    }
-
-                    @Override
-                    public void onInvalidCookie(ArrayList<Movie> result) {
-
-                    }
-
-                    @Override
-                    public void onInvalidLink(ArrayList<Movie> result) {
-
-                    }
-
-                    @Override
-                    public void onInvalidLink(String message) {
-
-                    }
-                });
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        adapter.addAll(0, finalMovieList);
-                    }
-                });
-            });
-
-            executor.shutdown();
-        }
+            if (isDefaultHeader) {
+                defaultHeadersCounter++;
+            }
+        });
+        return adapter;
     }
+
+    private void updateRelatedMovieItem(ArrayObjectAdapter adapter, int clickedMovieIndex, Movie resultMovie) {
+        if (adapter == null || resultMovie == null){
+            Log.d(TAG, "updateRelatedMovieItem: undefined adapter or movie");
+            return;
+        }
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+//                Log.d(TAG, "run: adapter> " + objectAdapter.size());
+                adapter.replace(clickedMovieIndex, resultMovie);
+            }
+        });
+    }
+
+    private void extendMovieListOfHorizontalMovieAdapter(ArrayList<Movie> movies, ArrayObjectAdapter adapter) {
+       if (adapter == null){
+           Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: undefined adapter");
+           return;
+       }
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+//                Log.d(TAG, "run: adapter> " + objectAdapter.size());
+                adapter.addAll(adapter.size(), movies);
+            }
+        });
+    }
+
+
+//    private void loadServerRow(String rowName, AbstractServer server, ArrayObjectAdapter adapter, String query) {
+//
+//
+//        if (server == null) {
+//            Movie movie = new Movie();
+//            movie.setTitle("ابحث في جوجل");
+//            movie.setStudio(Movie.SERVER_GOOGLE);
+//            movie.setVideoUrl(query);
+//            movie.setCardImageUrl(String.valueOf(mDefaultBackground));
+//            // adapter.add(0, movie);
+//        } else {
+////            if (server instanceof FaselHdController){
+////                server.setListRowAdapter(adapter);
+////            }
+//            Activity activity = getActivity();
+//
+//
+//            HeaderItem header = new HeaderItem(ROWS_COUNTER++, rowName);
+//            rowsAdapter.add(new ListRow(header, adapter));
+//
+//            ExecutorService executor = Executors.newSingleThreadExecutor();
+//            executor.submit(() -> {
+//                List<Movie> finalMovieList = server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+//                    @Override
+//                    public void onSuccess(ArrayList<Movie> result, String title) {
+//
+//                    }
+//
+//                    @Override
+//                    public void onInvalidCookie(ArrayList<Movie> result) {
+//
+//                    }
+//
+//                    @Override
+//                    public void onInvalidLink(ArrayList<Movie> result) {
+//
+//                    }
+//
+//                    @Override
+//                    public void onInvalidLink(String message) {
+//
+//                    }
+//                });
+//                activity.runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        adapter.addAll(0, finalMovieList);
+//                    }
+//                });
+//            });
+//
+//            executor.shutdown();
+//        }
+//    }
 
     private final class ItemViewClickedListener implements OnItemViewClickedListener {
 //        private ArrayObjectAdapter objectAdapter;
@@ -426,126 +695,250 @@ public class SearchResultFragment extends BrowseSupportFragment {
         public void onItemClicked(Presenter.ViewHolder itemViewHolder, Object item,
                                   RowPresenter.ViewHolder rowViewHolder, Row row) {
 
-            if (item instanceof Movie) {
-                Movie movie = (Movie) item;
-                //  if (movie.getStudio().equals(Movie.SERVER_GOOGLE)){
-                /*if (movie.getStudio().equals(Movie.SERVER_FASELHD)){
-                    FaselHdController server = FaselHdController.getInstance(getActivity());
-
-//                    Intent intent = new Intent(getActivity(), BBrowserActivity.class);
-//                    intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-//                    startActivity(intent);
-                    List<Movie> mList= server.searchWebView(query);
-                    Log.d(TAG, "onItemClicked: MovieListWeb:"+ mList);
-
-
-                }else { */
-                clickedMovie = movie;
-                if (movie.getState() == Movie.COOKIE_STATE) {
-                    Toast.makeText(getContext(), "renewing Cookie", Toast.LENGTH_SHORT).show();
-
-                    renewCookie(movie);
-                } else if (movie.getStudio().equals(Movie.SERVER_IPTV) && movie.getState() == Movie.VIDEO_STATE) {
-                    Intent intent = new Intent(getActivity(), ExoplayerMediaPlayer.class);
-                    intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-                    intent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-                    Objects.requireNonNull(getActivity()).startActivity(intent);
-
-                } else {
-                    if (movie.getState() == Movie.NEXT_PAGE_STATE) {
-                        //todo: add info to say if next already clicked, and handle the rest
-                        if (movie.getDescription().equals("0")) {
-                            ExecutorService executor = Executors.newSingleThreadExecutor();
-
-                            executor.submit(() -> {
-                                AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
-                                //server
-                                List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
-                                    @Override
-                                    public void onSuccess(ArrayList<Movie> result, String title) {
-
-                                    }
-
-                                    @Override
-                                    public void onInvalidCookie(ArrayList<Movie> result) {
-
-                                    }
-
-                                    @Override
-                                    public void onInvalidLink(ArrayList<Movie> result) {
-
-                                    }
-
-                                    @Override
-                                    public void onInvalidLink(String message) {
-
-                                    }
-                                });
-                                Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
-
-                                ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
-                                Log.d(TAG, "onItemClicked: adapter :" + adapter.toString());
-                                getActivity().runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        adapter.addAll(adapter.size(), nextList);
-                                    }
-                                });
-
-                                //flag that its already clicked
-                                movie.setDescription("1");
-                            });
-
-                            executor.shutdown();
-                        }
-
-                    } else {
-                        AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
-                        int nextAction = server.fetchNextAction((Movie) item);
-                        if (nextAction == VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY) {
-                            Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
-                            Thread t = new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-//                                    Movie movie = server.fetch((Movie) item, ((Movie) item).getState()).movie;
-                                }
-                            });
-                            t.start();
-                        } else {
-                            Log.d(TAG, "Item: " + item.toString());
-                            Intent intent = new Intent(getActivity(), DetailsActivity.class);
-                            intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-                            intent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-
-                            Bundle bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                                            getActivity(),
-                                            ((ImageCardView) itemViewHolder.view).getMainImageView(),
-                                            DetailsActivity.SHARED_ELEMENT_NAME)
-                                    .toBundle();
-                            getActivity().startActivity(intent, bundle);
-                        }
-                    }
-                }
-            } else if (item instanceof String) {
+//            handleItemClicked(itemViewHolder, item, row);
+            if (item instanceof String) {
                 if (((String) item).contains(getString(R.string.error_fragment))) {
                     Intent intent = new Intent(getActivity(), BrowseErrorActivity.class);
                     startActivity(intent);
                 } else {
                     Toast.makeText(getActivity(), ((String) item), Toast.LENGTH_SHORT).show();
                 }
+                return;
             }
+            if (!(item instanceof Movie)) {
+//                Toast.makeText(getActivity(), "handleItemClicked clicked item not is instanceof Movie ", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "onItemClicked: handleItemClicked clicked item not is instanceof Movie ");
+                return;
+            }
+
+            Movie movie = (Movie) item;
+
+            clickedMovieAdapter =(ArrayObjectAdapter) ((ListRow) row).getAdapter();
+//            clickedMovie = movie;
+            clickedMovieIndex = clickedMovieAdapter.indexOf(movie);
+
+            searchViewControl.handleMovieItemClick(movie, clickedMovieIndex, rowsAdapter, (ListRow) row, defaultHeadersCounter);
         }
     }
 
-    private void renewCookie(Movie movie) {
-        Intent browse = new Intent(getActivity(), BrowserActivity.class);
 
-        browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-        browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
-        browse.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        startActivityForResult(browse, 0);
-        //  startActivity(browse);
-    }
+//    private void handleNextPageMovieClick(ListRow row, Movie movie) {
+//        if (movie.getDescription().equals("0")) {
+//            ExecutorService executor = Executors.newSingleThreadExecutor();
+//            executor.submit(() -> {
+////                            AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
+//                AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+//                if (server == null) {
+//                    Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE run: unknown server:" + movie.getStudio());
+//                    return;
+//                }
+//                //server
+//                ArrayObjectAdapter adapter = (ArrayObjectAdapter) row.getAdapter();
+////                            Log.d(TAG, "onItemClicked: adapter :" + adapter.toString());
+//
+//                List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+//                    @Override
+//                    public void onSuccess(ArrayList<Movie> result, String title) {
+//                        Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE onSuccess");
+//                        if (result.isEmpty()) {
+//                            return;
+//                        }
+//                        mHandler.post(() -> {
+//                            adapter.addAll(adapter.size(), result);
+//                            //flag that its already clicked
+//                            movie.setDescription("1");
+//                        });
+//                    }
+//
+//                    @Override
+//                    public void onInvalidCookie(ArrayList<Movie> result) {
+//                        Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE onInvalidCookie");
+//                        if (result.isEmpty()) {
+//                            return;
+//                        }
+//                        mHandler.post(() -> {
+//                            adapter.addAll(adapter.size(), result);
+//                            //flag that its already clicked
+//                            movie.setDescription("1");
+//                        });
+//                    }
+//
+//                    @Override
+//                    public void onInvalidLink(ArrayList<Movie> result) {
+//
+//                    }
+//
+//                    @Override
+//                    public void onInvalidLink(String message) {
+//                        Log.d(TAG, "onInvalidLink: handleNextPageMovieClick: "+ message);
+//                    }
+//                });
+////                            Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
+//
+//            });
+//
+//            executor.shutdown();
+//
+//        }
+//    }
+
+
+//    private void handleItemClicked(Presenter.ViewHolder itemViewHolder, Object item, Row row) {
+//        //######
+//        if (item instanceof String) {
+//            if (((String) item).contains(getString(R.string.error_fragment))) {
+//                Intent intent = new Intent(getActivity(), BrowseErrorActivity.class);
+//                startActivity(intent);
+//            } else {
+//                Toast.makeText(getActivity(), ((String) item), Toast.LENGTH_SHORT).show();
+//            }
+//            return;
+//        }
+//        if (!(item instanceof Movie)) {
+////            Toast.makeText(getActivity(), "handleItemClicked clicked item not is instanceof Movie ", Toast.LENGTH_SHORT).show();
+//            Log.d(TAG, "handleItemClicked: handleItemClicked clicked item not is instanceof Movie ");
+//            return;
+//        }
+//
+//        Movie movie = (Movie) item;
+//        //  if (movie.getStudio().equals(Movie.SERVER_GOOGLE)){
+//                /*if (movie.getStudio().equals(Movie.SERVER_FASELHD)){
+//                    FaselHdController server = FaselHdController.getInstance(getActivity());
+//
+////                    Intent intent = new Intent(getActivity(), BBrowserActivity.class);
+////                    intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
+////                    startActivity(intent);
+//                    List<Movie> mList= server.searchWebView(query);
+//                    Log.d(TAG, "onItemClicked: MovieListWeb:"+ mList);
+//
+//
+//                }else { */
+//        clickedMovie = movie;
+//
+//        Log.d(TAG, "onItemClicked: " + item.toString());
+//        if (movie.getState() == Movie.COOKIE_STATE) {
+//            Toast.makeText(getContext(), "renewing Cookie", Toast.LENGTH_SHORT).show();
+//
+//            renewCookie(movie);
+//            return;
+//        }
+////            if (movie.getStudio().equals(Movie.SERVER_IPTV)) {
+//        if (movie.getState() == Movie.VIDEO_STATE) {
+//            Util.openExoPlayer(movie, activity, true);
+//            //exist method after handling
+//            return;
+//        }
+//
+//
+//        if (movie.getState() == Movie.NEXT_PAGE_STATE) {
+//            //todo: add info to say if next already clicked, and handle the rest
+//            handleNextPageMovieClick((ListRow) row, movie);
+//            return;
+//        }
+//
+//
+//        Intent intent = Util.generateIntent(movie, new Intent(activity, DetailsActivity.class), true);
+//
+//        Bundle bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
+//                        getActivity(),
+//                        ((ImageCardView) itemViewHolder.view).getMainImageView(),
+//                        DetailsActivity.SHARED_ELEMENT_NAME)
+//                .toBundle();
+//        getActivity().startActivity(intent, bundle);
+//
+////                else if (movie.getStudio().equals(Movie.SERVER_IPTV) && movie.getState() == Movie.VIDEO_STATE) {
+////                    Intent intent = new Intent(getActivity(), ExoplayerMediaPlayer.class);
+////                    intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
+////                    intent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
+////                    Objects.requireNonNull(getActivity()).startActivity(intent);
+////
+////                }
+////                else {
+////
+//////                    if (movie.getState() == Movie.NEXT_PAGE_STATE) {
+//////                        //todo: add info to say if next already clicked, and handle the rest
+//////                        if (movie.getDescription().equals("0")) {
+//////                            ExecutorService executor = Executors.newSingleThreadExecutor();
+//////
+//////                            executor.submit(() -> {
+////////                                AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
+//////                                AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+//////                                if (server == null) {
+//////                                    Log.d(TAG, "onItemClicked: NEXT_PAGE_STATE unknown server: " + movie.getStudio());
+//////                                    return;
+//////                                }
+//////                                //server
+//////                                List<Movie> nextList = server.search(movie.getVideoUrl(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+//////                                    @Override
+//////                                    public void onSuccess(ArrayList<Movie> result, String title) {
+//////
+//////                                    }
+//////
+//////                                    @Override
+//////                                    public void onInvalidCookie(ArrayList<Movie> result) {
+//////
+//////                                    }
+//////
+//////                                    @Override
+//////                                    public void onInvalidLink(ArrayList<Movie> result) {
+//////
+//////                                    }
+//////
+//////                                    @Override
+//////                                    public void onInvalidLink(String message) {
+//////
+//////                                    }
+//////                                });
+//////                                Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
+//////
+//////                                ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
+//////                                Log.d(TAG, "onItemClicked: adapter :" + adapter.toString());
+//////                                getActivity().runOnUiThread(new Runnable() {
+//////                                    @Override
+//////                                    public void run() {
+//////                                        adapter.addAll(adapter.size(), nextList);
+//////                                    }
+//////                                });
+//////
+//////                                //flag that its already clicked
+//////                                movie.setDescription("1");
+//////                            });
+//////
+//////                            executor.shutdown();
+//////                        }
+//////
+//////                    }
+//////
+////                    else {
+//////                        AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
+////                        AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+////                        if (server == null) {
+////                            Log.d(TAG, "onItemClicked: unknown server: " + movie.getStudio() + ", state: " + movie.getState());
+////                            return;
+////                        }
+////                        int nextAction = server.fetchNextAction((Movie) item);
+////                        if (nextAction == VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY) {
+////                            Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
+////                            Thread t = new Thread(new Runnable() {
+////                                @Override
+////                                public void run() {
+//////                                    Movie movie = server.fetch((Movie) item, ((Movie) item).getState()).movie;
+////                                }
+////                            });
+////                            t.start();
+////                        } else {
+////
+////
+////                        }
+////                    }
+////                }
+//    }
+
+
+//    private void renewCookie(Movie movie) {
+//        movie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
+//        Util.openBrowserIntent(movie, fragment, true, true);
+//    }
 
     private final class ItemViewSelectedListener implements OnItemViewSelectedListener {
         @Override
@@ -671,139 +1064,171 @@ public class SearchResultFragment extends BrowseSupportFragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(TAG, "onActivityResult: " + requestCode + ", " + resultCode + ", " + data);
-        if (clickedMovie == null) {
-            return;
-        }
-        ArrayObjectAdapter objectAdapter = getServerAdapter(clickedMovie.getStudio());
-        AbstractServer server = ServerManager.determineServer(clickedMovie, objectAdapter, getActivity(), fragment);
 
-        if (requestCode == 0) {
-            if (resultCode == Activity.RESULT_OK) {
-                if (data != null) {
-                    String result = data.getStringExtra("result");
-                    Log.d(TAG, "onActivityResult: " + result);
-                    Thread t = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-//                            Movie movie = new Movie();
-//                            movie.setTitle(query);
-//                            movie.setStudio(result);
-
-//                            Log.d(TAG, "run: after renewing the cookie:" + server.getHeaders());
-                            //List<Movie> movies = server.search(query);
-                            Gson gson = new Gson();
-                            Type movieListType = new TypeToken<List<Movie>>() {
-                            }.getType();
-                            List<Movie> movies = gson.fromJson(result, movieListType);
-
-                            if (clickedMovie.getState() == Movie.COOKIE_STATE) {
-                                for (Movie mov : movies) {
-                                    mov.setState(server.detectMovieState(mov));
-                                    //sets main movie to it self same as search method as renewing cookie only search for movies
-                                    mov.setMainMovie(mov);
-//                                    if (server.isSeries(mov)){
-//                                        movies.get(movies.indexOf(mov)).setState(Movie.GROUP_OF_GROUP_STATE);
-//                                    }else {
-//                                        movies.get(movies.indexOf(mov)).setState(Movie.ITEM_STATE);
-//                                    }
-                                }
-                            }
-
-                            if (movies.size() > 0) {
-                                getActivity().runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Log.d(TAG, "run: adapter> " + objectAdapter.size());
-                                        objectAdapter.addAll(1, movies);
-                                    }
-                                });
-                            } else {
-                                getActivity().runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(getContext(), "لايوجد نتائج", Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            }
-
-                        }
-                    });
-                    t.start();
-                    Log.d(TAG, "onActivityResult: cookies:");
+        searchViewControl.onActivityResult(requestCode, resultCode, data, clickedMovieAdapter, clickedMovieIndex);
+        super.onActivityResult(requestCode, resultCode, data);
 //
-//                    Gson gson = new Gson();
-//                    Type movieListType = new TypeToken<List<Movie>>(){}.getType();
-//                    List<Movie> movies = gson.fromJson(result, movieListType);
-//                    Log.d(TAG, "onActivityResult: movie:"+movies.toString());
-                }
-                // Do something with the result here
+//        if (resultCode != Activity.RESULT_OK || data == null) {
+//            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
+//            return;
+//        }
+//        if (clickedMovie == null) {
+//            Log.d(TAG, "onActivityResult: clickedMovie is not identified");
+//            return;
+//        }
+//        ArrayObjectAdapter objectAdapter = getServerAdapter(clickedMovie.getStudio());
+////        AbstractServer server = ServerManager.determineServer(clickedMovie, objectAdapter, getActivity(), fragment);
+//        AbstractServer server = ServerConfigManager.getServer(clickedMovie.getStudio());
+//        if (server == null) {
+//            Log.d(TAG, "onActivityResult: unknown server: " + clickedMovie.getStudio() + ", state: " + clickedMovie.getState());
+//            return;
+//        }
+//        String result = data.getStringExtra("result");
+//        ArrayList<Movie> resultMovieSublist = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
+//
+//        if (requestCode == 0 || requestCode == Movie.REQUEST_CODE_MOVIE_LIST) {
+//                    Thread t = new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+////                            Movie movie = new Movie();
+////                            movie.setTitle(query);
+////                            movie.setStudio(result);
+//
+////                            Log.d(TAG, "run: after renewing the cookie:" + server.getHeaders());
+//                            //List<Movie> movies = server.search(query);
+////                            Gson gson = new Gson();
+////                            Type movieListType = new TypeToken<List<Movie>>() {
+////                            }.getType();
+////                            List<Movie> movies = gson.fromJson(result, movieListType);
+////                            if (movies == null){
+////                                Log.d(TAG, "onActivityResult run: fail converting result to movies object ");
+////                                return;
+////                            }
+//
+//                            if (clickedMovie.getState() == Movie.COOKIE_STATE) {
+//                                for (Movie mov : resultMovieSublist) {
+//                                    //todo: check if still needed to redetect the movie state
+//                                    mov.setState(server.detectMovieState(mov));
+//                                    //sets main movie to it self same as search method as renewing cookie only search for movies
+//                                    mov.setMainMovie(mov);
+//                                    mov.setMainMovieTitle(mov.getTitle());
+////                                    if (server.isSeries(mov)){
+////                                        movies.get(movies.indexOf(mov)).setState(Movie.GROUP_OF_GROUP_STATE);
+////                                    }else {
+////                                        movies.get(movies.indexOf(mov)).setState(Movie.ITEM_STATE);
+////                                    }
+//                                }
+//                            }
+//
+//                            if (!resultMovieSublist.isEmpty()) {
+//                                getActivity().runOnUiThread(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        Log.d(TAG, "run: adapter> " + objectAdapter.size());
+//                                        objectAdapter.addAll(1, resultMovieSublist);
+//                                    }
+//                                });
+//                            } else {
+//                                getActivity().runOnUiThread(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        Toast.makeText(getContext(), "لايوجد نتائج", Toast.LENGTH_SHORT).show();
+//                                    }
+//                                });
+//                            }
+//
+//                        }
+//                    });
+//                    t.start();
+//                    Log.d(TAG, "onActivityResult: cookies:");
+////
+////                    Gson gson = new Gson();
+////                    Type movieListType = new TypeToken<List<Movie>>(){}.getType();
+////                    List<Movie> movies = gson.fromJson(result, movieListType);
+////                    Log.d(TAG, "onActivityResult: movie:"+movies.toString());
+//
+//            return;
+//
+//        }
+//            Thread t = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    List<Movie> movies = server.search(clickedMovie.getTitle(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+//                        @Override
+//                        public void onSuccess(ArrayList<Movie> result, String title) {
+//                            Log.d(TAG, "onSuccess: ");
+//                            if (result == null || result.isEmpty()){
+//                                Log.d(TAG, "onSuccess: onActivityResult empty result");
+//                            return;
+//                            }
+//                            getActivity().runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    Log.d(TAG, "run: adapter> " + objectAdapter.size());
+//                                    objectAdapter.addAll(1, result);
+//                                }
+//                            });
+//                        }
+//
+//                        @Override
+//                        public void onInvalidCookie(ArrayList<Movie> result) {
+//                            Log.d(TAG, "onInvalidCookie: ");
+//                            if (result == null || result.isEmpty()){
+//                                Log.d(TAG, "onInvalidCookie: onActivityResult empty result");
+//                                return;
+//                            }
+//                            getActivity().runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    Log.d(TAG, "run: adapter> " + objectAdapter.size());
+//                                    objectAdapter.addAll(1, result);
+//                                }
+//                            });
+//                        }
+//
+//                        @Override
+//                        public void onInvalidLink(ArrayList<Movie> result) {
+//
+//                        }
+//
+//                        @Override
+//                        public void onInvalidLink(String message) {
+//                            Log.d(TAG, "onInvalidLink: "+message);
+//                        }
+//                    });
+//                }
+//            });
+//            t.start();
+//
+            //hier
 
-            }
-        } else if (resultCode == Activity.RESULT_OK) {
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    List<Movie> movies = server.search(clickedMovie.getTitle(), new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
-                        @Override
-                        public void onSuccess(ArrayList<Movie> result, String title) {
 
-                        }
 
-                        @Override
-                        public void onInvalidCookie(ArrayList<Movie> result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidLink(ArrayList<Movie> result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidLink(String message) {
-
-                        }
-                    });
-                    if (movies.size() > 0) {
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Log.d(TAG, "run: adapter> " + objectAdapter.size());
-                                objectAdapter.addAll(1, movies);
-                            }
-                        });
-                    } else {
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(getContext(), "لايوجد نتائج", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-
-                }
-            });
-            t.start();
-        }
+//        getActivity().runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                Toast.makeText(getContext(), "لايوجد نتائج", Toast.LENGTH_SHORT).show();
+//            }
+//        });
 
     }
 
-    private ArrayObjectAdapter getServerAdapter(String serverId) {
-        switch (serverId) {
-            case Movie.SERVER_CIMA_CLUB:
-                return cimaClubAdapter;
-            case Movie.SERVER_CIMA4U:
-                return cima4uAdapter;
-            case Movie.SERVER_SHAHID4U:
-                return shahidAdapter;
-            case Movie.SERVER_ARAB_SEED:
-                return arabSeedAdapter;
-            case Movie.SERVER_FASELHD:
-                return faselAdapter;
-            case Movie.SERVER_IPTV:
-                return tvAdapter;
-            default:
-                return new ArrayObjectAdapter(new CardPresenter());
-        }
-    }
+//    private ArrayObjectAdapter getServerAdapter(String serverId) {
+//        switch (serverId) {
+//            case Movie.SERVER_CIMA_CLUB:
+//                return cimaClubAdapter;
+//            case Movie.SERVER_CIMA4U:
+//                return cima4uAdapter;
+//            case Movie.SERVER_SHAHID4U:
+//                return shahidAdapter;
+//            case Movie.SERVER_ARAB_SEED:
+//                return arabSeedAdapter;
+//            case Movie.SERVER_FASELHD:
+//                return faselAdapter;
+//            case Movie.SERVER_IPTV:
+//                return tvAdapter;
+//            default:
+//                return new ArrayObjectAdapter(new CardPresenter());
+//        }
+//    }
 }

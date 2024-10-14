@@ -2,26 +2,24 @@ package com.omerflex.view.mobile.entity;
 
 // Category.java
 
-import com.omerflex.entity.Movie;
-
-import java.util.List;
+import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 
 public class Category {
     private String categoryName;
-    private List<Movie> movieList;
+    private HorizontalMovieAdapter movieListAdapter;
 
     // Constructor, getters, and setters
-    public Category(String categoryName, List<Movie> movieList) {
+    public Category(String categoryName, HorizontalMovieAdapter movieList) {
         this.categoryName = categoryName;
-        this.movieList = movieList;
+        this.movieListAdapter = movieList;
     }
 
     public String getCategoryName() {
         return categoryName;
     }
 
-    public List<Movie> getMovieList() {
-        return movieList;
+    public HorizontalMovieAdapter getMovieAdapter() {
+        return movieListAdapter;
     }
 }
 

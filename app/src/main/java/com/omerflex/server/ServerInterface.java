@@ -20,7 +20,7 @@ public interface ServerInterface {
 
     interface ActivityCallback<T> {
         void onSuccess(T result, String title);
-        void onInvalidCookie(T result);
+        void onInvalidCookie(T result, String title);
         void onInvalidLink(T result);
         void onInvalidLink(String message);
     }

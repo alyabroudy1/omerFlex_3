@@ -137,6 +137,10 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
         Log.d(TAG, "saveMovieHistory: " + history);
 
+        if (history.getMainMovieUrl() == null) {
+            Log.d(TAG, "saveMovieHistory: fail history.getMainMovieUrl() == null");
+            return;
+        }
         try (Cursor cursor = db.query(
                 MovieHistoryTable.TABLE_NAME, null,
                 MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " = ?", new String[]{history.getMainMovieUrl()}, null, null, null)) {
@@ -1449,6 +1453,9 @@ public class MovieDbHelper extends SQLiteOpenHelper {
     public int deleteMovie(Movie movie) {
         String selection = MoviesTable.COLUMN_VIDEO_URL + " = ?";
         String[] selectionArgs = new String[]{movie.getVideoUrl()};
+        if (db == null){
+            return 0;
+        }
         return db.delete(MoviesTable.TABLE_NAME, selection, selectionArgs);
     }
 

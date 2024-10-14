@@ -115,7 +115,7 @@ public class FaselHdServer extends AbstractServer {
             m.setCreatedAt(Calendar.getInstance().getTime().toString());
             movieList.add(m);
 
-            activityCallback.onInvalidCookie(movieList);
+            activityCallback.onInvalidCookie(movieList, getLabel());
             return movieList;
         }
 
@@ -292,12 +292,12 @@ public class FaselHdServer extends AbstractServer {
     }
 
     private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
-//        Log.d(TAG, "fetchWatchLocally: "+movie);
+        Log.d(TAG, "fetchWatchLocally: "+movie);
         if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
         }
         activityCallback.onSuccess(movie, getLabel());
@@ -313,7 +313,7 @@ public class FaselHdServer extends AbstractServer {
                 return fetchBrowseItem(movie);
             case Movie.COOKIE_STATE:
                 Log.d(TAG, "fetchItemAction: COOKIE_STATE");
-                activityCallback.onInvalidCookie(movie);
+                activityCallback.onInvalidCookie(movie, getLabel());
                 return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
             case Movie.ACTION_WATCH_LOCALLY:
                 Log.d(TAG, "fetchItemAction: ACTION_WATCH_LOCALLY");
@@ -403,7 +403,7 @@ public class FaselHdServer extends AbstractServer {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
         }
 
@@ -513,7 +513,7 @@ public class FaselHdServer extends AbstractServer {
         if (doc.title().contains("moment")) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-            activityCallback.onInvalidCookie(movie);
+            activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
 //            return startWebForResultActivity(clonedMovie);
         }
@@ -630,7 +630,7 @@ public class FaselHdServer extends AbstractServer {
             clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
             Log.d(TAG, "fetchItem: moment");
-            activityCallback.onInvalidCookie(clonedMovie);
+            activityCallback.onInvalidCookie(clonedMovie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
         }
 
@@ -712,7 +712,7 @@ public class FaselHdServer extends AbstractServer {
             Movie clonedMovie = Movie.clone(movie);
             clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
-            activityCallback.onInvalidCookie(clonedMovie);
+            activityCallback.onInvalidCookie(clonedMovie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
         }
         activityCallback.onSuccess(movie, getLabel());
@@ -799,11 +799,11 @@ public class FaselHdServer extends AbstractServer {
     /*    CookieManager cookieManager = CookieManager.getInstance();
         Log.d(TAG, "onLoadResource: Fasel:" + url + ", movie:" + movie.getVideoUrl());
         String extractMovies =
-                "var postList = [];\n" +
-                        "var postDivs = document.getElementsByClassName(\"postDiv\");\n" +
-                        "for (var i = 0; i < postDivs.length; i++) {\n" +
-                        "    var post = {};\n" +
-                        "    var postDiv = postDivs[i];\n" +
+                "let postList = [];\n" +
+                        "let postDivs = document.getElementsByClassName(\"postDiv\");\n" +
+                        "for (let i = 0; i < postDivs.length; i++) {\n" +
+                        "    let post = {};\n" +
+                        "    let postDiv = postDivs[i];\n" +
                         "    post.title = postDiv.getElementsByTagName(\"img\")[0].alt;\n" +
                         "    post.videoUrl = postDiv.getElementsByTagName(\"a\")[0].href;\n" +
                         "    post.cardImageUrl = postDiv.getElementsByTagName(\"img\")[0].getAttribute('data-src');\n" +
@@ -816,19 +816,19 @@ public class FaselHdServer extends AbstractServer {
 
         // String web = FaselHdController.WEBSITE_URL + "/?p=";
         String fetchGroupOfGroup =
-                "var postList = [];\n" +
-                        "var seasons = document.querySelectorAll('.seasonDiv');\n" +
-                        "var description = document.getElementsByClassName(\"singleDesc\")[0].innerHTML.replace(/<.*?>/g, \"\").replace(/(\\r\\n|\\n|\\r)/gm,\"\");" +
-                        "for (var i = 0; i < seasons.length; i++) {\n" +
-                        "    var post = {};\n" +
-                        "    var season = seasons[i];\n" +
+                "let postList = [];\n" +
+                        "let seasons = document.querySelectorAll('.seasonDiv');\n" +
+                        "let description = document.getElementsByClassName(\"singleDesc\")[0].innerHTML.replace(/<.*?>/g, \"\").replace(/(\\r\\n|\\n|\\r)/gm,\"\");" +
+                        "for (let i = 0; i < seasons.length; i++) {\n" +
+                        "    let post = {};\n" +
+                        "    let season = seasons[i];\n" +
                         "    post.videoUrl = 'https://www.faselhd.club/?p='+ season.getAttribute('data-href');\n" +
                         "    post.title = season.querySelector('.title').textContent;\n" +
                         "    post.cardImageUrl = season.querySelector('[data-src]').getAttribute('data-src');\n" +
                         "    post.bgImageUrl = post.cardImageUrl;\n" +
                         "    post.description = description;\n" +
-                        "    var spans = season.querySelectorAll('.seasonMeta');\n" +
-                        "    for (var j = 0; j < spans.length; j++) {\n" +
+                        "    let spans = season.querySelectorAll('.seasonMeta');\n" +
+                        "    for (let j = 0; j < spans.length; j++) {\n" +
                         "        post.rate = spans[j].querySelector('*').textContent;\n" +
                         "        break;\n" +
                         "    }\n" +
@@ -840,16 +840,16 @@ public class FaselHdServer extends AbstractServer {
 
         String fetchGroup =
                 "//fetch description\n" +
-                        "        var description = document.getElementsByClassName(\"singleDesc\")[0].innerHTML.replace(/<.*?>/g, \"\").replace(/(\\r\\n|\\n|\\r)/gm,\"\");" +
+                        "        let description = document.getElementsByClassName(\"singleDesc\")[0].innerHTML.replace(/<.*?>/g, \"\").replace(/(\\r\\n|\\n|\\r)/gm,\"\");" +
                         "        //fetch session\n" +
-                        "        var boxs = document.getElementsByClassName(\"seasonDiv active\");\n" +
-                        "        var postList = [];\n" +
+                        "        let boxs = document.getElementsByClassName(\"seasonDiv active\");\n" +
+                        "        let postList = [];\n" +
                         "        if (boxs.length == 0){\n" +
-                        "            var title = document.getElementsByClassName(\"h1 title\")[0].text;\n" +
-                        "            var cardImageUrl = document.getElementsByClassName(\"img-fluid\")[0].getAttribute(\"src\");\n" +
-                        "            var divs = document.getElementById(\"epAll\").querySelectorAll(\"[href]\");\n" +
+                        "            let title = document.getElementsByClassName(\"h1 title\")[0].text;\n" +
+                        "            let cardImageUrl = document.getElementsByClassName(\"img-fluid\")[0].getAttribute(\"src\");\n" +
+                        "            let divs = document.getElementById(\"epAll\").querySelectorAll(\"[href]\");\n" +
                         "            for (const div of divs) {\n" +
-                        "                var post = {};\n" +
+                        "                let post = {};\n" +
                         "                post.cardImageUrl = cardImageUrl;\n" +
                         "                post.bgImageUrl = cardImageUrl;\n" +
                         "                post.backgroundImageUrl = cardImageUrl;\n" +
@@ -863,12 +863,12 @@ public class FaselHdServer extends AbstractServer {
                         "               console.log('box0: '+post.toString());" +
                         "            }\n" +
                         "        }else{" +
-                        "        for (var i = 0; i < boxs.length; i++) {\n" +
-                        "            var title = boxs[i].getElementsByClassName(\"title\")[0].textContent;\n" +
-                        "            var cardImageUrl = boxs[i].querySelectorAll(\"[data-src]\")[0].getAttribute(\"data-src\");\n" +
-                        "                var divs = document.getElementById(\"epAll\").getElementsByTagName(\"a\");\n" +
+                        "        for (let i = 0; i < boxs.length; i++) {\n" +
+                        "            let title = boxs[i].getElementsByClassName(\"title\")[0].textContent;\n" +
+                        "            let cardImageUrl = boxs[i].querySelectorAll(\"[data-src]\")[0].getAttribute(\"data-src\");\n" +
+                        "                let divs = document.getElementById(\"epAll\").getElementsByTagName(\"a\");\n" +
                         "                for (const div of divs) {\n" +
-                        "                var post = {};\n" +
+                        "                let post = {};\n" +
                         "                post.cardImageUrl = cardImageUrl;\n" +
                         "                post.bgImageUrl = cardImageUrl;\n" +
                         "                post.backgroundImageUrl = cardImageUrl;\n" +
@@ -926,7 +926,7 @@ public class FaselHdServer extends AbstractServer {
             // view.loadUrl("javascript:window.addEventListener('beforeunload', function (e) { e.preventDefault(); });");
             //  view.loadUrl("javascript:window.frames['player_iframe'].click()");
             String jsClickScript = "(function() {" +
-                    "var playerIframe = document.getElementById('player_iframe');" +
+                    "let playerIframe = document.getElementById('player_iframe');" +
                     "if (playerIframe) {" +
                     "playerIframe.click();" +
                     "}" +
@@ -979,11 +979,11 @@ public class FaselHdServer extends AbstractServer {
                 CookieManager cookieManager = CookieManager.getInstance();
                 Log.d(TAG, "onLoadResource: Fasel:" + url + ", movie:" + movie.getVideoUrl());
                 String extractMovies =
-                        "var postList = [];\n" +
-                                "var postDivs = document.getElementsByClassName(\"postDiv\");\n" +
-                                "for (var i = 0; i < postDivs.length; i++) {\n" +
-                                "    var post = {};\n" +
-                                "    var postDiv = postDivs[i];\n" +
+                        "let postList = [];\n" +
+                                "let postDivs = document.getElementsByClassName(\"postDiv\");\n" +
+                                "for (let i = 0; i < postDivs.length; i++) {\n" +
+                                "    let post = {};\n" +
+                                "    let postDiv = postDivs[i];\n" +
                                 "    post.title = postDiv.getElementsByTagName(\"img\")[0].alt;\n" +
                                 "    post.videoUrl = postDiv.getElementsByTagName(\"a\")[0].href;\n" +
                                 "    post.cardImageUrl = postDiv.getElementsByTagName(\"img\")[0].getAttribute('data-src');\n" +
@@ -1240,7 +1240,7 @@ public class FaselHdServer extends AbstractServer {
                     if (!scrolled) {
                         String jsScroll = "function scrollToIframe() {\n" +
                                 "  // Find the iframe element\n" +
-                                "  var iframe = document.querySelector('iframe[src]:not([src=\"about:blank\"])');\n" +
+                                "  let iframe = document.querySelector('iframe[src]:not([src=\"about:blank\"])');\n" +
                                 "  \n" +
                                 "  // Check if the iframe element was found\n" +
                                 "  if (iframe) {\n" +
@@ -1374,18 +1374,19 @@ public class FaselHdServer extends AbstractServer {
                 Log.d(TAG, "getScript:WEB_VIEW_MODE_ON_PAGE_STARTED COOKIE_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
                         // "alert(\"DOM ready!\");" +
-                        "var postDivs = document.getElementsByClassName(\"postDiv\");" +
+                        "let postDivs = document.getElementsByClassName(\"postDiv\");" +
                         "if (postDivs.length > 0){" +
-                        "var postList = [];" +
-                        "for (var i = 0; i < postDivs.length; i++) {" +
-                        "    var post = {};" +
-                        "    var postDiv = postDivs[i];" +
+                        "let postList = [];" +
+                        "for (let i = 0; i < postDivs.length; i++) {" +
+                        "    let post = {};" +
+                        "    let postDiv = postDivs[i];" +
                         "    post.title = postDiv.getElementsByTagName(\"img\")[0].alt;" +
                         "    post.videoUrl = postDiv.getElementsByTagName(\"a\")[0].href;" +
                         "    post.cardImageUrl = postDiv.getElementsByTagName(\"img\")[0].getAttribute('data-src');" +
                         "    post.bgImageUrl = post.cardImageUrl;" +
                         "    post.backgroundImageUrl = post.cardImageUrl;" +
                         "    post.studio = '" + Movie.SERVER_FASELHD + "';" +
+                        "    post.mainMovieTitle = '" + movie.getMainMovieTitle() + "';" +
                         "    let u = post.videoUrl;" +
                         "    let n = post.title;" +
                         "    let series = u.includes(\"/seasons\") || n.includes(\"مسلسل\");\n" +
@@ -1406,21 +1407,21 @@ public class FaselHdServer extends AbstractServer {
             } else if (movie.getState() == Movie.GROUP_OF_GROUP_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED GROUP_OF_GROUP_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                        "var seasons = document.querySelectorAll('.seasonDiv');" +
+                        "let seasons = document.querySelectorAll('.seasonDiv');" +
                         "if (seasons.length > 0){" +
-                        "var postList = [];" +
-                        "var description = document.getElementsByClassName(\"singleDesc\")[0].innerHTML.replace(/<.*?>/g, \"\").replace(/(\\r\\n|\\n|\\r)/gm,\"\");" +
-                        "for (var i = 0; i < seasons.length; i++) {" +
-                        "    var post = {};" +
-                        "    var season = seasons[i];" +
+                        "let postList = [];" +
+                        "let description = document.getElementsByClassName(\"singleDesc\")[0].innerHTML.replace(/<.*?>/g, \"\").replace(/(\\r\\n|\\n|\\r)/gm,\"\");" +
+                        "for (let i = 0; i < seasons.length; i++) {" +
+                        "    let post = {};" +
+                        "    let season = seasons[i];" +
                         "    post.videoUrl = 'https://www.faselhd.ac/'+ season.getAttribute('onclick').match(/\\?p=.[^']*/);;" +
                         //   "    post.videoUrl = 'https://www.faselhd.club/?p='+ season.getAttribute('data-href');" +
                         "    post.title = season.querySelector('.title').textContent;" +
                         "    post.cardImageUrl = season.querySelector('[data-src]').getAttribute('data-src');" +
                         "    post.bgImageUrl = post.cardImageUrl;" +
                         "    post.description = description;" +
-                        "    var spans = season.querySelectorAll('.seasonMeta');" +
-                        "    for (var j = 0; j < spans.length; j++) {" +
+                        "    let spans = season.querySelectorAll('.seasonMeta');" +
+                        "    for (let j = 0; j < spans.length; j++) {" +
                         "        post.rate = spans[j].querySelector('*').textContent;" +
                         "        break;" +
                         "    }" +
@@ -1439,11 +1440,11 @@ public class FaselHdServer extends AbstractServer {
                         "                        const boxs = document.getElementsByClassName('seasonDiv active');\n" +
                         "                        const postList = [];\n" +
                         "                        if (boxs.length === 0){\n" +
-                        "                        var title = document.getElementsByClassName('h1 title')[0].text;\n" +
-                        "                        var cardImageUrl = document.getElementsByClassName('img-fluid')[0].getAttribute('src');\n" +
-                        "                        var divs = document.getElementById('epAll').querySelectorAll('[href]');\n" +
+                        "                        let title = document.getElementsByClassName('h1 title')[0].text;\n" +
+                        "                        let cardImageUrl = document.getElementsByClassName('img-fluid')[0].getAttribute('src');\n" +
+                        "                        let divs = document.getElementById('epAll').querySelectorAll('[href]');\n" +
                         "                        for (const div of divs) {\n" +
-                        "                        var post = {};\n" +
+                        "                        let post = {};\n" +
                         "                        post.cardImageUrl = cardImageUrl;\n" +
                         "                        post.bgImageUrl = cardImageUrl;\n" +
                         "                        post.backgroundImageUrl = cardImageUrl;\n" +
@@ -1456,12 +1457,12 @@ public class FaselHdServer extends AbstractServer {
                         "                        postList.push(post);\n" +
                         "                        }\n" +
                         "                        }else{\n" +
-                        "                        for (var i = 0; i < boxs.length; i++) {\n" +
-                        "                        var title = boxs[i].getElementsByClassName('title')[0].textContent;\n" +
-                        "                        var cardImageUrl = boxs[i].querySelectorAll('[data-src]')[0].getAttribute('data-src');\n" +
-                        "                        var divs = document.getElementById('epAll').getElementsByTagName('a');\n" +
+                        "                        for (let i = 0; i < boxs.length; i++) {\n" +
+                        "                        let title = boxs[i].getElementsByClassName('title')[0].textContent;\n" +
+                        "                        let cardImageUrl = boxs[i].querySelectorAll('[data-src]')[0].getAttribute('data-src');\n" +
+                        "                        let divs = document.getElementById('epAll').getElementsByTagName('a');\n" +
                         "                        for (const div of divs) {\n" +
-                        "                        var post = {};\n" +
+                        "                        let post = {};\n" +
                         "                        post.cardImageUrl = cardImageUrl;\n" +
                         "                        post.bgImageUrl = cardImageUrl;\n" +
                         "                        post.backgroundImageUrl = cardImageUrl;\n" +
@@ -1482,7 +1483,7 @@ public class FaselHdServer extends AbstractServer {
             else if (movie.getState() == Movie.ITEM_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED ITEM_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                        "var iframe = document.querySelector('iframe[src]:not([src=\"about:blank\"])');" +
+                        "let iframe = document.querySelector('iframe[src]:not([src=\"about:blank\"])');" +
                         "  // Check if the iframe element was found" +
                         "  if (iframe) {" +
                         "    iframe.scrollIntoView({behavior: 'smooth'});" +
@@ -1548,7 +1549,7 @@ public class FaselHdServer extends AbstractServer {
             } else if (movie.getState() == Movie.RESOLUTION_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED RESOLUTION_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                        "var buttons = document.getElementsByClassName('hd_btn');" +
+                        "let buttons = document.getElementsByClassName('hd_btn');" +
                         " if (buttons.length > 0){" +
                         "     buttons[0].click();" +
                         "}" +
@@ -1558,21 +1559,21 @@ public class FaselHdServer extends AbstractServer {
             if (movie.getState() == Movie.ITEM_STATE) {
                 Log.d(TAG, "getScript: fasel WEB_VIEW_MODE_ON_LOAD_RESOURCES ITEM_STATE");
                 script =
-//                            "var singeWatch = document.getElementsByClassName(\"signleWatch\");" +
+//                            "let singeWatch = document.getElementsByClassName(\"signleWatch\");" +
 //                                    "if(singeWatch.length > 0){" +
 //                                    "singeWatch[0].getElementsByTagName('li')[1].click();" +
 //                                    "singeWatch[0].getElementsByTagName('li')[0].click();" +
 //                                    "}" +
-                        "var singeWatch = document.getElementsByClassName('signleWatch');\n" +
+                        "let singeWatch = document.getElementsByClassName('signleWatch');\n" +
                                 "            if (singeWatch.length > 0) {\n" +
                                 "                singeWatch[0].getElementsByTagName('li')[1].click();\n" +
                                 "                //singeWatch[0].getElementsByTagName('li')[0].click();\n" +
                                 "            }\n" +
-                                "            var video = document.getElementsByTagName('video');\n" +
+                                "            let video = document.getElementsByTagName('video');\n" +
                                 "            if (video.length > 0){\n" +
                                 "                video[0].click();\n" +
                                 "            }\n" +
-                                "            var button = document.getElementsByClassName('hd_btn');\n" +
+                                "            let button = document.getElementsByClassName('hd_btn');\n" +
                                 "            if (button.length > 0){\n" +
                                 "                button[0].click();\n" +
                                 "                window.frames['player_iframe'].document.querySelectorAll('.hd_btn selected')[0].click();" +

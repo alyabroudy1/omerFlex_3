@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -15,7 +14,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityOptionsCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.app.DetailsSupportFragment;
@@ -27,7 +25,6 @@ import androidx.leanback.widget.DetailsOverviewRow;
 import androidx.leanback.widget.FullWidthDetailsOverviewRowPresenter;
 import androidx.leanback.widget.FullWidthDetailsOverviewSharedElementHelper;
 import androidx.leanback.widget.HeaderItem;
-import androidx.leanback.widget.ImageCardView;
 import androidx.leanback.widget.ListRow;
 import androidx.leanback.widget.ListRowPresenter;
 import androidx.leanback.widget.OnActionClickedListener;
@@ -40,8 +37,6 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.model.LazyHeaders;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
-import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieHistory;
@@ -50,24 +45,21 @@ import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerConfigManager;
-import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.view.mobile.DetailsViewControl;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import okhttp3.Headers;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
@@ -82,6 +74,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     public static final int ACTION_OPEN_DETAILS_ACTIVITY = 1;
     public static final int ACTION_OPEN_EXTERNAL_ACTIVITY = 2;
     public static final int ACTION_OPEN_NO_ACTIVITY = 3;
+    private static final int ACTION_OPEN_BROWSER_FOR_RESULT = 4;
 
     private static final int ACTION_WATCH = 1;
     private static final int ACTION_WATCH_TRAILER = 2;
@@ -89,10 +82,12 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     private static final int DETAIL_THUMB_HEIGHT = 274;
 
     private static final int NUM_COLS = 10;
-
+    int defaultHeadersCounter = 0;
+    int clickedMovieIndex = 0;
     private Movie mSelectedMovie;
 
     private ArrayObjectAdapter mAdapter;
+    private ArrayObjectAdapter clickedMovieAdapter;
     private ClassPresenterSelector mPresenterSelector;
 
     private DetailsSupportFragmentBackgroundController mDetailsBackground;
@@ -112,17 +107,19 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
     DetailsOverviewRow row;
     Fragment fragment = this;
+    Activity activity;
     private boolean isInitialized = false;
 
     ServerConfig config;
+    DetailsViewControl detailsViewControl;
 
     // ********
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate DetailsFragment");
-        super.onCreate(savedInstanceState);
         start();
+        super.onCreate(savedInstanceState);
     }
 
     public void start() {
@@ -130,31 +127,28 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             return;
         }
         setRetainInstance(true);
-        Activity currentActivity = getActivity();
-        if (currentActivity == null) {
+        activity = getActivity();
+        if (activity == null) {
             return;
         }
-        Intent currentIntent = currentActivity.getIntent();
+        Intent currentIntent = activity.getIntent();
 
         if (currentIntent == null) {
             return;
         }
 
         mSelectedMovie = Util.recieveSelectedMovie(getActivity());
-
-        if (mSelectedMovie != null) {
+        listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
 //            mSelectedMovie.setMainMovie(mSelectedMovieMainMovie);
 
-            //very important to initialize all required
-            initializeThings();
-            if (mSelectedMovie.getMovieHistory() == null && mSelectedMovie.getMainMovie() != null) {
-                mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mSelectedMovie.getMainMovie().getVideoUrl())));
-            }
-            setupRowsAndServer();
-        } else {
-            Intent intent = new Intent(getActivity(), MainActivity.class);
-            startActivity(intent);
+        //very important to initialize all required
+        initializeThings();
+
+        // todo clarify
+        if (mSelectedMovie.getMovieHistory() == null && mSelectedMovie.getMainMovie() != null) {
+            mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mSelectedMovie.getMainMovie().getVideoUrl())));
         }
+        setupRowsAndServer();
 
         isInitialized = true;
     }
@@ -165,8 +159,8 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         //   Log.d(TAG, "onStart::: " + mSelectedMovie.getStudio());
         //fetch server and load description and bg image
 //        server = ServerManager.determineServer(mSelectedMovie, listRowAdapter, getActivity(), this);
-        super.onStart();
         start();
+        super.onStart();
     }
 
     @Override
@@ -180,18 +174,18 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
         mDetailsBackground = new DetailsSupportFragmentBackgroundController(this);
         detailsDescriptionPresenter = new DetailsDescriptionPresenter();
-        listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
 
 
-        String movieJson = Objects.requireNonNull(getActivity()).getIntent().getStringExtra(DetailsActivity.MOVIE_SUBLIST);
-        Gson gson = new Gson();
-        Type type = new TypeToken<List<Movie>>() {
-        }.getType();
-        List<Movie> movieSublist = gson.fromJson(movieJson, type);
-        Log.d(TAG, "onCreate: subList:" + movieSublist);
-        if (movieSublist != null) {
-            mSelectedMovie.setSubList(movieSublist);
-        }
+
+//        String movieJson = Objects.requireNonNull(getActivity()).getIntent().getStringExtra(DetailsActivity.MOVIE_SUBLIST);
+//        Gson gson = new Gson();
+//        Type type = new TypeToken<List<Movie>>() {
+//        }.getType();
+//        List<Movie> movieSublist = gson.fromJson(movieJson, type);
+//        Log.d(TAG, "onCreate: subList:" + movieSublist);
+//        if (movieSublist != null) {
+//            mSelectedMovie.setSubList(movieSublist);
+//        }
 
         mProgressDialog = new ProgressDialog(getContext());
         mProgressDialog.setTitle("جاري التحميل...");
@@ -199,7 +193,12 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         mProgressDialog.setIndeterminate(true);
         mProgressDialog.setCancelable(true);
 
-        server = ServerManager.determineServer(mSelectedMovie, listRowAdapter, getActivity(), fragment);
+//        server = ServerManager.determineServer(mSelectedMovie, listRowAdapter, getActivity(), fragment);
+        server = ServerConfigManager.getServer(mSelectedMovie.getStudio());
+        if (server == null) {
+            Log.d(TAG, "initializeThings: unknown server: " + mSelectedMovie.getStudio() + ", state: " + mSelectedMovie.getState());
+            return;
+        }
 
         mPresenterSelector = new ClassPresenterSelector();
         mAdapter = new ArrayObjectAdapter(mPresenterSelector);
@@ -210,12 +209,87 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         setAdapter(mAdapter);
         initializeBackground(mSelectedMovie);
 
+        detailsViewControl = new DetailsViewControl(getActivity(), fragment, dbHelper) {
+            @Override
+            protected void updateCurrentMovie(Movie movie) {
+                updateCurrentMovieView(movie);
+            }
+
+            @Override
+            protected <T> void updateMovieListOfMovieAdapter(ArrayList<Movie> movies, T clickedAdapter) {
+                if (clickedAdapter instanceof ArrayObjectAdapter) {
+                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
+                    extendMovieListOfHorizontalMovieAdapter(movies, adapter);
+                }
+            }
+
+            @Override
+            protected <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
+                return null;
+            }
+
+            @Override
+            protected <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie) {
+                Log.d(TAG, "updateClickedMovieItem: "+ clickedAdapter);
+                if (clickedAdapter instanceof ArrayObjectAdapter) {
+                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
+                    Log.d(TAG, "updateClickedMovieItem: "+ adapter.size());
+                    updateRelatedMovieItem(adapter, clickedMovieIndex, resultMovie);
+                }
+            }
+
+            @Override
+            protected void openDetailsActivity(Movie movie, Activity activity) {
+                Util.openVideoDetailsIntent(movie, activity);
+            }
+
+            @Override
+            protected <T> void removeRow(T rowsAdapter, int i) {
+                if (rowsAdapter instanceof ArrayObjectAdapter){
+                    try {
+                        ((ArrayObjectAdapter) rowsAdapter).remove(i);
+                    } catch (Exception exception) {
+                        Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
+                    }
+                }
+            }
+        };
         setOnItemViewClickedListener(new ItemViewClickedListener());
     }
+    private void updateRelatedMovieItem(ArrayObjectAdapter adapter, int clickedMovieIndex, Movie resultMovie) {
+        if (adapter == null || resultMovie == null) {
+            Log.d(TAG, "updateRelatedMovieItem: undefined adapter or movie");
+            return;
+        }
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+//                Log.d(TAG, "run: adapter> " + objectAdapter.size());
+                adapter.replace(clickedMovieIndex, resultMovie);
+            }
+        });
+    }
 
+    private void extendMovieListOfHorizontalMovieAdapter(ArrayList<Movie> movies, ArrayObjectAdapter adapter) {
+        if (adapter == null) {
+            Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: undefined adapter");
+            return;
+        }
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+//                Log.d(TAG, "run: adapter> " + objectAdapter.size());
+                adapter.addAll(adapter.size(), movies);
+            }
+        });
+    }
 
     //fetch and update current movie
     private void setupRowsAndServer() {
+        if (mSelectedMovie.getFetch() == Movie.NO_FETCH_MOVIE_AT_START) {
+            Log.d(TAG, "setupRowsAndServer:NO_FETCH_MOVIE_AT_START ");
+            return;
+        }
 
         //todo: 1. at start init and fetch current movie and update the current movie accordingly
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -228,34 +302,42 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                         @Override
                         public void onSuccess(Movie result, String title) {
                             Log.d(TAG, "setupRowsAndServer: mSelectedMovie after first fetch:" + mSelectedMovie);
-                            if (mSelectedMovie.getSubList() != null) {
-                                listRowAdapter.addAll(0, mSelectedMovie.getSubList());
-                                Movie firstSubMovie = mSelectedMovie.getSubList().get(0);
-                                if (firstSubMovie != null) {
-                                    boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE;
-                                    boolean watchOmarCond = mSelectedMovie.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
-                                    if (watchCond || watchOmarCond) {
-                                        getActivity().runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                loadActionRow();
-                                            }
-                                        });
-                                    }
-                                }
-                                removeInvalidLinks(mSelectedMovie.getSubList());
+                            if (result == null || result.getSubList() == null || result.getSubList().isEmpty()) {
+                                Log.d(TAG, "setupRowsAndServer: onSuccess after first fetch: empty movie");
+                                return;
                             }
+//                            if (mSelectedMovie.getSubList() != null) {
+                            listRowAdapter.addAll(0, result.getSubList());
+                            Movie firstSubMovie = result.getSubList().get(0);
+                            if (firstSubMovie != null) {
+                                boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE;
+                                boolean watchOmarCond = result.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
+                                if (watchCond || watchOmarCond) {
+                                    Log.d(TAG, "onSuccess: watchCond");
+                                    getActivity().runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            loadActionRow();
+                                        }
+                                    });
+                                }
+                            }
+                            //todo test
+//                            removeInvalidLinks(mSelectedMovie.getSubList());
+
+
                             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
                             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
                             setSelectedPosition(getAdapter().size() - 1, true);
-                            Log.d(TAG, "setupRowsAndServer: mSelectedMovie sublist after first fetch:" + mSelectedMovie.getSubList().toString());
+//                            Log.d(TAG, "setupRowsAndServer: mSelectedMovie sublist after first fetch:" + mSelectedMovie.getSubList().toString());
 
                             hideProgressDialog(true);
                         }
 
                         @Override
-                        public void onInvalidCookie(Movie result) {
-
+                        public void onInvalidCookie(Movie result, String title) {
+                            result.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+                            Util.openBrowserIntent(result, getActivity(), false, true);
                         }
 
                         @Override
@@ -265,7 +347,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
                         @Override
                         public void onInvalidLink(String message) {
-
+                            Log.d(TAG, "onInvalidLink: " + message);
                         }
                     }
             ).movie;
@@ -336,10 +418,10 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             //            mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
             //            mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
             for (Movie movie : subList) {
-                if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE || movie.getState() == Movie.VIDEO_STATE){
+                if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE || movie.getState() == Movie.VIDEO_STATE) {
                     boolean invalidLink = !isValidLink(movie);
                     Log.d(TAG, "removeInvalidLinks: " + !invalidLink + ", " + movie.getTitle() + ", " + movie.getVideoUrl());
-                    if (invalidLink){
+                    if (invalidLink) {
                         int movieIndexInRow = listRowAdapter.indexOf(movie);
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
@@ -348,9 +430,9 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                                 listRowAdapter.notifyArrayItemRangeChanged(0, listRowAdapter.size());
 
                                 mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
-                                            mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
-                                            mSelectedMovie.getSubList().remove(movie);
-                                Log.d(TAG, "removeInvalidLinks: removed index "+ movieIndexInRow + "title: "+movie.getTitle());
+                                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+                                mSelectedMovie.getSubList().remove(movie);
+                                Log.d(TAG, "removeInvalidLinks: removed index " + movieIndexInRow + "title: " + movie.getTitle());
                             }
                         });
 
@@ -438,7 +520,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             }
         } catch (IOException e) {
             Log.d(TAG, "isValidLink: error: " + e.getMessage());
-            if (e.getMessage().contains("PROTOCOL_ERROR")){
+            if (e.getMessage().contains("PROTOCOL_ERROR")) {
                 return true;
             }
         }
@@ -484,64 +566,68 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
     private void initializeBackground(Movie data) {
         mDetailsBackground.enableParallax();
-        server = ServerManager.determineServer(mSelectedMovie, null, getActivity(), this);
-        config = ServerConfigManager.getConfig(server.getServerId());
-        if (config.getHeaders() != null) {
-            String cookies = config.getStringCookies();
-            if (cookies == null) {
-                cookies = "";
-            }
 
-            LazyHeaders.Builder builder = new LazyHeaders.Builder()
-                    .addHeader("Cookie", cookies);
+        config = ServerConfigManager.getConfig(data.getStudio());
+        boolean noHeaderCond = config == null ||
+                config.getHeaders() == null ||
+                config.getHeaders().isEmpty();
+        if (noHeaderCond) {
+            Glide.with(getActivity())
+                    .asBitmap()
+                    .centerCrop()
+                    .error(R.drawable.default_background_2)
+                    .fallback(R.drawable.default_background_2)
+                    .placeholder(R.drawable.default_background_2)
+                    .load(data.getBackgroundImageUrl())
+                    .into(new SimpleTarget<Bitmap>() {
+                        @Override
+                        public void onResourceReady(@NonNull Bitmap bitmap,
+                                                    @Nullable Transition<? super Bitmap> transition) {
+                            mDetailsBackground.setCoverBitmap(bitmap);
+                            mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
+                        }
+                    });
+            return;
+        }
 
-            for (Map.Entry<String, String> entry : config.getHeaders().entrySet()) {
-                builder.addHeader(entry.getKey(), entry.getValue());
-            }
+
+        String cookies = config.getStringCookies();
+        if (cookies == null) {
+            cookies = "";
+        }
+
+        LazyHeaders.Builder builder = new LazyHeaders.Builder()
+                .addHeader("Cookie", cookies);
+
+        for (Map.Entry<String, String> entry : config.getHeaders().entrySet()) {
+            builder.addHeader(entry.getKey(), entry.getValue());
+        }
 //            GlideUrl glideUrl = new GlideUrl(data.getBackgroundImageUrl(), builder.build());
 //            if (mSelectedMovie.getStudio().equals(Movie.SERVER_FASELHD)){
 //                glideUrl = new GlideUrl("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png", builder.build());
 //            }
 
-            if (data.getBackgroundImageUrl() == null || data.getBackgroundImageUrl().equals("")) {
-                data.setBackgroundImageUrl(data.getCardImageUrl());
-            }
-
-            Glide.with(getActivity())
-                    .asBitmap()
-                    //.fitCenter()
-                    .centerCrop()
-                    //  .load(glideUrl)
-                    .load(data.getBackgroundImageUrl())
-                    .error(R.drawable.default_background_2)
-                    .fallback(R.drawable.default_background_2)
-                    .placeholder(R.drawable.default_background_2)
-                    .into(new SimpleTarget<Bitmap>() {
-                        @Override
-                        public void onResourceReady(@NonNull Bitmap bitmap,
-                                                    @Nullable Transition<? super Bitmap> transition) {
-                            mDetailsBackground.setCoverBitmap(bitmap);
-                            mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
-                        }
-                    });
-
-        } else {
-            Glide.with(getActivity())
-                    .asBitmap()
-                    .centerCrop()
-                    .error(R.drawable.default_background_2)
-                    .fallback(R.drawable.default_background_2)
-                    .placeholder(R.drawable.default_background_2)
-                    .load(data.getBackgroundImageUrl())
-                    .into(new SimpleTarget<Bitmap>() {
-                        @Override
-                        public void onResourceReady(@NonNull Bitmap bitmap,
-                                                    @Nullable Transition<? super Bitmap> transition) {
-                            mDetailsBackground.setCoverBitmap(bitmap);
-                            mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
-                        }
-                    });
+        if (data.getBackgroundImageUrl() == null || data.getBackgroundImageUrl().equals("")) {
+            data.setBackgroundImageUrl(data.getCardImageUrl());
         }
+
+        Glide.with(getActivity())
+                .asBitmap()
+                //.fitCenter()
+                .centerCrop()
+                //  .load(glideUrl)
+                .load(data.getBackgroundImageUrl())
+                .error(R.drawable.default_background_2)
+                .fallback(R.drawable.default_background_2)
+                .placeholder(R.drawable.default_background_2)
+                .into(new SimpleTarget<Bitmap>() {
+                    @Override
+                    public void onResourceReady(@NonNull Bitmap bitmap,
+                                                @Nullable Transition<? super Bitmap> transition) {
+                        mDetailsBackground.setCoverBitmap(bitmap);
+                        mAdapter.notifyArrayItemRangeChanged(0, mAdapter.size());
+                    }
+                });
     }
 
     private void setupDetailsOverviewRow() {
@@ -598,7 +684,9 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         detailsPresenter.setOnActionClickedListener(new OnActionClickedListener() {
             @Override
             public void onActionClicked(Action action) {
-                handleActionClick(action);
+                Log.d(TAG, "onActionClicked: "+listRowAdapter.size());
+                clickedMovieAdapter = listRowAdapter;
+                detailsViewControl.handleActionClick(mSelectedMovie, action.getId(), clickedMovieAdapter);
             }
         });
         mPresenterSelector.addClassPresenter(DetailsOverviewRow.class, detailsPresenter);
@@ -625,7 +713,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
                 showProgressDialog(false);
                 ExecutorService executor = Executors.newSingleThreadExecutor();
-                showProgressDialog(false);
+
                 Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_SHORT).show();
                 executor.submit(() -> {
                     // mSelectedMovie = Objects.requireNonNull(server).fetchItem(mSelectedMovie);
@@ -633,6 +721,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                     movie.setRowIndex(0); // very important to update the correct item of the row
                     Log.d(TAG, "run: condWatch2 " + movie);
                     //todo : handle local watch
+                    dbHelper.addMainMovieToHistory(mSelectedMovie);
 //                    Movie res = server.fetchToWatchLocally(movie);
                     Movie res = server.fetch(
                             movie,
@@ -641,21 +730,17 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                                 @Override
                                 public void onSuccess(Movie result, String title) {
                                     if (result != null && result.getVideoUrl() != null) {
-                                        String type = "video/*";
+//                                        String type = "video/*";
                                         // Uri uri = Uri.parse(res.getSubList().get(0).getVideoUrl());
                                         Log.d(TAG, "onActionClicked: Resolutions " + result);
-                                        Objects.requireNonNull(getActivity()).runOnUiThread(new Runnable() {
+                                        getActivity().runOnUiThread(new Runnable() {
                                             @Override
                                             public void run() {
-                                                //Intent intent = new Intent(activity, PlaybackActivity.class);
-                                                Intent exoIntent = new Intent(getActivity(), ExoplayerMediaPlayer.class);
-                                                exoIntent.putExtra(DetailsActivity.MOVIE, result);
-                                                exoIntent.putExtra(DetailsActivity.MAIN_MOVIE, result.getMainMovie());
-                                                //intent.putExtra(DetailsActivity.MOVIE, (Serializable) res.getSubList().get(0));
-                                                Objects.requireNonNull(getActivity()).startActivity(exoIntent);
+                                                Util.openExoPlayer(result, getActivity(), true);
                                                 //dbHelper.addMainMovieToHistory(res.getMainMovieTitle(), null);
                                                 updateItemFromActivityResult(result);
-                                                dbHelper.addMainMovieToHistory(mSelectedMovie);
+
+                                                hideProgressDialog(false);
                                             }
                                         });
 
@@ -663,8 +748,10 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                                 }
 
                                 @Override
-                                public void onInvalidCookie(Movie result) {
-
+                                public void onInvalidCookie(Movie result, String title) {
+                                    hideProgressDialog(false);
+                                    result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
+                                    Util.openBrowserIntent(result, getActivity(), false, true);
                                 }
 
                                 @Override
@@ -742,299 +829,424 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                 Object item,
                 RowPresenter.ViewHolder rowViewHolder,
                 Row row) {
-
-            handleItemClick(itemViewHolder, item, rowViewHolder, row);
-        }
-    }
-
-    private void handleItemClick(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder,
-                                 Row row) {
-        if (item instanceof Movie) {
-            Log.d(TAG, "Item: " + item.toString());
-            int nextAction = server.fetchNextAction((Movie) item);
-
-            generateMovieHistory(mSelectedMovie, (Movie) item);
-            //find the adapter to get the item index in order to identify and update the correct clicked item on returned result
-            ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
-            int itemIndexInRow = adapter.indexOf(item);
-            Log.d(TAG, "handleItemClick: itemIndex:" + itemIndexInRow);
-            ((Movie) item).setRowIndex(itemIndexInRow);
-            Log.d(TAG, "handleItemClick: id: " + ((Movie) item).getRowIndex());
-
-            if (nextAction == ACTION_OPEN_DETAILS_ACTIVITY) {
-                Log.d(TAG, "onItemClicked: new Activity");
-                Intent intent = new Intent(getActivity(), DetailsActivity.class);
-                intent.putExtra(getResources().getString(R.string.movie), (Serializable) (Movie) item);
-                intent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) (Movie) ((Movie) item).getMainMovie());
-                Bundle bundle =
-                        ActivityOptionsCompat.makeSceneTransitionAnimation(
-                                        getActivity(),
-                                        ((ImageCardView) itemViewHolder.view).getMainImageView(),
-                                        DetailsActivity.SHARED_ELEMENT_NAME)
-                                .toBundle();
-                getActivity().startActivity(intent, bundle);
-            } else if (nextAction == ACTION_OPEN_EXTERNAL_ACTIVITY) { // means to run movie with external video player usually when movie in Video state is
-                Log.d(TAG, "onItemClicked: fetch only");
-
-                showProgressDialog(false);
-                ExecutorService executor = Executors.newSingleThreadExecutor();
-
-                executor.submit(() -> {
-                    Movie movie = server.fetch(
-                            (Movie) item,
-                            ((Movie) item).getState(),
-                            new ServerInterface.ActivityCallback<Movie>() {
-                                @Override
-                                public void onSuccess(Movie result, String title) {
-                                    Log.d(TAG, "run: fetch only save movie 2");
-
-                                    if (result != null && result.getVideoUrl() != null) {
-                                        //dbHelper.addMainMovieToHistory(movie.getMainMovieTitle(), null);
-                                        getActivity().runOnUiThread(() -> {
-                                            String type = "video/*"; // It works for all video application
-                                            Uri uri = Uri.parse(result.getVideoUrl());
-                                            Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
-                                            in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                            //  in1.setPackage("org.videolan.vlc");
-                                            in1.setDataAndType(uri, type);
-                                            // movie.getMainMovie().save(dbHelper);
-                                            hideProgressDialog(true);
-
-                                            getActivity().startActivity(in1);
-                                            updateItemFromActivityResult(result);
-                                            dbHelper.addMainMovieToHistory(mSelectedMovie);
-                                        });
-                                    }
-                                }
-
-                                @Override
-                                public void onInvalidCookie(Movie result) {
-
-                                }
-
-                                @Override
-                                public void onInvalidLink(Movie result) {
-
-                                }
-
-
-                                @Override
-                                public void onInvalidLink(String message) {
-
-                                }
-                            }
-                    ).movie;
-                });
-
-                executor.shutdown();
-
-            } else {
-                if (!((Movie) item).getVideoUrl().equals("")) {
-                    Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
+            if (item instanceof String) {
+                if (((String) item).contains(getString(R.string.error_fragment))) {
+                    Intent intent = new Intent(getActivity(), BrowseErrorActivity.class);
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(getActivity(), ((String) item), Toast.LENGTH_SHORT).show();
                 }
-                ExecutorService executor = Executors.newSingleThreadExecutor();
-
-                executor.submit(() -> {
-                    //dbHelper.addMainMovieToHistory(((Movie) item).getMainMovieTitle(), null);
-                    //fetch movie and the server is responsible for playing the video internal or external
-                    Movie movie = server.fetch(
-                            (Movie) item,
-                            ((Movie) item).getState(),
-                            new ServerInterface.ActivityCallback<Movie>() {
-                                @Override
-                                public void onSuccess(Movie result, String title) {
-                                    Log.d(TAG, "handleItemClick: open No Activity: " + result);
-                                    if (result != null) {
-                                        getActivity().runOnUiThread(() -> {
-                                            String type = "video/*"; // It works for all video application
-                                            Uri uri = Uri.parse(result.getVideoUrl());
-                                            Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
-                                            in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                            //  in1.setPackage("org.videolan.vlc");
-                                            in1.setDataAndType(uri, type);
-                                            hideProgressDialog(true);
-
-                                            getActivity().startActivity(in1);
-                                            updateItemFromActivityResult(result);
-                                            dbHelper.addMainMovieToHistory(mSelectedMovie);
-
-                                        });
-                                    }
-                                }
-
-                                @Override
-                                public void onInvalidCookie(Movie result) {
-
-                                }
-
-                                @Override
-                                public void onInvalidLink(Movie result) {
-
-                                }
-
-
-                                @Override
-                                public void onInvalidLink(String message) {
-
-                                }
-                            }
-                    ).movie;
-
-                });
-
-                executor.shutdown();
-
+                return;
             }
+            if (!(item instanceof Movie)) {
+//                Toast.makeText(getActivity(), "handleItemClicked clicked item not is instanceof Movie ", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "onItemClicked: handleItemClicked clicked item not is instanceof Movie ");
+                return;
+            }
+
+            Movie movie = (Movie) item;
+
+            clickedMovieAdapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
+//            clickedMovie = movie;
+            clickedMovieIndex = clickedMovieAdapter.indexOf(movie);
+            generateMovieHistory(mSelectedMovie, movie);
+//            handleItemClick(itemViewHolder, item, rowViewHolder, row);
+            detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,(ListRow) row, defaultHeadersCounter);
         }
+
     }
 
+//    private void handleItemClick(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder,
+//                                 Row row) {
+//        if (item instanceof String) {
+//            if (((String) item).contains(getString(R.string.error_fragment))) {
+//                Intent intent = new Intent(getActivity(), BrowseErrorActivity.class);
+//                startActivity(intent);
+//            } else {
+//                Toast.makeText(getActivity(), ((String) item), Toast.LENGTH_SHORT).show();
+//            }
+//            return;
+//        }
+//        if (!(item instanceof Movie)) {
+//            Toast.makeText(getActivity(), "handleItemClicked clicked item not is instanceof Movie ", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+//        Movie movie = (Movie) item;
+//
+//        Log.d(TAG, "Item: " + item.toString());
+//        int nextAction = server.fetchNextAction(movie);
+//
+//        generateMovieHistory(mSelectedMovie, movie);
+//
+//        //find the adapter to get the item index in order to identify and update the correct clicked item on returned result
+//        ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
+//        int itemIndexInRow = adapter.indexOf(movie);
+//        Log.d(TAG, "handleItemClick: itemIndex:" + itemIndexInRow);
+//        movie.setRowIndex(itemIndexInRow);
+//        Log.d(TAG, "handleItemClick: id: " + movie.getRowIndex());
+//
+//        if (nextAction == ACTION_OPEN_DETAILS_ACTIVITY) {
+//            Log.d(TAG, "onItemClicked: new Activity");
+//            Intent intent = Util.generateIntent(movie, new Intent(getActivity(), DetailsActivity.class), true);
+//
+//            Bundle bundle =
+//                    ActivityOptionsCompat.makeSceneTransitionAnimation(
+//                                    getActivity(),
+//                                    ((ImageCardView) itemViewHolder.view).getMainImageView(),
+//                                    DetailsActivity.SHARED_ELEMENT_NAME)
+//                            .toBundle();
+//            getActivity().startActivity(intent, bundle);
+//            return;
+//        }
+//        dbHelper.addMainMovieToHistory(mSelectedMovie);
+//
+//        if (nextAction == ACTION_OPEN_EXTERNAL_ACTIVITY) { // means to run movie with external video player usually when movie in Video state is
+//            Log.d(TAG, "onItemClicked: fetch only");
+//            openExternalActivityOnItemClicked(movie);
+//            return;
+//        }
+//
+//        if (nextAction == ACTION_OPEN_NO_ACTIVITY) {
+//            MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
+//                @Override
+//                public void onSuccess(Movie result, String title) {
+//                    Log.d(TAG, "onSuccess: ");
+//                    Util.openExternalVideoPlayer(movie, getActivity());
+//                    updateItemFromActivityResult(result);
+//                }
+//
+//                @Override
+//                public void onInvalidCookie(Movie result, String title) {
+//                    Log.d(TAG, "onInvalidCookie: ");
+//                    movie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+//                    Util.openBrowserIntent(movie, fragment, false, true);
+//                }
+//
+//                @Override
+//                public void onInvalidLink(Movie result) {
+//
+//                }
+//
+//                @Override
+//                public void onInvalidLink(String message) {
+//                    Log.d(TAG, "onInvalidLink: "+message);
+//                }
+//            });
+//        }
+//
+//
+////        if (!((Movie) item).getVideoUrl().equals("")) {
+////            Toast.makeText(getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
+////        }
+//
+//        // case ACTION_OPEN_NO_ACTIVITY
+////        ExecutorService executor = Executors.newSingleThreadExecutor();
+////
+////        executor.submit(() -> {
+////            //dbHelper.addMainMovieToHistory(((Movie) item).getMainMovieTitle(), null);
+////            //fetch movie and the server is responsible for playing the video internal or external
+////            server.fetch(
+////                    movie,
+////                    movie.getState(),
+////                    new ServerInterface.ActivityCallback<Movie>() {
+////                        @Override
+////                        public void onSuccess(Movie result, String title) {
+////                            Log.d(TAG, "handleItemClick: open No Activity: " + result);
+////                            if (result == null) {
+////                                Log.d(TAG, "handleItemClick: open No Activity onSuccess: empty result");
+////                            }
+////                                movieHandler.post(() -> {
+//////                                    String type = "video/*"; // It works for all video application
+//////                                    Uri uri = Uri.parse(result.getVideoUrl());
+//////                                    Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
+//////                                    in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+//////                                    //  in1.setPackage("org.videolan.vlc");
+//////                                    in1.setDataAndType(uri, type);
+////                                    hideProgressDialog(true);
+////                                    Util.openExternalVideoPlayer(result, getActivity());
+////
+//////                                    getActivity().startActivity(in1);
+////                                    updateItemFromActivityResult(result);
+////                                    dbHelper.addMainMovieToHistory(mSelectedMovie);
+////
+////                                });
+////                        }
+////
+////                        @Override
+////                        public void onInvalidCookie(Movie result) {
+////                            result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+////                            Util.openBrowserIntent(result, getActivity(), false, true);
+////                        }
+////
+////                        @Override
+////                        public void onInvalidLink(Movie result) {
+////
+////                        }
+////
+////
+////                        @Override
+////                        public void onInvalidLink(String message) {
+////                            Log.d(TAG, "onInvalidLink: "+ message);
+////                        }
+////                    }
+////            );
+////
+////        });
+////
+////        executor.shutdown();
+//    }
+
+//    private void openExternalActivityOnItemClicked(Movie item) {
+//        showProgressDialog(false);
+//        ExecutorService executor = Executors.newSingleThreadExecutor();
+//
+//        executor.submit(() -> {
+//            Movie movie = server.fetch(
+//                    item,
+//                    item.getState(),
+//                    new ServerInterface.ActivityCallback<Movie>() {
+//                        @Override
+//                        public void onSuccess(Movie result, String title) {
+//                            Log.d(TAG, "run: fetch only save movie 2");
+//
+//                            if (result == null || result.getVideoUrl() == null) {
+//                                Log.d(TAG, "openExternalActivityOnItemClicked: onSuccess: empty result");
+//                                return;
+//                            }
+//                            //dbHelper.addMainMovieToHistory(movie.getMainMovieTitle(), null);
+////                            movieHandler.post(() -> {
+////                                    String type = "video/*"; // It works for all video application
+////                                    Uri uri = Uri.parse(result.getVideoUrl());
+////                                    Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
+////                                    in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+////                                    //  in1.setPackage("org.videolan.vlc");
+////                                    in1.setDataAndType(uri, type);
+//                                // movie.getMainMovie().save(dbHelper);
+//                                hideProgressDialog(true);
+//                                Util.openExternalVideoPlayer(result, getActivity());
+//
+////                                    getActivity().startActivity(in1);
+//                                updateItemFromActivityResult(result);
+////                                dbHelper.addMainMovieToHistory(mSelectedMovie);
+////                            });
+//
+//                        }
+//
+//                        @Override
+//                        public void onInvalidCookie(Movie result, String title) {
+//                            result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+//                            Util.openBrowserIntent(result, getActivity(), false, true);
+//                        }
+//
+//                        @Override
+//                        public void onInvalidLink(Movie result) {
+//
+//                        }
+//
+//
+//                        @Override
+//                        public void onInvalidLink(String message) {
+//                            Log.d(TAG, "onInvalidLink: " + message);
+//                        }
+//                    }
+//            ).movie;
+//        });
+//
+//        executor.shutdown();
+//    }
+
+    private void updateCurrentMovieView(Movie movie){
+        movieHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                mSelectedMovie = movie;
+//                if (movie.getSubList() != null) {
+//                    listRowAdapter.addAll(listRowAdapter.size(), movie.getSubList());
+//                }
+                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+                loadActionRow();
+            }
+        });
+
+    }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d(TAG, "onActivityResult: " + requestCode + ", " + data);
-        if (resultCode == Activity.RESULT_OK) {
-            Log.d(TAG, "onActivityResult:RESULT_OK ");
-            if (data != null) {
-                Gson gson = new Gson();
 
-                //requestCode Movie.REQUEST_CODE_MOVIE_UPDATE is one movie object or 2 for a list of movies
-                //this result is only to update the clicked movie of the sublist only and in some cases to update the description of mSelectedMovie
-                //the id property of Movie object is used to identify the index of the clicked sublist movie
-                if (requestCode == Movie.REQUEST_CODE_MOVIE_UPDATE) {
-                    Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
-                    if (resultMovie != null) {
-                        Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
-
-                        String movieSublistString = data.getStringExtra(DetailsActivity.MOVIE_SUBLIST);
-//                    ArrayList<Movie> movieSublist = (ArrayList<Movie>) data.getSerializableExtra(DetailsActivity.MOVIE_SUBLIST);
-                        Type type = new TypeToken<List<Movie>>() {
-                        }.getType();
-                        List<Movie> movieSublist = gson.fromJson(movieSublistString, type);
-
-                        Log.d(TAG, "onActivityResult: subList:" + movieSublist);
-                        if (movieSublist != null && !movieSublist.isEmpty()) {
-                            String desc = movieSublist.get(0).getDescription();
-                            Log.d(TAG, "onActivityResult: desc: " + desc);
-                            resultMovie.setDescription(desc);
-                            mSelectedMovie.setDescription(desc);
-                            resultMovie.setSubList(movieSublist);
-
-                        }
-                        mSelectedMovie = resultMovie;
-                        if (resultMovie.getSubList() != null) {
-                            listRowAdapter.addAll(listRowAdapter.size(), resultMovie.getSubList());
-                        }
-                        mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
-                        mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
-                    }
-                } else if (requestCode == Movie.REQUEST_CODE_EXOPLAYER) {
-                    Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
-                    Log.d(TAG, "onActivityResult: REQUEST_CODE_EXOPLAYER: " + resultMovie);
-                    updateItemFromActivityResult(resultMovie);
-
-                    Intent exoIntent = new Intent(getActivity(), ExoplayerMediaPlayer.class);
-                    exoIntent.putExtra(DetailsActivity.MOVIE, (Serializable) resultMovie);
-                    exoIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) (resultMovie != null ? resultMovie.getMainMovie() : null));
-                    //intent.putExtra(DetailsActivity.MOVIE, (Serializable) res.getSubList().get(0));
-                    Objects.requireNonNull(getActivity()).startActivity(exoIntent);
-                    dbHelper.addMainMovieToHistory(mSelectedMovie);
-
-                } else if (requestCode == Movie.REQUEST_CODE_FETCH_HTML) {
-                    String result = data.getStringExtra("result");
-                    //todo handle handleOnActivityResultHtml
-//                    Movie resultMovie = (Movie) server.handleOnActivityResultHtml(result, mSelectedMovie);
-//                    Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
-//                    updateItemFromActivityResult(resultMovie);
-                } else if (requestCode == Movie.REQUEST_CODE_EXTERNAL_PLAYER) {
-                    Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
-                    Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
-                    updateItemFromActivityResult(resultMovie);
-
-                    String type = "video/*";
-                    Uri uri = Uri.parse(resultMovie.getVideoUrl());
-                    Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
-                    in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    //  in1.setPackage("org.videolan.vlc");
-                    in1.setDataAndType(uri, type);
-                    getActivity().startActivity(in1);
-                    dbHelper.addMainMovieToHistory(mSelectedMovie);
-
-                } else if (requestCode == Movie.REQUEST_CODE_MOVIE_LIST) {
-                    //list of movies
-                    String result = data.getStringExtra("result");
-                    Log.d(TAG, "onActivityResult: resultString:" + result);
-                    if (result != null) {
-                        Type movieListType = new TypeToken<List<Movie>>() {
-                        }.getType();
-                        List<Movie> movies = gson.fromJson(result, movieListType);
-                        if (movies != null) {
-                            if (mSelectedMovie.getState() == Movie.RESULT_STATE) {
-                                for (Movie mov : movies) {
-                                    // todo; optimize
-//                                    if (server.isSeries(mov)) {
-//                                        movies.get(movies.indexOf(mov)).setState(Movie.GROUP_OF_GROUP_STATE);
-//                                    } else {
-//                                        movies.get(movies.indexOf(mov)).setState(Movie.ITEM_STATE);
-//                                    }
-                                }
-                            }
-                            Log.d(TAG, "onActivityResult: movie before:" + mSelectedMovie.getSubList());
-
-                            if (mSelectedMovie.getSubList() == null) {
-                                mSelectedMovie.setSubList(new ArrayList<>());
-                            }
-                            mSelectedMovie.setSubList(movies);
-
-//                            mSelectedMovie = Movie.clone(mSelectedMovie);
-//                            mSelectedMovie.setSubList(movies);
-                            getActivity().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    for (Movie movie : movies) {
-                                        Log.d(TAG, "run: movie: " + movie);
-                                        listRowAdapter.add(movie);
-                                    }
-                                    mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
-                                    mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
-
-                                    if (movies.size() > 0 && movies.get(0) != null) {
-                                        int state = movies.get(0).getState();
-                                        if (state == Movie.RESOLUTION_STATE || state == Movie.VIDEO_STATE) {
-                                            loadActionRow();
-                                        }
-                                    }
-                                }
-                            });
-
-//                            Movie mm = new Movie();
-//                            mm.setStudio(mSelectedMovie.getStudio());
-//                            mm.setState(Movie.GROUP_OF_GROUP_STATE);
-//                            mm.setDescription(mSelectedMovie.getDescription());
-//                            Intent intent = new Intent(getActivity(), DetailsActivity.class);
-//                            if (movies != null){
-//                                //Convert the movie object to a JSON string
-//                                String movieJson = gson.toJson(movies);
-//                                intent.putExtra(DetailsActivity.MOVIE_SUBLIST, (Serializable) movieJson);
-//                            }
-//                            intent.putExtra(getResources().getString(R.string.movie), (Serializable) (Movie) mm);
-//                            getActivity().startActivity(intent);
-
-
-                            Log.d(TAG, "onActivityResult: listRowAdapter:" + listRowAdapter.size());
-                            Log.d(TAG, "onActivityResult: movies:" + mSelectedMovie.getSubList().toString());
-                        }
-
-                    }
-                }
-            }
-        }
-
+        detailsViewControl.onActivityResult(requestCode, resultCode, data, clickedMovieAdapter, clickedMovieIndex);
         super.onActivityResult(requestCode, resultCode, data);
+//
+//        if (resultCode != Activity.RESULT_OK || data == null) {
+//            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
+//            return;
+//        }
+//            Log.d(TAG, "onActivityResult:RESULT_OK ");
+//
+////                Gson gson = new Gson();
+//
+//        Movie resultMovie = (Movie) data.getParcelableExtra(DetailsActivity.MOVIE);
+////        Type type = new TypeToken<List<Movie>>() {
+////        }.getType();
+////        ArrayList<Movie> movieSublistString = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
+//        ArrayList<Movie> resultMovieSublist = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
+//
+////        List<Movie> resultMovieSublist = gson.fromJson(movieSublistString, type);
+//
+//        String result = data.getStringExtra("result");
+//
+//        //requestCode Movie.REQUEST_CODE_MOVIE_UPDATE is one movie object or 2 for a list of movies
+//                //this result is only to update the clicked movie of the sublist only and in some cases to update the description of mSelectedMovie
+//                //the id property of Movie object is used to identify the index of the clicked sublist movie
+//
+//        switch (requestCode) {
+//            case Movie.REQUEST_CODE_EXOPLAYER:
+//                // open exoplayer after a web activity to fetch the real video link
+//                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_EXOPLAYER");
+//                if (resultMovie != null) {
+//                    resultMovie.setSubList(resultMovieSublist);
+//                }
+//                Util.openExoPlayer(resultMovie, getActivity(), true);
+//                // todo: handle dbHelper
+//                updateItemFromActivityResult(resultMovie);
+//                dbHelper.addMainMovieToHistory(mSelectedMovie);
+//                break;
+//            case Movie.REQUEST_CODE_EXTERNAL_PLAYER:
+//                // open external activity after a web activity to fetch the real video link
+//                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_EXTERNAL_PLAYER");
+//                Util.openExternalVideoPlayer(resultMovie, getActivity());
+//                // todo: handle dbHelper
+////                updateRelatedMovieItem(clickedMovieIndex, resultMovie);
+////                mSelectedMovie = resultMovie;
+//
+//                Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
+//                updateItemFromActivityResult(resultMovie);
+//                dbHelper.addMainMovieToHistory(mSelectedMovie);
+//                break;
+//            default: //case Movie.REQUEST_CODE_MOVIE_UPDATE
+//                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE unknown: "+ requestCode);
+//                updateCurrentMovieView(resultMovie);
+//        }
+//
+//
+//        if (requestCode == Movie.REQUEST_CODE_MOVIE_UPDATE) {
+//                    Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);
+//                    if (resultMovie != null) {
+//                        Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
+//
+//                        String movieSublistString = data.getStringExtra(DetailsActivity.MOVIE_SUBLIST);
+////                    ArrayList<Movie> movieSublist = (ArrayList<Movie>) data.getSerializableExtra(DetailsActivity.MOVIE_SUBLIST);
+//                        Type type = new TypeToken<List<Movie>>() {
+//                        }.getType();
+//                        List<Movie> movieSublist = gson.fromJson(movieSublistString, type);
+//
+//                        Log.d(TAG, "onActivityResult: subList:" + movieSublist);
+//                        if (movieSublist != null && !movieSublist.isEmpty()) {
+//                            String desc = movieSublist.get(0).getDescription();
+//                            Log.d(TAG, "onActivityResult: desc: " + desc);
+//                            resultMovie.setDescription(desc);
+//                            mSelectedMovie.setDescription(desc);
+//                            resultMovie.setSubList(movieSublist);
+//
+//                        }
+//                        mSelectedMovie = resultMovie;
+//                        if (resultMovie.getSubList() != null) {
+//                            listRowAdapter.addAll(listRowAdapter.size(), resultMovie.getSubList());
+//                        }
+//                        mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+//                        mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+//                    }
+//                }
+//         else if (requestCode == Movie.REQUEST_CODE_FETCH_HTML) {
+//                    String result = data.getStringExtra("result");
+//                    //todo handle handleOnActivityResultHtml
+////                    Movie resultMovie = (Movie) server.handleOnActivityResultHtml(result, mSelectedMovie);
+////                    Log.d(TAG, "onActivityResult: REQUEST_CODE_MOVIE_UPDATE: " + resultMovie);
+////                    updateItemFromActivityResult(resultMovie);
+//                }
+//         else if (requestCode == Movie.REQUEST_CODE_EXTERNAL_PLAYER)
+//         {
+//
+//
+//                } else if (requestCode == Movie.REQUEST_CODE_MOVIE_LIST) {
+//                    //list of movies
+//                    Log.d(TAG, "onActivityResult: resultString:" + result);
+//                    if (result == null) {
+//                        return;
+//                    }
+//                        Type movieListType = new TypeToken<List<Movie>>() {
+//                        }.getType();
+//                        List<Movie> movies = gson.fromJson(result, movieListType);
+//                        if (movies != null) {
+//                            if (mSelectedMovie.getState() == Movie.RESULT_STATE) {
+//                                for (Movie mov : movies) {
+//                                    // todo; optimize
+////                                    if (server.isSeries(mov)) {
+////                                        movies.get(movies.indexOf(mov)).setState(Movie.GROUP_OF_GROUP_STATE);
+////                                    } else {
+////                                        movies.get(movies.indexOf(mov)).setState(Movie.ITEM_STATE);
+////                                    }
+//                                }
+//                            }
+//                            Log.d(TAG, "onActivityResult: movie before:" + mSelectedMovie.getSubList());
+//
+//                            if (mSelectedMovie.getSubList() == null) {
+//                                mSelectedMovie.setSubList(new ArrayList<>());
+//                            }
+//                            mSelectedMovie.setSubList(movies);
+//
+////                            mSelectedMovie = Movie.clone(mSelectedMovie);
+////                            mSelectedMovie.setSubList(movies);
+//                            getActivity().runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    for (Movie movie : movies) {
+//                                        Log.d(TAG, "run: movie: " + movie);
+//                                        listRowAdapter.add(movie);
+//                                    }
+//                                    mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+//                                    mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+//
+//                                    if (movies.size() > 0 && movies.get(0) != null) {
+//                                        int state = movies.get(0).getState();
+//                                        if (state == Movie.RESOLUTION_STATE || state == Movie.VIDEO_STATE) {
+//                                            loadActionRow();
+//                                        }
+//                                    }
+//                                }
+//                            });
+//
+////                            Movie mm = new Movie();
+////                            mm.setStudio(mSelectedMovie.getStudio());
+////                            mm.setState(Movie.GROUP_OF_GROUP_STATE);
+////                            mm.setDescription(mSelectedMovie.getDescription());
+////                            Intent intent = new Intent(getActivity(), DetailsActivity.class);
+////                            if (movies != null){
+////                                //Convert the movie object to a JSON string
+////                                String movieJson = gson.toJson(movies);
+////                                intent.putExtra(DetailsActivity.MOVIE_SUBLIST, (Serializable) movieJson);
+////                            }
+////                            intent.putExtra(getResources().getString(R.string.movie), (Serializable) (Movie) mm);
+////                            getActivity().startActivity(intent);
+//
+//
+//                            Log.d(TAG, "onActivityResult: listRowAdapter:" + listRowAdapter.size());
+//                            Log.d(TAG, "onActivityResult: movies:" + mSelectedMovie.getSubList().toString());
+//                        }
+//
+//                    }
+//
+
+
+//        super.onActivityResult(requestCode, resultCode, data);
         // Objects.requireNonNull(getView()).requestFocus();
     }
 
     private void updateItemFromActivityResult(Movie resultMovie) {
-        if (resultMovie != null && resultMovie.getVideoUrl() != null) {
+        if (resultMovie == null || resultMovie.getVideoUrl() == null) {
+            return;
+        }
             //find the correct clicked movie to be updated
             Movie targetMovie = mSelectedMovie.getSubList().get(resultMovie.getRowIndex());
             resultMovie.setTitle(mSelectedMovie.getTitle() + " | " + targetMovie.getTitle());
@@ -1043,7 +1255,6 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
             listRowAdapter.replace(resultMovie.getRowIndex(), resultMovie);
-        }
     }
 
     private void generateMovieHistory(Movie movie, Movie subMovie) {

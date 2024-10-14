@@ -40,6 +40,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -303,7 +304,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         return headerList;
     }
 
-    private MediaSource buildMediaSource(Movie movie) {
+    private MediaSource buildMediaSource_old(Movie movie) {
         if (Objects.equals(movie.getStudio(), Movie.SERVER_OLD_AKWAM) && !movie.getVideoUrl().contains("https")){
             movie.setVideoUrl(movie.getVideoUrl().replace("http", "https"));
         }
@@ -400,8 +401,79 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 //        return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
     }
 
+    private MediaSource buildMediaSource(Movie movie) {
+        updateMovieUrlToHttps(movie);
 
-    private MediaItem createMediaSource(Movie movie) {
+        String url = movie.getVideoUrl();
+        // Split the URL to get the clean URL and headers part
+        String[] parts = url.split("\\|", 2);
+        String cleanUrl = parts[0];
+        Map<String, String> headers = new HashMap<>();
+
+        if (parts.length == 2) {
+            headers = com.omerflex.server.Util.extractHeaders(parts[1]);
+            Log.d("TAG", "buildMediaSource: h:" + parts[1]);
+        }
+        DataSource.Factory dataSourceFactory = createDataSourceFactory(cleanUrl, headers);
+
+        Log.d("TAG", "buildMediaSource: " + cleanUrl);
+        Uri uri = Uri.parse(cleanUrl);
+
+        MediaSource mediaSource = createMediaSource(dataSourceFactory, uri, movie);
+        Log.d(TAG, "buildMediaSource: "+mediaSource.toString());
+        Log.d("TAG", "buildMediaSource: play: " + Util.inferContentType(uri) + ", " + uri);
+        return mediaSource;
+    }
+
+    private void updateMovieUrlToHttps(Movie movie) {
+        if (Objects.equals(movie.getStudio(), Movie.SERVER_OLD_AKWAM) && !movie.getVideoUrl().contains("https")) {
+            movie.setVideoUrl(movie.getVideoUrl().replace("http", "https"));
+        }
+    }
+
+    private DataSource.Factory createDataSourceFactory(String url, Map<String, String> headers) {
+        Log.d(TAG, "createDataSourceFactory: h:"+headers);
+        if (headers.isEmpty()) {
+            return new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true);
+        }
+            return () -> {
+                DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
+                        .setAllowCrossProtocolRedirects(true);
+                DataSource dataSource = httpDataSourceFactory.createDataSource();
+                    setRequestHeaders(dataSource, headers);
+
+                return dataSource;
+            };
+    }
+
+    private void setRequestHeaders(DataSource dataSource, Map<String, String> headers) {
+        Log.d("TAG", "buildMediaSource: extracted headers: " + headers);
+
+        headers.forEach((key, value) ->
+                ((HttpDataSource) dataSource).setRequestProperty(key, value)
+        );
+    }
+
+    private MediaSource createMediaSource(DataSource.Factory dataSourceFactory, Uri uri, Movie movie) {
+        int type = Util.inferContentType(uri);
+        Log.d(TAG, "createMediaSource: type: "+type);
+
+        if (movie.getVideoUrl().contains("m3u")) {
+            return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+        }
+        switch (type) {
+            case C.CONTENT_TYPE_SS:
+                return new SsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+            case C.CONTENT_TYPE_DASH:
+                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+            case C.CONTENT_TYPE_HLS:
+                return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+            default:
+                return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+        }
+    }
+
+    private MediaItem createMediaSource_old(Movie movie) {
         // Uri videoUri = Uri.parse("https://media.geeksforgeeks.org/wp-content/uploads/20201217163353/Screenrecorder-2020-12-17-16-32-03-350.mp4");
         // Build the media item.
         if (Objects.equals(movie.getStudio(), Movie.SERVER_OLD_AKWAM) && !movie.getVideoUrl().contains("https")){
