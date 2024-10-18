@@ -11,6 +11,7 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.IptvServer;
+import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
@@ -26,7 +27,6 @@ public abstract class MainViewControl extends SearchViewControl {
         super(activity, fragment, dbHelper);
     }
 
-
     protected <T> void loadServerRow(AbstractServer server, String finalQuery) {
         //initialize homepage
         Log.d(TAG, "loadHomepageRows ");
@@ -37,6 +37,10 @@ public abstract class MainViewControl extends SearchViewControl {
 
             if (server instanceof IptvServer) {
                 // return as it is loaded with loadOmarServerResult to manage orders
+                return;
+            }
+
+            if (server instanceof OldAkwamServer) {
                 return;
             }
 
@@ -99,8 +103,8 @@ public abstract class MainViewControl extends SearchViewControl {
         executor2.submit(() -> {
             ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
 
-            loadIptvServerHomepageResult();
-            loadHomepageHistoryRows();
+//            loadIptvServerHomepageResult();
+//            loadHomepageHistoryRows();
         });
         executor2.shutdown();
     }

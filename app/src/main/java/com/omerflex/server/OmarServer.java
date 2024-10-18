@@ -32,7 +32,7 @@ import okhttp3.Response;
 
 public class OmarServer extends AbstractServer {
 
-    private static final String TYPE_IPTV = "Iptv_channel";
+    public static final String TYPE_IPTV = "Iptv_channel";
     static String TAG = "Omar";
     public static final  String TYPE_SERIES = "Series";
     public static final  String TYPE_SEASON = "Season";
@@ -80,7 +80,7 @@ public class OmarServer extends AbstractServer {
 //                        }
 //                        Movie movie = generateMovieObject(movieDTO);
                         ArrayList<Movie> movies = generateMovieListFromSearchResponse(searchResponse);
-                        activitySearchCallback.onSuccess(movies, searchResponse.title);
+                        activitySearchCallback.onSuccess(movies, searchResponse.category);
                     }
                 } catch (JsonSyntaxException e) {
 //                    e.printStackTrace();
@@ -135,7 +135,7 @@ public class OmarServer extends AbstractServer {
 
     @NonNull
     private Movie generateMovieObject(MovieDTO movieDTO) {
-        Log.d(TAG, "generateMovieObject: "+movieDTO);
+//        Log.d(TAG, "generateMovieObject: "+movieDTO);
         Movie movie = new Movie();
         String title = movieDTO.title;
         movie.setDescription(movieDTO.description);
@@ -175,10 +175,13 @@ public class OmarServer extends AbstractServer {
             videoLink = movieDTO.url;
             String fileName = movieDTO.fileName;
             String credentialUrl = movieDTO.credentialUrl;
+//            movie.setGroup(movieDTO.groupTitle);
+            movie.setGroup(type);
 
             if(fileName != null && credentialUrl != null){
                 videoLink = credentialUrl + fileName + "|user-agent=airmaxtv";
             }
+//            Log.d(TAG, "generateMovieObject: "+credentialUrl + ", "+ movieDTO);
         }else {
             movieState = Movie.ITEM_STATE;
         }
@@ -495,8 +498,8 @@ public class OmarServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getConfig().getUrl()+"/homepage", activityCallback);
-
+//        return search(getConfig().getUrl()+"/homepage", activityCallback);
+        return search(getConfig().getUrl()+"/search/ss", activityCallback);
 //        return search(getConfig().getUrl()+"/homepage");
 //        return search("sonic");
     }

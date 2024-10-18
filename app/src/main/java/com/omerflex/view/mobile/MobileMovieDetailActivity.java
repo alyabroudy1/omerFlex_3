@@ -106,7 +106,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                 Log.d(TAG, "onClick: watch button");
                 Movie sampleMovie = relatedMoviesAdapter.getMovieList().get(0);
                 clickedMovieIndex = 0;
-                dbHelper.addMainMovieToHistory(mSelectedMovie);
+//                dbHelper.addMainMovieToHistory(mSelectedMovie);
                 MovieFetchProcess movieFetchProcess= server.fetch(
                         sampleMovie,
                         Movie.ACTION_WATCH_LOCALLY,
@@ -353,7 +353,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                 Util.openExoPlayer(resultMovie, activity, true);
                 // todo: handle dbHelper
                 updateRelatedMovieItem(clickedMovieIndex, resultMovie);
-                 dbHelper.addMainMovieToHistory(mSelectedMovie);
+//                 dbHelper.addMainMovieToHistory(mSelectedMovie);
 //                mSelectedMovie = resultMovie;
                 break;
             case Movie.REQUEST_CODE_EXTERNAL_PLAYER:
@@ -361,7 +361,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                 Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_EXTERNAL_PLAYER");
                 Util.openExternalVideoPlayer(resultMovie, activity);
                 // todo: handle dbHelper
-                 dbHelper.addMainMovieToHistory(mSelectedMovie);
+//                 dbHelper.addMainMovieToHistory(mSelectedMovie);
                 updateRelatedMovieItem(clickedMovieIndex, resultMovie);
 //                mSelectedMovie = resultMovie;
                 break;
@@ -443,11 +443,11 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                     Util.openMobileDetailsIntent(movie, activity, false);
                     break;
                 case VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY:
-                    dbHelper.addMainMovieToHistory(movie);
+//                    dbHelper.addMainMovieToHistory(movie);
                     Util.openExternalVideoPlayer(movie, activity);
                     break;
                 case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
-                    dbHelper.addMainMovieToHistory(movie);
+//                    dbHelper.addMainMovieToHistory(movie);
                     MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
                         @Override
                         public void onSuccess(Movie result, String title) {

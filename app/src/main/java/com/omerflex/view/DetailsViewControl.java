@@ -1,4 +1,4 @@
-package com.omerflex.view.mobile;
+package com.omerflex.view;
 
 import android.app.Activity;
 import android.os.Handler;
@@ -16,15 +16,12 @@ import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.MovieDbHelper;
-import com.omerflex.view.SearchViewControl;
-import com.omerflex.view.VideoDetailsFragment;
 
-import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public abstract class DetailsViewControl extends SearchViewControl {
-    public static String TAG = "SearchViewControl";
+    public static String TAG = "DetailsViewControl";
 
     private static final int ACTION_WATCH = 1;
     private static final int ACTION_WATCH_TRAILER = 2;
@@ -38,7 +35,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
     public <T> void handleActionClick(Movie movie, long actionId, T clickedAdapter) {
         boolean condTrailer = actionId == ACTION_WATCH_TRAILER;
         boolean condWatch1 = actionId == ACTION_WATCH;
-        Log.d(TAG, "handleActionClick: "+clickedAdapter);
+//        Log.d(TAG, "handleActionClick: "+clickedAdapter);
         if (condTrailer) {
             Log.d(TAG, "onActionClicked: Trailer: " + movie.getTitle());
 
@@ -48,6 +45,9 @@ public abstract class DetailsViewControl extends SearchViewControl {
         if (!condWatch1) {
             return;
         }
+//        Log.d(TAG, "handleActionClick: before addMainMovieToHistory: "+movie);
+        dbHelper.addMainMovieToHistory(movie);
+//        Log.d(TAG, "handleActionClick: after addMainMovieToHistory: "+movie);
         Movie watchMovie;
         if (clickedAdapter instanceof ArrayObjectAdapter){
             ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
@@ -77,8 +77,9 @@ public abstract class DetailsViewControl extends SearchViewControl {
             // mSelectedMovie = Objects.requireNonNull(server).fetchItem(mSelectedMovie);
 
            Log.d(TAG, "run: condWatch2 " + watchMovie);
+//           Log.d(TAG, "run: condWatch2 sub: " + movie.getSubList());
             //todo : handle local watch
-            dbHelper.addMainMovieToHistory(movie);
+//            dbHelper.addMainMovieToHistory(movie);
             AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
 
             if (server == null){
@@ -192,66 +193,49 @@ public abstract class DetailsViewControl extends SearchViewControl {
                 break;
             case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
                 dbHelper.addMainMovieToHistory(movie);
-                MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
-                    @Override
-                    public void onSuccess(Movie result, String title) {
-                        Util.openExternalVideoPlayer(movie, activity);
-                        updateClickedMovieItem(clickedRow, position, result);
-                    }
-
-                    @Override
-                    public void onInvalidCookie(Movie result, String title) {
-                        result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
-                        if (fragment != null) {
-                            Util.openBrowserIntent(result, fragment, true, true);
-                            return;
-                        }
-                        Util.openBrowserIntent(result, activity, false, true);
-                    }
-
-                    @Override
-                    public void onInvalidLink(Movie result) {
-
-                    }
-
-                    @Override
-                    public void onInvalidLink(String message) {
-
-                    }
-                });
+                handleFetchMovieFromServer(movie, position, clickedRow, server);
                 break;
 
         }
     }
 
-    public class SearchCallback implements ServerInterface.ActivityCallback<ArrayList<Movie>> {
-        @Override
-        public void onSuccess(ArrayList<Movie> result, String title) {
-            if (result == null || result.isEmpty()) {
-                Log.d(TAG, "onSuccess: search result is empty");
-                return;
+    private <T> void handleFetchMovieFromServer(Movie movie, int position, T clickedRow, AbstractServer server) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        new Handler(Looper.getMainLooper()).post(() -> {
+            Toast.makeText(activity, "الرجاء الانتظار...", Toast.LENGTH_SHORT).show();
+        });
+
+        executor.submit(() -> {
+        MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
+            @Override
+            public void onSuccess(Movie result, String title) {
+                Util.openExternalVideoPlayer(movie, activity);
+                updateClickedMovieItem(clickedRow, position, result);
             }
-            generateCategory(title, result, true);
-        }
 
-        @Override
-        public void onInvalidCookie(ArrayList<Movie> result, String title) {
-            Log.d(TAG, "onInvalidCookie: " + result);
-            if (result == null || result.isEmpty()) {
-                Log.d(TAG, "onInvalidCookie: search result is empty");
-                return;
+            @Override
+            public void onInvalidCookie(Movie result, String title) {
+                result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+                if (fragment != null) {
+                    Util.openBrowserIntent(result, fragment, true, true);
+                    return;
+                }
+                Util.openBrowserIntent(result, activity, false, true);
             }
-            generateCategory(title, result, true);
-        }
 
-        @Override
-        public void onInvalidLink(ArrayList<Movie> result) {
+            @Override
+            public void onInvalidLink(Movie result) {
 
-        }
+            }
 
-        @Override
-        public void onInvalidLink(String message) {
-            Log.d(TAG, "onInvalidLink: loadOmarServerResult: " + message);
-        }
+            @Override
+            public void onInvalidLink(String message) {
+
+            }
+        });
+    });
+
+        executor.shutdown();
     }
 }

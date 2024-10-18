@@ -15,6 +15,7 @@ import com.omerflex.entity.MovieHistory;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.CookieDTO;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.OmarServer;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.contract.CookieContract.CookieTable;
@@ -778,30 +779,41 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 //                sortOrder
 //        );
 
-        String sql = "SELECT * FROM " + MoviesTable.TABLE_NAME + " WHERE " + MoviesTable.COLUMN_IS_HISTORY + " = '1' ORDER BY " + MoviesTable.COLUMN_UPDATED_AT + " DESC";
+//        String sql = "SELECT * FROM " + MoviesTable.TABLE_NAME + " WHERE " + MoviesTable.COLUMN_IS_HISTORY + " = '1' ORDER BY " + MoviesTable.COLUMN_UPDATED_AT + " DESC";
         // Cursor c = db.rawQuery(sql, null);
 
-        String selection = MoviesTable.COLUMN_IS_HISTORY + " = ? AND " + MoviesTable.COLUMN_STUDIO + " != ?";
+        String selection = MoviesTable.COLUMN_IS_HISTORY + " = ? AND " + MoviesTable.COLUMN_STUDIO + " != ? AND " +  MoviesTable.COLUMN_GROUP + " IS NULL";
         String[] selectionArgs = {"1", Movie.SERVER_IPTV};
 
         if (tv) {
-            sql = "SELECT * FROM " + MoviesTable.TABLE_NAME + " WHERE " + MoviesTable.COLUMN_STUDIO + " = " + Movie.SERVER_IPTV + " AND ORDER BY " + MoviesTable.COLUMN_UPDATED_AT + " DESC";
-            selection = MoviesTable.COLUMN_IS_HISTORY + " = ? AND " + MoviesTable.COLUMN_STUDIO + " = ?";
-        }
+            // Update selection string for TV case
+            selection = MoviesTable.COLUMN_IS_HISTORY + " = ? AND (" + MoviesTable.COLUMN_STUDIO + " = ? OR " + MoviesTable.COLUMN_GROUP + " = ? )";
 
+            // Update selectionArgs to match the new selection
+            selectionArgs = new String[]{"1", Movie.SERVER_IPTV, OmarServer.TYPE_IPTV};
+        }
 
         String sortOrder = MoviesTable.COLUMN_UPDATED_AT + " DESC";
 
-        Cursor c = db.query(
-                MoviesTable.TABLE_NAME,
-                null,
-                selection,
-                selectionArgs,
-                null,
-                null,
-                sortOrder
-        );
-        movieArrayList = fetchMovieListFromDB(c);
+        try {
+            Cursor c = db.query(
+                    MoviesTable.TABLE_NAME,
+                    null,
+                    selection,
+                    selectionArgs,
+                    null,
+                    null,
+                    sortOrder
+            );
+            Log.d(TAG, "getAllHistoryMovies: "+c.getCount());
+            movieArrayList = fetchMovieListFromDB(c);
+
+        }catch (Exception e){
+            Log.d(TAG, "getAllHistoryMovies: error: "+ e.getMessage());
+        }
+
+
+
 
         //c.close();
         ////db.close();

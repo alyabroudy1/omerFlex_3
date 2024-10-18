@@ -46,7 +46,6 @@ import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.MovieDbHelper;
-import com.omerflex.view.mobile.DetailsViewControl;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -230,10 +229,10 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
             @Override
             protected <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie) {
-                Log.d(TAG, "updateClickedMovieItem: "+ clickedAdapter);
+//                Log.d(TAG, "updateClickedMovieItem: "+ clickedAdapter);
                 if (clickedAdapter instanceof ArrayObjectAdapter) {
                     ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
-                    Log.d(TAG, "updateClickedMovieItem: "+ adapter.size());
+                    Log.d(TAG, "updateClickedMovieItem: "+ adapter.size()+ ", index: "+clickedMovieIndex);
                     updateRelatedMovieItem(adapter, clickedMovieIndex, resultMovie);
                 }
             }
@@ -721,7 +720,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                     movie.setRowIndex(0); // very important to update the correct item of the row
                     Log.d(TAG, "run: condWatch2 " + movie);
                     //todo : handle local watch
-                    dbHelper.addMainMovieToHistory(mSelectedMovie);
+//                    dbHelper.addMainMovieToHistory(mSelectedMovie);
 //                    Movie res = server.fetchToWatchLocally(movie);
                     Movie res = server.fetch(
                             movie,

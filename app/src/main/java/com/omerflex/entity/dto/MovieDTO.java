@@ -63,6 +63,7 @@ public class MovieDTO {
                 ", groupTitle='" + groupTitle + '\'' +
                 ", fileName='" + fileName + '\'' +
                 ", url='" + url + '\'' +
+                ", credentialUrl='" + credentialUrl + '\'' +
                 ", type='" + type + '\'' +
                 ", id=" + id +
                 ", title='" + title + '\'' +

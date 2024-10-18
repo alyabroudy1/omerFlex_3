@@ -75,6 +75,7 @@ public abstract class SearchViewControl {
 //            if (movie.getStudio().equals(Movie.SERVER_IPTV)) {
             if (movie.getState() == Movie.VIDEO_STATE) {
                 Util.openExoPlayer(movie, activity, true);
+                dbHelper.addMainMovieToHistory(movie);
                 //exist method after handling
                 return;
             }
@@ -373,7 +374,7 @@ public abstract class SearchViewControl {
                 loadServerRow(server, finalQuery);
             }
 
-//            loadHomepageHistoryRows();
+            loadHomepageHistoryRows();
         });
         executor.shutdown();
     }

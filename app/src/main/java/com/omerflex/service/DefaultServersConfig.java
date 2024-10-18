@@ -3,8 +3,7 @@ package com.omerflex.service;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.IptvServer;
-import com.omerflex.server.OmarServer;
+import com.omerflex.server.ArabSeedServer;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
@@ -50,62 +49,75 @@ public class DefaultServersConfig {
 //        ServerConfigManager.addConfig(faselConfig, dbHelper);
 //        ServerConfigManager.addServer(faselhd);
 
-        //### iptv ###
-        ServerConfig iptvConfig = new ServerConfig();
-        iptvConfig.setName(Movie.SERVER_IPTV);
-        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
-        iptvConfig.setReferer("https://drive.google.com/");
-        ServerConfigManager.addConfig(iptvConfig);
+//        //### iptv ###
+//        ServerConfig iptvConfig = new ServerConfig();
+//        iptvConfig.setName(Movie.SERVER_IPTV);
+//        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
+//        iptvConfig.setReferer("https://drive.google.com/");
+//        ServerConfigManager.addConfig(iptvConfig);
 
-        AbstractServer iptv = new IptvServer();
-        ServerConfigManager.addConfig(iptvConfig, dbHelper);
-        ServerConfigManager.addServer(iptv);
+//        AbstractServer iptv = new IptvServer();
+//        ServerConfigManager.addConfig(iptvConfig, dbHelper);
+//        ServerConfigManager.addServer(iptv);
+//
+//                // ### omar ###
+//        ServerConfig omarConfig = new ServerConfig();
+//        omarConfig.setName(Movie.SERVER_OMAR);
+//        omarConfig.setActive(true);
+//        omarConfig.setUrl("http://194.164.53.40/movie");
+//        omarConfig.setReferer("http://194.164.53.40/");
+////        ServerConfigManager.addConfig(omarConfig);
+//
+//        AbstractServer omarServer = new OmarServer();
+//        ServerConfigManager.addConfig(omarConfig, dbHelper);
+//        ServerConfigManager.addServer(omarServer);
 
-                // ### omar ###
-        ServerConfig omarConfig = new ServerConfig();
-        omarConfig.setName(Movie.SERVER_OMAR);
-        omarConfig.setActive(true);
-        omarConfig.setUrl("http://194.164.53.40/movie");
-        omarConfig.setReferer("http://194.164.53.40/");
-//        ServerConfigManager.addConfig(omarConfig);
-
-        AbstractServer omarServer = new OmarServer();
-        ServerConfigManager.addConfig(omarConfig, dbHelper);
-        ServerConfigManager.addServer(omarServer);
-
-        // ### akwam ###
+////         ### akwam ###
 //        ServerConfig akwamConfig = new ServerConfig();
 //        akwamConfig.setName(Movie.SERVER_AKWAM);
+//        akwamConfig.setActive(true);
 //        akwamConfig.setUrl("https://ak.sv");
 //        akwamConfig.setReferer("https://ak.sv/");
-//        ServerConfigManager.addConfig(akwamConfig);
 //
-//        AbstractServer akwam = AkwamServer.getInstance(activity, fragment);
-//        dbHelper.saveServerConfigAsCookieDTO(akwamConfig, date);
-//        servers.add(akwam);
+//        AbstractServer akwamServer = new AkwamServer();
+//        ServerConfigManager.addConfig(akwamConfig, dbHelper);
+//        ServerConfigManager.addServer(akwamServer);
 
-//        //### arabseed ###
-//        ServerConfig arabseedConfig = new ServerConfig();
-//        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
-//        arabseedConfig.setUrl("https://arabseed.show");
-//        arabseedConfig.setReferer("https://arabseed.show/");
-//        ServerConfigManager.addConfig(arabseedConfig);
+//        //         ### cimaNow ###
+//        ServerConfig cimaNowConfig = new ServerConfig();
+//        cimaNowConfig.setName(Movie.SERVER_CimaNow);
+//        cimaNowConfig.setActive(true);
+//        cimaNowConfig.setUrl("https://cimanow.cc");
+//        cimaNowConfig.setReferer("https://cimanow.cc/");
 //
-//        AbstractServer arabseed = ArabSeedServer.getInstance(fragment, activity);
-//        dbHelper.saveServerConfigAsCookieDTO(arabseedConfig, date);
-//        servers.add(arabseed);
+//        AbstractServer cimaNowServer = new CimaNowServer();
+//        ServerConfigManager.addConfig(cimaNowConfig, dbHelper);
+//        ServerConfigManager.addServer(cimaNowServer);
+
+        //### arabseed ###
+        ServerConfig arabseedConfig = new ServerConfig();
+        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
+        arabseedConfig.setUrl("https://arabseed.show");
+        arabseedConfig.setReferer("https://arabseed.show/");
+        arabseedConfig.setActive(true);
+
+        AbstractServer arabseedServer = new ArabSeedServer();
+
+        ServerConfigManager.addConfig(arabseedConfig, dbHelper);
+        ServerConfigManager.addServer(arabseedServer);
+
 //
 //        //### old_Akwam ###
 //        ServerConfig oldAkwamConfig = new ServerConfig();
 //        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
+//        oldAkwamConfig.setActive(true);
 //        oldAkwamConfig.setUrl("https://ak.sv/old");
 //        oldAkwamConfig.setReferer("https://ak.sv/old/");
-//        ServerConfigManager.addConfig(oldAkwamConfig);
 //
-//        AbstractServer oldAkwam = OldAkwamServer.getInstance(activity, fragment);
-//        dbHelper.saveServerConfigAsCookieDTO(oldAkwamConfig, date);
-//        servers.add(oldAkwam);
-//
+//        AbstractServer oldAkwamServer = new OldAkwamServer();
+//        ServerConfigManager.addConfig(oldAkwamConfig, dbHelper);
+//        ServerConfigManager.addServer(oldAkwamServer);
+
 //        //### cimaclub ###
 //        ServerConfig cimaclubConfig = new ServerConfig();
 //        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);

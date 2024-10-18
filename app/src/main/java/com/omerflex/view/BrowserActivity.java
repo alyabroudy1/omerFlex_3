@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -242,13 +243,15 @@ public class BrowserActivity extends AppCompatActivity {
 /////////////////////////////////////////
 
         // webView.setFocusable(false);  // Set the WebView to not focusable
-//        webView.setOnKeyListener(new View.OnKeyListener() {
-//            @Override
-//            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-//                Log.d(TAG, "onKey:: " + keyEvent);
-//                return false;
-//            }
-//        });
+        webView.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View view, int i, KeyEvent keyEvent) {
+               String message = "key: "+keyEvent.getKeyCode() + ", "+keyEvent.getCharacters();
+//                Log.d(TAG, "onKey: "+message);
+                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
 
 
 //        server = ServerManager.determineServer(movie, listRowAdapter, BrowserActivity.this, null);
@@ -581,6 +584,7 @@ public class BrowserActivity extends AppCompatActivity {
         if (backPressedTime + 2000 > System.currentTimeMillis()) {
             finish();
         } else {
+            Toast.makeText(activity, "backPressed", Toast.LENGTH_SHORT).show();
             if (webView != null && webView.canGoBack())
                 webView.goBack();// if there is previous page open it
             else
@@ -794,6 +798,7 @@ public class BrowserActivity extends AppCompatActivity {
                 movie.setSubList(movies);
                 setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
                 finish();
+                return;
             } else if (elementJson.equals("click")) {
 //                mouseArrow.setX(screenHeight / 2);
 //                mouseArrow.setY(screenWidth / 2);
@@ -861,6 +866,7 @@ public class BrowserActivity extends AppCompatActivity {
 //                    ServerConfigManager.updateConfig(config, dbHelper);
 //                    dbHelper.saveHeadersAndCookies(server, movie.getStudio())
                     finish();
+                    return;
                 }
                 else {
                     Movie resultMovie = null;
@@ -886,14 +892,15 @@ public class BrowserActivity extends AppCompatActivity {
                         String movieReferer = Util.getValidReferer(movie.getVideoUrl());
 //                        ServerConfig config = server.getConfig();
                         //todo optimize config update
-                        config.setReferer(movieReferer);
-                        config.setUrl(movieReferer);
+                        if (config != null){
+                            config.setReferer(movieReferer);
+                            config.setUrl(movieReferer);
 
-                        ServerConfigManager.updateConfig(config, dbHelper);
+                            ServerConfigManager.updateConfig(config, dbHelper);
+                        }
 //                        dbHelper.saveHeadersAndCookies(server, server.getServerId());
-
-
                         finish();
+                        return;
                     } else {
                         resultMovie = movie;
                     }
@@ -910,6 +917,7 @@ public class BrowserActivity extends AppCompatActivity {
                             movie.setSubList(movies);
                             setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
                             finish();
+                            return;
                         }
                     }
 
@@ -929,6 +937,7 @@ public class BrowserActivity extends AppCompatActivity {
                     movie.setSubList(movies);
                     Util.openVideoDetailsIntent(movie, activity);
                     finish();
+                    return;
                 }
             }
 
@@ -1507,6 +1516,7 @@ public class BrowserActivity extends AppCompatActivity {
                 //hier hhhhhhhh
                 setResult(Activity.RESULT_OK, Util.generateIntentResult(mov));
                 finish();
+                return;
                 //hier hhhhhhhh
 
 //                mov.setFetch(0);
