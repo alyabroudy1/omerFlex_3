@@ -854,9 +854,9 @@ public class MyCimaServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search("sonic", activityCallback);
+//        return search("sonic", activityCallback);
 //        return search("ratched");
-//        return search(getConfig().getUrl() + "/movies/");
+        return search(getConfig().getUrl() + "/movies/", activityCallback);
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);
     }

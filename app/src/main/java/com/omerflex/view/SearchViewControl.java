@@ -490,6 +490,7 @@ public abstract class SearchViewControl {
                 Log.d(TAG, "onActivityResult: empty result movie");
                 return;
             }
+            Log.d(TAG, "onActivityResult: "+resultMovie);
             Util.openExternalVideoPlayer(resultMovie, activity);
             // todo: handle dbHelper
 //            updateRelatedMovieItem(clickedHorizontalMovieAdapter, clickedMovieIndex, resultMovie);

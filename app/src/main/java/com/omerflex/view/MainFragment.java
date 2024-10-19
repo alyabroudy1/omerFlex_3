@@ -774,10 +774,13 @@ public class MainFragment extends BrowseSupportFragment {
 ////    String url = "https://www.faselhd.express/video_player?uid=0&vid=863adbd5b09c0b764128cec2dcb1d84f&img=https://img.scdns.io/thumb/863adbd5b09c0b764128cec2dcb1d84f/large.jpg&nativePlayer=true";
 //    String url = "https://www.faselhd.link/movies/%d9%81%d9%8a%d9%84%d9%85-sonic-hedgehog-2020-%d9%85%d8%aa%d8%b1%d8%ac%d9%85-ct";
 //    String url = "https://tgb4.top15top.shop/0bboz4svw11q/Sonic_the_Hedgehog_2020_Bluray-1080p.Weciima.mp4.html?Key=ibPyARbr1aJuVz7ibn-kng&Expires=1728899987|referer=https://wecima.movie/";
-    String url = "https://airmax.boats:443/airmaxtv1122/airmaxtv2211/312.ts|user-agent=airmaxtv";
+//    String url = "https://deva-cpmav9sk6x33.cimanowtv.com/uploads/2024/10/17/_Cima-Now.CoM_%20El.Moass.Osman.S06E03.HD/[Cima-Now.CoM]%20El.Moass.Osman.S06E03.HD-480p.mp4|Referer=https://deva-cpmav9sk6x33.cimanowtv.com/e/2ss18e78qfgj";
+//    String url = "https://deva-cpmav9sk6x35.cimanowtv.com/uploads/2024/10/18/_Cima-Now.CoM_%20Bagman.2024.HD/[Cima-Now.CoM]%20Bagman.2024.HD-480p.mp4|sec-ch-ua=\"Chromium\";v=\"130\", \"Android WebView\";v=\"130\", \"Not?A_Brand\";v=\"99\"&sec-ch-ua-mobile=?1&Accept=*/*&sec-ch-ua-platform=\"Android\"&User-Agent=Mozilla/5.0 (Linux; Android 14; SM-S908B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36&Referer=https://deva-cpmav9sk6x35.cimanowtv.com/e/525yih97u1vs&Accept-Encoding=identity;q=1, *;q=0&Range=bytes=0-";
+    String url = "blob:https://vk.com/d08eb16f-d03e-4743-8a27-8158f72c1c7b|Referer=https://vk.com/&User-Agent=Android 8";
     mm.setVideoUrl(url);
-    mm.setStudio(Movie.SERVER_MyCima);
+    mm.setStudio(Movie.SERVER_CimaNow);
     mm.setState(Movie.VIDEO_STATE);
+//    mm.setState(Movie.BROWSER_STATE);
 //
 //            Map<String, String> headers = Util.extractHeaders(url);
 //
@@ -785,6 +788,7 @@ public class MainFragment extends BrowseSupportFragment {
 //
 //
 Util.openExoPlayer(mm, getActivity(), false);
+//Util.openBrowserIntent(mm, fragment, false, false);
 //Util.openExternalVideoPlayer(mm, getActivity());
 //    Intent browse = new Intent(getActivity(), BrowserActivity.class);
 //     browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);

@@ -7,6 +7,8 @@ import android.webkit.WebView;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
+import com.omerflex.view.BrowserActivity;
+import com.omerflex.view.VideoDetailsFragment;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -88,6 +90,11 @@ public class CimaNowServer extends AbstractServer{
 
     private ArrayList<Movie> generateSearchResultFromDoc(Document doc) {
         Elements articles = doc.select("article[aria-label=post]");
+        if (articles.isEmpty()){
+            articles = doc.select("a:has(li[aria-label=title])");
+        }
+//        Log.d(TAG, "generateSearchResultFromDoc: "+doc.body().toString());
+//        Log.d(TAG, "generateSearchResultFromDoc: articles: "+articles.size());
 
         ArrayList<Movie> movieList = new ArrayList<>();
         for (Element article : articles) {
@@ -95,9 +102,15 @@ public class CimaNowServer extends AbstractServer{
 
             // Extract the video URL from the anchor tag
             Element anchor = article.selectFirst("a");
-            if (anchor != null) {
-                movie.setVideoUrl(anchor.attr("href"));
+            String title = anchor.attr("href");
+            Log.d(TAG, "generateSearchResultFromDoc: article: "+anchor);
+            if (title == null) {
+                if (article.attr("href") == null){
+                    continue;
+                }
+                title = article.attr("href");
             }
+            movie.setVideoUrl(title);
 
             // Extract the movie title and category
             Element titleElement = article.selectFirst("li[aria-label=title]");
@@ -266,7 +279,7 @@ public class CimaNowServer extends AbstractServer{
         }
 
         // Find the episodes section by its class "tabcontent active"
-        Element episodesList = doc.selectFirst("ul.tabcontent.active");
+        Element episodesList = doc.selectFirst("ul.tabcontent");
 
         if (episodesList != null) {
             // Select all <li> elements inside the ul
@@ -316,34 +329,74 @@ public class CimaNowServer extends AbstractServer{
     protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback) {
 //        Log.d(TAG, "fetchItemAction: 55");
         switch (action) {
-//            case Movie.BROWSER_STATE:
-//                return fetchBrowseItem(movie, activityCallback);
+            case Movie.BROWSER_STATE:
+//            case Movie.RESOLUTION_STATE:
+                return fetchBrowseItem(movie, activityCallback);
 //            case Movie.COOKIE_STATE:
 //                return fetchCookie(movie);
             case Movie.ACTION_WATCH_LOCALLY:
                 return fetchWatchLocally(movie, activityCallback);
-//            case Movie.RESOLUTION_STATE:
-//                return fetchResolutions(movie);
+            case Movie.RESOLUTION_STATE:
+                return fetchResolutions(movie, activityCallback);
 //            case Movie.VIDEO_STATE:
 //                return fetchVideo(movie);
             default:
                 return fetchItem(movie, activityCallback);
         }
     }
+    public MovieFetchProcess fetchResolutions(Movie movie, ActivityCallback<Movie> activityCallback) {
+        Log.d(TAG, "fetchResolutions: ");
+        Movie clonedMovie = Movie.clone(movie);
+        clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+        // to do nothing and wait till result returned to activity only the first fetch
+//        return startWebForResultActivity(clonedMovie);
+        activityCallback.onInvalidCookie(clonedMovie, getLabel());
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
+    }
+    public MovieFetchProcess fetchBrowseItem(Movie movie, ActivityCallback<Movie> activityCallback) {
+        Movie clonedMovie = Movie.clone(movie);
+        clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+        // to do nothing and wait till result returned to activity only the first fetch
+//        return startWebForResultActivity(clonedMovie);
+        activityCallback.onInvalidCookie(clonedMovie, getLabel());
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
+    }
+
     private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
-        if (movie.getState() == Movie.BROWSER_STATE) {
+        Log.d(TAG, "fetchWatchLocally: ");
+        if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
             activityCallback.onInvalidCookie(movie, getLabel());
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
         }
         activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_EXOPLAYER, movie);
     }
 
+    @Override
+    public int fetchNextAction(Movie movie) {
+        Log.d(TAG, "fetchNextAction: " + movie);
+        switch (movie.getState()) {
+            case Movie.GROUP_STATE:
+            case Movie.ITEM_STATE:
+                return VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY;
+            case Movie.VIDEO_STATE:
+                return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
+//           case Movie.RESOLUTION_STATE:
+//               if (movie.getFetch() == 1 || movie.getFetch() == 0){
+//                   return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
+//               }
+//                break;
+        }
+        return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
+    }
+
     private MovieFetchProcess fetchItem(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
-        String url = movie.getVideoUrl();
+
+        String url = movie.getVideoUrl() + "watching/";
 //            Document doc = Jsoup.connect(url).header(
 //                    "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8").header(
 //                    "User-Agent", " Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36").header(
@@ -366,8 +419,47 @@ public class CimaNowServer extends AbstractServer{
             activityCallback.onInvalidCookie(movie, getLabel());
         }
 
+        // Select all <li> elements that have a data-index attribute
+        Elements movieElements = doc.select("li[data-index]");
 
+        if (movieElements.isEmpty()){
+            activityCallback.onInvalidCookie(movie, getLabel());
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
+        }
+// Loop through the elements and extract the movie information
+//        Element embedElement = doc.selectFirst("iframe");
+//
+//        if (embedElement != null){
+//            String src = embedElement.attr("src");
+//            if (src != null){
+//                Movie serverItem = Movie.clone(movie);
+//                if (src.startsWith("//")){
+//                    src = "https:"+src;
+//                }
+//                serverItem.setVideoUrl(src + "|Referer="+getConfig().getReferer());
+//                serverItem.setState(Movie.BROWSER_STATE);
+//                movie.addSubList(serverItem);
+//            }
+//        }
 
+        for (Element movieElement : movieElements) {
+//            if (movieElement.hasClass("active")){
+//                //ignore active item as its fetched before
+//                continue;
+//            }
+            String dataIndex = movieElement.attr("data-index");
+            String title = movieElement.text();  // Get the text content of the <li>
+
+            // Create a new Movie object and add it to the list
+            Movie serverItem = Movie.clone(movie);
+            serverItem.setTitle(title);
+            serverItem.setVideoUrl(url + "#"+dataIndex  + "|Referer="+getConfig().getReferer());
+            serverItem.setState(Movie.RESOLUTION_STATE);
+            movie.addSubList(serverItem);
+            Log.d(TAG, "fetchItem: serverItem:"+serverItem.getVideoUrl());
+        }
+
+        activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
@@ -382,13 +474,127 @@ public class CimaNowServer extends AbstractServer{
 
     @Override
     public String getWebScript(int mode, Movie movie) {
-        return null;
+        String script = null;
+
+        Log.d(TAG, "getWebScript: m:" + mode + ", f:" + movie.getFetch());
+        if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
+////            if (movie.getState() == Movie.GROUP_OF_GROUP_STATE){
+//                Log.d(TAG, "getScript:mycima REQUEST_CODE_FETCH_HTML");
+//                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
+////                        "var serverElems = document.getElementsByClassName('PostItemContent');\n" +
+////                        "console.log(serverElems.length);" +
+////                        "if(serverElems.length > 0){" +
+//                        "var html = ('<html>'+document.getElementsByTagName('html')[0].innerHTML+'</html>');" +
+//                        "MyJavaScriptInterface.myMethod(html);" +
+////                        "}" +
+//                        "});";
+////            }
+//
+            if (movie.getState() == Movie.RESOLUTION_STATE) {
+                String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
+                int hashIndex = movie.getVideoUrl().indexOf('#');
+
+                // Check if the hash symbol is found in the string
+                if (hashIndex != -1 && hashIndex < movie.getVideoUrl().length() - 1) {
+                    // Return the substring after the hash symbol
+                  String  serverId = movie.getVideoUrl().substring(hashIndex + 1);
+
+                    // Find the index of the '|' symbol in the substring after the hash
+                    int pipeIndex = serverId.indexOf('|');
+
+                    // If '|' is found, return the substring up to the '|' symbol
+                    if (pipeIndex != -1) {
+                        serverId = serverId.substring(0, pipeIndex);
+                    }
+
+
+                    script = "document.addEventListener('DOMContentLoaded', () => {\n" +
+                            "    let elements = document.querySelectorAll('li[data-index]');\n" +
+                            "    elements.forEach(function (element) {\n" +
+                            "        if (element.getAttribute('data-index') == "+serverId+") {\n" +
+                            "            // Simulate a click on the matched element\n" +
+                            "            element.click();\n" +
+                            "// Wait for the second element to appear after the click\n" +
+                            "        waitForElement('iframe', function(secondElement) {\n" +
+                            "            console.log('xxxx: Second element appeared:', secondElement);\n" +
+                            "makeFullScreen(secondElement);" +
+                            "        });" +
+
+                            "        }\n" +
+                            "    });" +
+
+                            "function makeFullScreen(iframe) {" +
+                            "if (iframe) {\n" +
+                            "  // Clone the iframe element\n" +
+                            "        var clonedIframe = iframe.cloneNode(true);\n" +
+                            "        \n" +
+                            "        // Clear the entire body content\n" +
+                            "        document.body.innerHTML = '';\n" +
+                            "\n" +
+                            "        // Append the cloned iframe to the body\n" +
+                            "        document.body.appendChild(clonedIframe);\n" +
+                            " // Modify the cloned iframe to make it fullscreen\n" +
+                            "        clonedIframe.style.position = \"fixed\";\n" +
+                            "        clonedIframe.style.top = \"0\";\n" +
+                            "        clonedIframe.style.left = \"0\";\n" +
+                            "        clonedIframe.style.width = \"100%\";\n" +
+                            "        clonedIframe.style.height = \"100%\";\n" +
+                            "        clonedIframe.style.zIndex = \"9999\";\n" +
+                            "        clonedIframe.style.border = \"none\"; // Remove any borders\n" +
+                            "        clonedIframe.setAttribute(\"allowfullscreen\", \"true\");\n" +
+                            "        clonedIframe.setAttribute(\"scrolling\", \"yes\");\n" +
+                            "\n" +
+                            "        // Optional: if you want to apply fullscreen mode programmatically (only works if triggered by a user gesture)\n" +
+                            "        if (iframe.requestFullscreen) {\n" +
+                            "            iframe.requestFullscreen();\n" +
+                            "        } else if (iframe.webkitRequestFullscreen) { // Safari\n" +
+                            "            iframe.webkitRequestFullscreen();\n" +
+                            "        } else if (iframe.mozRequestFullScreen) { // Firefox\n" +
+                            "            iframe.mozRequestFullScreen();\n" +
+                            "        } else if (iframe.msRequestFullscreen) { // IE/Edge\n" +
+                            "            iframe.msRequestFullscreen();\n" +
+                            "        }\n" +
+                            "    } else {\n" +
+                            "        console.log(\"Iframe not found.\");\n" +
+                            "    }" +
+                            "\n}" +
+                            "// Function to wait for an element to appear\n" +
+                            "    function waitForElement(selector, callback) {\n" +
+                            "        const observer = new MutationObserver(function(mutations) {\n" +
+                            "            mutations.forEach(function(mutation) {\n" +
+                            "                const element = document.querySelector(selector);\n" +
+                            "                if (element) {\n" +
+                            "                    callback(element);\n" +
+                            "                    observer.disconnect(); // Stop observing after the element appears\n" +
+                            "                }\n" +
+                            "            });\n" +
+                            "        });\n" +
+                            "\n" +
+                            "        // Observe changes in the DOM\n" +
+                            "        observer.observe(document.body, {\n" +
+                            "            childList: true,\n" +
+                            "            subtree: true\n" +
+                            "        });\n" +
+                            "    }" +
+                            "" +
+                            "" +
+                            " });";
+                }
+
+            }
+
+
+        }
+        Log.d(TAG, "getWebScript: "+script);
+        return script;
     }
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getConfig().getUrl() + "/الاحدث/", activityCallback);
+//        return search(getConfig().getUrl() + "/الاحدث/", activityCallback);
+        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
 //        return search(getConfig().getUrl() + "/category/المسلسلات", activityCallback);
+//        return search("sonic", activityCallback);
     }
 
     @Override

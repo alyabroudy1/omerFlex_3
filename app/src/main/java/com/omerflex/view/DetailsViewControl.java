@@ -120,7 +120,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
 
                         @Override
                         public void onInvalidCookie(Movie result, String title) {
-                            Log.d(TAG, "onInvalidCookie: ");
+                            Log.d(TAG, "onInvalidCookie: "+result.getVideoUrl());
 //                            hideProgressDialog(false);
                             result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
                             if (fragment != null){
@@ -132,12 +132,12 @@ public abstract class DetailsViewControl extends SearchViewControl {
 
                         @Override
                         public void onInvalidLink(Movie result) {
-
+                            Log.d(TAG, "onInvalidLink: "+result.getVideoUrl());
                         }
 
                         @Override
                         public void onInvalidLink(String message) {
-
+                            Log.d(TAG, "onInvalidLink: "+message);
                         }
                     }
             );

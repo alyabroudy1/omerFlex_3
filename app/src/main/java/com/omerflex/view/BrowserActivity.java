@@ -277,6 +277,7 @@ public class BrowserActivity extends AppCompatActivity {
             redirectUrl = movie.getVideoUrl();
 
             String url = movie.getVideoUrl();
+            Log.d(TAG, "onCreate: url: "+url);
             if (url.contains("||")) {
                 Map<String, String> map = parseParamsToMap(movie.getVideoUrl());
                 url = url.substring(0, url.indexOf("||"));
@@ -284,14 +285,21 @@ public class BrowserActivity extends AppCompatActivity {
                 Log.d(TAG, "browser: map:" + map.toString() + ", url:" + url);
                 webView.loadUrl(url, map);
             }else if (url.contains("|")) {
-                Map<String, String> map = parseParamsToMap(movie.getVideoUrl());
-                url = url.substring(0, url.indexOf("|"));
+//                Map<String, String> map = parseParamsToMap(movie.getVideoUrl());
+                String[] parts = url.split("\\|", 2);
+                String cleanUrl = parts[0];
+                Map<String, String> headers = new HashMap<>();
 
-                Log.d(TAG, "browser: map:" + map.toString() + ", url:" + url);
-                if (map != null){
-                    webView.loadUrl(url, map);
+                if (parts.length == 2) {
+                    headers = com.omerflex.server.Util.extractHeaders(parts[1]);
+                    Log.d("TAG", "buildMediaSource: h:" + parts[1]);
+                }
+
+                Log.d(TAG, "browser: map:" + headers.toString() + ", url:" + cleanUrl);
+                if (!headers.isEmpty()){
+                    webView.loadUrl(cleanUrl, headers);
                 }else {
-                    webView.loadUrl(url);
+                    webView.loadUrl(cleanUrl);
                 }
             } else {
                 Log.d(TAG, "onCreate: url:" + url);
@@ -727,20 +735,36 @@ public class BrowserActivity extends AppCompatActivity {
         view.evaluateJavascript(jsCode, null);
     }
 
-    public static boolean isVideo(String url, Movie movie) {
+    public static boolean isBlackListedUrl(String url) {
 
         // List of substrings to check
         List<String> patterns = Arrays.asList(
-                "click", "brand", "/patrik", "adserver", ".php", ".gif", "error", "null"
+                "click",
+                "brand",
+                "/patrik",
+                "adserver",
+                ".php",
+                ".gif",
+                "error",
+                "null",
+                "/stub",
+                ".html"
         );
 
         // Check if the URL contains any of the substrings
         for (String pattern : patterns) {
             if (url.contains(pattern)) {
-                return false;
+                return true;
             }
         }
+        return false;
+    }
 
+    public static boolean isVideo(String url, Movie movie) {
+
+        if (isBlackListedUrl(url)){
+            return false;
+        }
         List<String> patternsMovieUrl = Arrays.asList(
                 "vidmoly", ".html"
         );
@@ -1116,6 +1140,9 @@ public class BrowserActivity extends AppCompatActivity {
             boolean isAcceptEncoding = acceptEncoding != null && acceptEncoding.contains("identity;q=1");
             if (isAcceptEncoding) {
                 Log.d(TAG, "isSupportedMedia: isAcceptEncoding: " + acceptEncoding);
+                if (isBlackListedUrl(request.getUrl().toString())){
+                    return false;
+                }
                 return true;
             }
             if (mimeType != null) {
@@ -1133,6 +1160,7 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             Log.d(TAG, "shouldInterceptRequest: " + request.getUrl());
+            headers = request.getRequestHeaders();
 //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 //                Log.d(TAG, "shouldInterceptRequest: isRedirect: "+request.isRedirect());
 //            }
@@ -1161,8 +1189,16 @@ public class BrowserActivity extends AppCompatActivity {
 //                Intent returnIntent = new Intent(activity, ExoplayerMediaPlayer.class);
                 Movie mm = Movie.clone(movie);
                 mm.setState(Movie.VIDEO_STATE);
+
+                if (movie.getStudio().equals(Movie.SERVER_CimaNow)) {
+                    if (Util.extractDomain(request.getUrl().toString(), false, false).contains("cima")){
+                       return super.shouldInterceptRequest(view, request);
+                    }
+                }
+
                 mm.setVideoUrl(request.getUrl().toString() + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
-                Log.d(TAG, "shouldInterceptRequest: video: " + mm.getVideoUrl());
+//                Log.d(TAG, "shouldInterceptRequest: video: " + mm.getVideoUrl());
+//                Log.d(TAG, "shouldInterceptRequest: video: headers: " + request.getRequestHeaders());
 
 //                //movie.setFetch(0); //tell next activity not to fetch movie on start
 //                returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
@@ -1185,10 +1221,18 @@ public class BrowserActivity extends AppCompatActivity {
 //                returnIntent.putExtra(DetailsActivity.MOVIE,  mm);
 //                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, mm.getMainMovie());
                 setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
-                finish();
+                activity.finish();
 //                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
 //                finish();
-                return super.shouldInterceptRequest(view, request);
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        view.stopLoading();
+                    }
+                });
+
+                return null;
+//                return super.shouldInterceptRequest(view, request);
 //                activity.finish();
             }
 
@@ -1207,7 +1251,7 @@ public class BrowserActivity extends AppCompatActivity {
 //                  return super.shouldInterceptRequest(view, request);
 //            }
             try {
-                headers = request.getRequestHeaders();
+
 
 
                 if (!cookieFound && request.getRequestHeaders() != null && request.getRequestHeaders().containsKey("Referer")) {
@@ -1476,10 +1520,18 @@ public class BrowserActivity extends AppCompatActivity {
                 String newUrl = url;
                 //   if (url.endsWith("m3u8")){
                 if (!movie.getStudio().equals(Movie.SERVER_FASELHD)) {
+                    if (movie.getStudio().equals(Movie.SERVER_CimaNow)) {
+                        if (Util.extractDomain(newUrl, false, false).contains("cimanow")){
+                            url = url.replace("-360p.", "-720p.");
+                        }
+                    }
+
+
                     //convert headers to string
                     newUrl = Util.generateMaxPlayerHeaders(url, headers);
                     // newUrl =url+"|Referer=https://vidshar.org/";
                     //   }
+
                 }
 
 
@@ -1515,7 +1567,15 @@ public class BrowserActivity extends AppCompatActivity {
 
                 //hier hhhhhhhh
                 setResult(Activity.RESULT_OK, Util.generateIntentResult(mov));
-                finish();
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        view.stopLoading();
+                    }
+                });
+
+                activity.finish();
                 return;
                 //hier hhhhhhhh
 

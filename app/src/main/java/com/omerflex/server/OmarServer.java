@@ -498,8 +498,8 @@ public class OmarServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-//        return search(getConfig().getUrl()+"/homepage", activityCallback);
-        return search(getConfig().getUrl()+"/search/ss", activityCallback);
+        return search(getConfig().getUrl()+"/homepage", activityCallback);
+//        return search(getConfig().getUrl()+"/search/ss", activityCallback);
 //        return search(getConfig().getUrl()+"/homepage");
 //        return search("sonic");
     }

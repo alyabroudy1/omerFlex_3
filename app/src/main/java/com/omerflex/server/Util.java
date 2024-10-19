@@ -317,6 +317,7 @@ public class Util {
                 @Override
                 public void run() {
                     String type = "video/*"; // It works for all video application
+                    Log.d(TAG, "run: playing: "+ movie.getVideoUrl());
                     Uri uri = Uri.parse(movie.getVideoUrl());
                     Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
                     in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);

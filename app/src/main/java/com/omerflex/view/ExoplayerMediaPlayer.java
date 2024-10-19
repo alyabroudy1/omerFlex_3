@@ -434,11 +434,15 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
     private DataSource.Factory createDataSourceFactory(String url, Map<String, String> headers) {
         Log.d(TAG, "createDataSourceFactory: h:"+headers);
         if (headers.isEmpty()) {
-            return new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true);
+            return new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+                    .setConnectTimeoutMs(60000)
+                    .setReadTimeoutMs(60000);
         }
             return () -> {
                 DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
-                        .setAllowCrossProtocolRedirects(true);
+                        .setAllowCrossProtocolRedirects(true)
+                        .setConnectTimeoutMs(60000)
+                        .setReadTimeoutMs(60000);
                 DataSource dataSource = httpDataSourceFactory.createDataSource();
                     setRequestHeaders(dataSource, headers);
 
