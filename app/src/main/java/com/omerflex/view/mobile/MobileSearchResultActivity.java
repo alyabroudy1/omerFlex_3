@@ -22,13 +22,11 @@ import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.SearchViewControl;
-import com.omerflex.view.mobile.entity.Category;
 import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 import com.omerflex.view.mobile.view.OnMovieClickListener;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class MobileSearchResultActivity extends AppCompatActivity {
 
@@ -36,7 +34,6 @@ public class MobileSearchResultActivity extends AppCompatActivity {
     public static String TAG = "MobileSearchResultActivity";
     private RecyclerView recyclerView;
     private CategoryAdapter categoryAdapter;
-    private List<Category> categoryList;
     ServerManager serverManager;
     Activity activity;
     HorizontalMovieAdapter clickedHorizontalMovieAdapter;
@@ -68,7 +65,7 @@ public class MobileSearchResultActivity extends AppCompatActivity {
 
 //        // Set up the vertical RecyclerView
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        categoryList = new ArrayList<>();
+
 //        categoryAdapter = new CategoryAdapter(this, categoryList, new MovieItemClickListener(this));
         categoryAdapter = new CategoryAdapter(this, new MovieItemClickListener(this));
 
@@ -89,8 +86,9 @@ public class MobileSearchResultActivity extends AppCompatActivity {
         searchViewControl = new SearchViewControl(activity, null, dbHelper) {
             @Override
             public <T> void handleMovieItemClick(Movie movie, int position, T rowsAdapter, T clickedRow, int defaultHeadersCounter) {
-                super.handleMovieItemClick(movie, position, categoryAdapter, clickedRow, defaultHeadersCounter);
+                super.handleMovieItemClick(movie, position, rowsAdapter, clickedRow, defaultHeadersCounter);
             }
+
             @Override
             protected void openDetailsActivity(Movie movie, Activity activity) {
                 Util.openMobileDetailsIntent(movie, activity, true);
@@ -98,7 +96,7 @@ public class MobileSearchResultActivity extends AppCompatActivity {
 
             @Override
             protected <T> void removeRow(T rowsAdapter, int i) {
-                if (rowsAdapter instanceof CategoryAdapter){
+                if (rowsAdapter instanceof CategoryAdapter) {
                     try {
                         ((CategoryAdapter) rowsAdapter).remove(i);
                     } catch (Exception exception) {
@@ -131,7 +129,7 @@ public class MobileSearchResultActivity extends AppCompatActivity {
                 }
             }
 
-            protected <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader){
+            protected <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
                 return (T) generateCategoryView(title, movies, isDefaultHeader);
             }
         };
@@ -363,13 +361,17 @@ public class MobileSearchResultActivity extends AppCompatActivity {
     private HorizontalMovieAdapter generateCategoryView(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
 
         HorizontalMovieAdapter adapter = categoryAdapter.addCategory(title, movies);
+        if (isDefaultHeader) {
+            defaultHeadersCounter++;
+        }
+        if (isDefaultHeader) {
+            defaultHeadersCounter++;
+        }
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
-                categoryAdapter.notifyItemInserted(categoryList.size() - 1);
-                if (isDefaultHeader) {
-                    defaultHeadersCounter++;
-                }
+                categoryAdapter.notifyItemInserted(categoryAdapter.size() - 1);
+
             }
         });
         return adapter;
@@ -587,7 +589,13 @@ public class MobileSearchResultActivity extends AppCompatActivity {
 
     private void updateRelatedMovieItem(HorizontalMovieAdapter horizontalMovieAdapter, int clickedMovieIndex, Movie resultMovie) {
         horizontalMovieAdapter.getMovieList().set(clickedMovieIndex, resultMovie);
-        horizontalMovieAdapter.notifyItemChanged(clickedMovieIndex);
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                horizontalMovieAdapter.notifyItemChanged(clickedMovieIndex);
+            }
+        });
+
     }
 
 //    private void updateMovieListOfHorizontalMovieAdapter(ArrayList<Movie> resultMovieSublist) {
@@ -599,7 +607,7 @@ public class MobileSearchResultActivity extends AppCompatActivity {
     private void extendMovieListOfHorizontalMovieAdapter(ArrayList<Movie> resultMovieSublist, HorizontalMovieAdapter horizontalMovieAdapter) {
         Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: p:" + ", s:" + horizontalMovieAdapter.getItemCount());
         horizontalMovieAdapter.getMovieList().addAll(resultMovieSublist);
-        handler.post(new Runnable() {
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
 //                    categoryList.add(category);

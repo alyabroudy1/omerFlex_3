@@ -246,9 +246,13 @@ public class BrowserActivity extends AppCompatActivity {
         webView.setOnKeyListener(new View.OnKeyListener() {
             @Override
             public boolean onKey(View view, int i, KeyEvent keyEvent) {
-               String message = "key: "+keyEvent.getKeyCode() + ", "+keyEvent.getCharacters();
-//                Log.d(TAG, "onKey: "+message);
-                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
+               String message = "key: "+keyEvent.getKeyCode() ;
+                Log.d(TAG, "onKey: "+message);
+                if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_BACK){
+                    onBackPressed();
+                    return true;
+                }
+//                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
                 return false;
             }
         });
@@ -256,6 +260,10 @@ public class BrowserActivity extends AppCompatActivity {
 
 //        server = ServerManager.determineServer(movie, listRowAdapter, BrowserActivity.this, null);
         server = ServerConfigManager.getServer(movie.getStudio());
+        if (server == null){
+            Toast.makeText(activity, "undefined server", Toast.LENGTH_SHORT).show();
+            return;
+        }
         config = ServerConfigManager.getConfig(server.getServerId());
         //   simpleWebView.setWebViewClient(new CustomWebViewClient());
         //   webView.setWebChromeClient(new ChromeClient());

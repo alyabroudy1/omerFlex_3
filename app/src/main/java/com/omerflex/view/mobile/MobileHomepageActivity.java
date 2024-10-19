@@ -27,7 +27,6 @@ import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 import com.omerflex.view.mobile.view.OnMovieClickListener;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class MobileHomepageActivity extends AppCompatActivity {
 
@@ -35,7 +34,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
     public static String TAG = "MobileHomepageActivity";
     private RecyclerView recyclerView;
     private CategoryAdapter categoryAdapter;
-    private List<HorizontalMovieAdapter> categoryList;
+//    private List<HorizontalMovieAdapter> categoryList;
     ServerManager serverManager;
     Activity activity;
     HorizontalMovieAdapter clickedHorizontalMovieAdapter;
@@ -70,7 +69,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
 
 //        // Set up the vertical RecyclerView
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        categoryList = new ArrayList<>();
+//        categoryList = new ArrayList<>();
         categoryAdapter = new CategoryAdapter(this, new MovieItemClickListener(this));
 
 
@@ -181,10 +180,10 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //        Category category = new Category(title, movies);
         Log.d(TAG, "generateCategoryView: " + movies);
         HorizontalMovieAdapter adapter = categoryAdapter.addCategory(title, movies);
-        categoryAdapter.notifyItemInserted(categoryAdapter.size() - 1);
         if (isDefaultHeader) {
             defaultHeadersCounter++;
         }
+        categoryAdapter.notifyItemInserted(categoryAdapter.size() - 1);
 //        adapter.notifyItemInserted(categoryAdapter.size() - 1);
 //        new Handler(Looper.getMainLooper()).post(new Runnable() {
 //            @Override
@@ -512,7 +511,13 @@ public class MobileHomepageActivity extends AppCompatActivity {
 
     private void updateRelatedMovieItem(HorizontalMovieAdapter horizontalMovieAdapter, int clickedMovieIndex, Movie resultMovie) {
         horizontalMovieAdapter.getMovieList().set(clickedMovieIndex, resultMovie);
-        horizontalMovieAdapter.notifyItemChanged(clickedMovieIndex);
+
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                horizontalMovieAdapter.notifyItemChanged(clickedMovieIndex);
+            }
+        });
     }
 
     private void updateMovieListOfHorizontalMovieAdapter(ArrayList<Movie> resultMovieSublist) {
@@ -524,7 +529,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
     private void extendMovieListOfHorizontalMovieAdapter(ArrayList<Movie> resultMovieSublist, HorizontalMovieAdapter horizontalMovieAdapter) {
         Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: p:" + ", s:" + horizontalMovieAdapter.getItemCount());
         horizontalMovieAdapter.getMovieList().addAll(resultMovieSublist);
-        handler.post(new Runnable() {
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
 //                    categoryList.add(category);
@@ -543,11 +548,11 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //                    categoryList.add(category);
 //                    categoryAdapter.notifyItemInserted(categoryList.size() - 1);
 //                    horizontalMovieAdapter.notifyItemInserted(categoryList.size() - 1);
-                if (categoryList.contains(category)) {
-                    int cateIndex = categoryList.indexOf(category);
-                    categoryList.get(cateIndex).getMovieList().addAll(resultMovieSublist);
-                    categoryAdapter.notifyItemInserted(categoryList.size() - 1);
-                }
+//                if (categoryList.contains(category)) {
+//                    int cateIndex = categoryList.indexOf(category);
+//                    categoryList.get(cateIndex).getMovieList().addAll(resultMovieSublist);
+//                    categoryAdapter.notifyItemInserted(categoryList.size() - 1);
+//                }
 
             }
         });

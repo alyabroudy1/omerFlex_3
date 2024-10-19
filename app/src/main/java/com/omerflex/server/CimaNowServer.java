@@ -529,7 +529,8 @@ public class CimaNowServer extends AbstractServer{
                             "        var clonedIframe = iframe.cloneNode(true);\n" +
                             "        \n" +
                             "        // Clear the entire body content\n" +
-                            "        document.body.innerHTML = '';\n" +
+//                            "        document.body.innerHTML = '';\n" +
+                            "        iframe.innerHTML = '';\n" +
                             "\n" +
                             "        // Append the cloned iframe to the body\n" +
                             "        document.body.appendChild(clonedIframe);\n" +

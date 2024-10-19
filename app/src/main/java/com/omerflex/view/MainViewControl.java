@@ -103,7 +103,7 @@ public abstract class MainViewControl extends SearchViewControl {
         executor2.submit(() -> {
             ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
 
-//            loadIptvServerHomepageResult();
+            loadIptvServerHomepageResult();
 //            loadHomepageHistoryRows();
         });
         executor2.shutdown();

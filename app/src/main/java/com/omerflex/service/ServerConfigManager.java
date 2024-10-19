@@ -87,9 +87,9 @@ public class ServerConfigManager {
     }
 
     private static ArrayList<AbstractServer> initializeServersFromDB(MovieDbHelper dbHelper) {
-        ArrayList<CookieDTO> serverConfigs = dbHelper.getAllCookieDto();
+//        ArrayList<CookieDTO> serverConfigs = dbHelper.getAllCookieDto();
 
-//        ArrayList<CookieDTO> serverConfigs = new ArrayList<>();
+        ArrayList<CookieDTO> serverConfigs = new ArrayList<>();
         Log.d(TAG, "initializeServersFromDB " + serverConfigs);
         if (serverConfigs.isEmpty()) {
             return DefaultServersConfig.getDefaultServers(dbHelper);

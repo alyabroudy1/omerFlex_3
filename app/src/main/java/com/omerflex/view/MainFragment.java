@@ -779,7 +779,8 @@ public class MainFragment extends BrowseSupportFragment {
     String url = "blob:https://vk.com/d08eb16f-d03e-4743-8a27-8158f72c1c7b|Referer=https://vk.com/&User-Agent=Android 8";
     mm.setVideoUrl(url);
     mm.setStudio(Movie.SERVER_CimaNow);
-    mm.setState(Movie.VIDEO_STATE);
+//    mm.setState(Movie.VIDEO_STATE);
+    mm.setState(Movie.RESOLUTION_STATE);
 //    mm.setState(Movie.BROWSER_STATE);
 //
 //            Map<String, String> headers = Util.extractHeaders(url);
@@ -787,8 +788,8 @@ public class MainFragment extends BrowseSupportFragment {
 //            headers.forEach((key, value) -> System.out.println(key + ": " + value));
 //
 //
-Util.openExoPlayer(mm, getActivity(), false);
-//Util.openBrowserIntent(mm, fragment, false, false);
+//Util.openExoPlayer(mm, getActivity(), false);
+Util.openBrowserIntent(mm, fragment, false, false);
 //Util.openExternalVideoPlayer(mm, getActivity());
 //    Intent browse = new Intent(getActivity(), BrowserActivity.class);
 //     browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
