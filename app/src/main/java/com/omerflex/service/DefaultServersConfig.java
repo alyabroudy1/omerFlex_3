@@ -36,6 +36,7 @@ public class DefaultServersConfig {
         mycimaConfig.setName(Movie.SERVER_MyCima);
         mycimaConfig.setUrl("https://mycima.io");
         mycimaConfig.setReferer("https://mycima.io/");
+        mycimaConfig.setActive(true);
 //        ServerConfigManager.addConfig(mycimaConfig);
 
         AbstractServer mycima = new MyCimaServer();
@@ -108,6 +109,7 @@ public class DefaultServersConfig {
         iptvConfig.setName(Movie.SERVER_IPTV);
         iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
         iptvConfig.setReferer("https://drive.google.com/");
+        iptvConfig.setActive(true);
         ServerConfigManager.addConfig(iptvConfig);
 
         AbstractServer iptv = new IptvServer();

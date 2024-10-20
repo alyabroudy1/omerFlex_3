@@ -3,9 +3,9 @@ package com.omerflex.entity.dto;
 public class ServerConfigDTO {
 
     public String name;
-    public String displayName;
+    public String label;
     public  String url;
-    public  String webName;
+    public  String referer;
     public boolean isActive;
     public String description;
     public String date;
@@ -14,9 +14,9 @@ public class ServerConfigDTO {
     public String toString() {
         return "ServerConfig{" +
                 "name='" + name + '\'' +
-                ", displayName='" + displayName + '\'' +
+                ", label='" + label + '\'' +
                 ", url='" + url + '\'' +
-                ", webName='" + webName + '\'' +
+                ", referer='" + referer + '\'' +
                 ", isActive=" + isActive +
                 ", description='" + description + '\'' +
                 ", date='" + date + '\'' +

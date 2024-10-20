@@ -1065,8 +1065,14 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                 mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
                 mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
                 loadActionRow();
+                try {
+                    initializeBackground(movie);
+                }catch (Exception e){
+                    Log.d(TAG, "run: error updating background: "+e.getMessage());
+                }
             }
         });
+
 
     }
 

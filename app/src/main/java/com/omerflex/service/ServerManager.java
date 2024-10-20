@@ -12,7 +12,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
-import com.omerflex.entity.dto.CookieDTO;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.FaselHdServer;
@@ -132,46 +131,47 @@ public class ServerManager {
         executor.shutdown();
     }
 
-    private void updateServerConfig(ServerConfigDTO serverConfigDTO) {
+    private void updateServerConfig(ServerConfigDTO githubServerConfigDTO) {
 //        Log.d(TAG, "updateServerConfig: " + serverConfig);
-        if (serverConfigDTO == null || serverConfigDTO.name == null || serverConfigDTO.name.equals("")) {
+        if (githubServerConfigDTO == null || githubServerConfigDTO.name == null || githubServerConfigDTO.name.equals("")) {
             return;
         }
 
 //        Log.d(TAG, "updateServerConfig2: " + serverConfig);
         try {
-            CookieDTO cookieDTO = dbHelper.getCookieDto(serverConfigDTO.name);
-            if (cookieDTO == null) {
+//            CookieDTO cookieDTO = dbHelper.getCookieDto(serverConfigDTO.name);
+            ServerConfig serverConfig = dbHelper.getServerConfig(githubServerConfigDTO.name);
+            if (serverConfig == null) {
                 return;
             }
 //            Log.d(TAG, "updateServerConfig3:cookieDTO: " + cookieDTO);
 
-            if (serverConfigDTO.url != null && !serverConfigDTO.url.equals("")) {
-                if (cookieDTO.date != null) {
+            if (githubServerConfigDTO.url != null && !githubServerConfigDTO.url.equals("")) {
+                if (serverConfig.getCreatedAt() != null) {
                     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                     try {
-                        Date githubDate = format.parse(serverConfigDTO.date);
+                        Date githubDate = format.parse(githubServerConfigDTO.date);
                         //if github date is newer then take it
-                        boolean isNewDate = githubDate.getTime() > cookieDTO.date.getTime();
+                        boolean isNewDate = githubDate.getTime() > serverConfig.getCreatedAt().getTime();
                         Log.d(TAG,
                                 "updateServerConfig:" +
-                                        serverConfigDTO.name +
+                                        githubServerConfigDTO.name +
                                         ", isNewDate:" + isNewDate +
                                         ", g:" + githubDate +
-                                        ", db:" + cookieDTO.date +
-                                        ", gUrl: " + serverConfigDTO.url +
-                                        ", dbUrl: " + cookieDTO.referer
+                                        ", db:" + serverConfig.getCreatedAt() +
+                                        ", gUrl: " + githubServerConfigDTO.url +
+                                        ", dbUrl: " + serverConfig.getReferer()
                         );
                         if (isNewDate) {
-                            ServerConfig serverConfig = new ServerConfig();
-                            serverConfig.setDate(serverConfigDTO.date);
-                            serverConfig.setName(serverConfigDTO.name);
-                            serverConfig.setUrl(serverConfigDTO.url);
-                            serverConfig.setDisplayName(serverConfigDTO.displayName);
-                            serverConfig.setWebName(serverConfigDTO.webName);
-                            serverConfig.setDescription(serverConfigDTO.description);
-                            serverConfig.setActive(serverConfigDTO.isActive);
-                            dbHelper.saveServerConfigAsCookieDTO(serverConfig, githubDate);
+//                            serverConfig.setCreatedAt(serverConfigDTO.date);
+                            serverConfig.setCreatedAt(githubDate);
+                            serverConfig.setName(githubServerConfigDTO.name);
+                            serverConfig.setUrl(githubServerConfigDTO.url);
+                            serverConfig.setReferer(githubServerConfigDTO.referer);
+                            serverConfig.setLabel(githubServerConfigDTO.label);
+                            serverConfig.setActive(githubServerConfigDTO.isActive);
+//                            dbHelper.saveServerConfigAsCookieDTO(serverConfig, githubDate);
+                            dbHelper.saveServerConfig(serverConfig);
                         }
                     } catch (ParseException e) {
                         e.printStackTrace();

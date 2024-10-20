@@ -12,7 +12,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -34,6 +33,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.leanback.widget.ArrayObjectAdapter;
@@ -135,6 +135,29 @@ public class BrowserActivity extends AppCompatActivity {
 
         gson = new Gson();
         activity = this;
+
+
+        // Handle the back button press with the new onBackPressedDispatcher
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+//                if (webView.canGoBack()) {
+//                    webView.stopLoading(); // Stop loading the page
+//                    webView.goBack();      // Navigate back in WebView's history
+//                } else {
+//                    // If there's no history, close the activity
+//                    finish();
+//                }
+                handleBackPressed();
+            }
+        };
+
+        // Add the callback to the back pressed dispatcher
+        getOnBackPressedDispatcher().addCallback(this, callback);
+
+
+
+
         // webView = MyApplication.getWebView();
         // setContentView(webView);
         dbHelper = MovieDbHelper.getInstance(this);
@@ -243,19 +266,19 @@ public class BrowserActivity extends AppCompatActivity {
 /////////////////////////////////////////
 
         // webView.setFocusable(false);  // Set the WebView to not focusable
-        webView.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-               String message = "key: "+keyEvent.getKeyCode() ;
-                Log.d(TAG, "onKey: "+message);
-                if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_BACK){
-                    onBackPressed();
-                    return true;
-                }
-//                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
-                return false;
-            }
-        });
+//        webView.setOnKeyListener(new View.OnKeyListener() {
+//            @Override
+//            public boolean onKey(View view, int i, KeyEvent keyEvent) {
+//               String message = "key: "+keyEvent.getKeyCode() ;
+//                Log.d(TAG, "onKey: "+message);
+//                if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_BACK){
+//                    onBackPressed();
+//                    return true;
+//                }
+////                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
+//                return false;
+//            }
+//        });
 
 
 //        server = ServerManager.determineServer(movie, listRowAdapter, BrowserActivity.this, null);
@@ -317,6 +340,26 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
     }
+
+//    @Override
+//    public boolean onKeyDown(int keyCode, KeyEvent event) {
+//        if (keyCode == KeyEvent.KEYCODE_BACK) {
+//            Log.d(TAG, "onKeyDown: "+keyCode);
+//            handleBackPressed();
+//        }
+////            onBackPressed();
+//////            if (webView.canGoBack()) {
+//////                // If the WebView has a history, go back immediately
+//////                webView.stopLoading(); // Stop any ongoing page loading
+//////                webView.goBack();
+//////                return true; // Indicate that we've handled the back press
+//////            } else {
+//////                // If there's no history, handle the default back press (exit the activity)
+//////                finish();
+//////            }
+////        }
+//        return super.onKeyDown(keyCode, event);
+//    }
 
     public Map<String, String> parseParamsToMap(String params) {
         params = params.substring(params.indexOf("||") + 2);
@@ -594,20 +637,23 @@ public class BrowserActivity extends AppCompatActivity {
         webView.destroy();
     }
 
-    @Override
-    public void onBackPressed() {
+//    @Override
+//    public void onBackPressed() {
+    private void handleBackPressed() {
+        Log.d(TAG, "handleBackPressed: ");
         //check if waiting time between the second click of back button is greater less than 2 seconds so we finish the app
         if (backPressedTime + 2000 > System.currentTimeMillis()) {
+            webView.stopLoading();
             finish();
         } else {
-            Toast.makeText(activity, "backPressed", Toast.LENGTH_SHORT).show();
-            if (webView != null && webView.canGoBack())
+            if (webView != null && webView.canGoBack()) {
                 webView.goBack();// if there is previous page open it
+                Toast.makeText(activity, "backPressed", Toast.LENGTH_SHORT).show();
+            }
             else
                 Toast.makeText(this, "Press back 2 time to exit", Toast.LENGTH_SHORT).show();
         }
         backPressedTime = System.currentTimeMillis();
-        super.onBackPressed();
     }
 
     /**

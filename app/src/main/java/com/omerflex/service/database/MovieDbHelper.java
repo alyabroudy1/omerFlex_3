@@ -19,10 +19,12 @@ import com.omerflex.server.OmarServer;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.contract.CookieContract.CookieTable;
+import com.omerflex.service.database.contract.ServerConfigContract.ConfigTable;
 import com.omerflex.service.database.contract.IptvContract.IptvTable;
 import com.omerflex.service.database.contract.MovieContract.MoviesTable;
 import com.omerflex.service.database.contract.MovieHistoryContract.MovieHistoryTable;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
@@ -36,7 +38,7 @@ import java.util.Map;
 public class MovieDbHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "MoviesHistory.db";
     static String TAG = "MovieDbHelper";
-    private static final int DATABASE_VERSION = 1; // should be increased if changes applied to database structure or reinstall the app
+    private static final int DATABASE_VERSION = 4; // should be increased if changes applied to database structure or reinstall the app
 
     //to make this class singleton which means to be created only one time in the app
     private static MovieDbHelper instance;
@@ -93,6 +95,18 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 + CookieTable.COLUMN_COOKIE + " TEXT"
                 + ")";
 
+        final String SQL_CREATE_SERVER_CONFIGS_TABLE = "CREATE TABLE " + ConfigTable.TABLE_NAME + "("
+                + ConfigTable.COLUMN_ID + " TEXT PRIMARY KEY, "
+                + ConfigTable.COLUMN_NAME + " TEXT, "
+                + ConfigTable.COLUMN_LABEL + " TEXT, "
+                + ConfigTable.COLUMN_IS_ACTIVE + " INTEGER, "
+                + ConfigTable.COLUMN_URL + " TEXT, "
+                + ConfigTable.COLUMN_REFERER + " TEXT, "
+                + ConfigTable.COLUMN_CREATED_AT + " INTEGER, "
+                + ConfigTable.COLUMN_HEADER + " TEXT, "
+                + ConfigTable.COLUMN_COOKIE + " TEXT"
+                + ")";
+
         final String SQL_CREATE_IPTV_TABLE = "CREATE TABLE " + IptvTable.TABLE_NAME + "("
                 + IptvTable.COLUMN_ID + " TEXT, "
                 + IptvTable.COLUMN_URL + " TEXT, "
@@ -110,17 +124,21 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
         db.execSQL(SQL_CREATE_MOVIES_TABLE);
         db.execSQL(SQL_CREATE_IPTV_TABLE);
-        db.execSQL(SQL_CREATE_COOKIE_TABLE);
+//        db.execSQL(SQL_CREATE_COOKIE_TABLE);
+        db.execSQL(SQL_CREATE_SERVER_CONFIGS_TABLE);
         db.execSQL(SQL_CREATE_MOVIE_HISTORY_TABLE);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + MoviesTable.TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + CookieTable.TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + IptvTable.TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + MovieHistoryTable.TABLE_NAME);
-        onCreate(db);
+        if (newVersion > oldVersion) {
+            db.execSQL("DROP TABLE IF EXISTS " + MoviesTable.TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + CookieTable.TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + ConfigTable.TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + IptvTable.TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + MovieHistoryTable.TABLE_NAME);
+            onCreate(db);
+        }
     }
 
     @Override
@@ -174,7 +192,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
     public void saveHeadersAndCookies(AbstractServer server, String serverName) {
         //.getHeaders(), server.getCookies(), movie.getStudio()
         ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
-        if (config == null){
+        if (config == null) {
             return;
         }
 
@@ -183,9 +201,9 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
         SQLiteDatabase db = this.getWritableDatabase();
 //
-        if (headers.containsKey("Referer")){
+        if (headers.containsKey("Referer")) {
             String referer = headers.get("Referer");
-            if (referer != null){
+            if (referer != null) {
                 headers.put("Referer", Util.extractDomain(referer, true, true));
             }
         }
@@ -272,6 +290,61 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         return history;
     }
 
+    private ServerConfig generateServerConfigObject(Cursor cursor) {
+        ServerConfig serverConfig = new ServerConfig();
+
+        int nameIndex = cursor.getColumnIndex(ConfigTable .COLUMN_ID);
+        if (nameIndex >= 0) {
+            serverConfig.setName(cursor.getString(nameIndex));
+        }
+
+        int labelIndex = cursor.getColumnIndex(ConfigTable .COLUMN_LABEL);
+        if (labelIndex >= 0) {
+            serverConfig.setLabel(cursor.getString(labelIndex));
+        }
+
+        int isActiveIndex = cursor.getColumnIndex(ConfigTable .COLUMN_IS_ACTIVE);
+        if (isActiveIndex >= 0) {
+            serverConfig.setActive(cursor.getInt(isActiveIndex) == 1);
+        }
+
+        int urlIndex = cursor.getColumnIndex(ConfigTable .COLUMN_URL);
+        if (urlIndex >= 0) {
+            serverConfig.setUrl(cursor.getString(urlIndex));
+        }
+
+        int refererIndex = cursor.getColumnIndex(ConfigTable .COLUMN_REFERER);
+        if (refererIndex >= 0) {
+            serverConfig.setReferer(cursor.getString(refererIndex));
+        }
+
+        int dateIndex = cursor.getColumnIndex(ConfigTable .COLUMN_CREATED_AT);
+        if (dateIndex >= 0) {
+            try {
+                serverConfig.setCreatedAt(new Date(cursor.getLong(dateIndex)));
+            } catch (Exception exception) {
+                Log.d(TAG, "generateCookieDto: error date: " + exception.getMessage());
+            }
+        }
+
+        int headersIndex = cursor.getColumnIndex(ConfigTable .COLUMN_HEADER);
+        if (headersIndex >= 0) {
+            try {
+                serverConfig.setHeaders(Util.convertJsonToHashMap(cursor.getString(headersIndex)));
+            } catch (JSONException e) {
+                Log.d(TAG, "generateServerConfigObject: error retrieving headers as hash: "+e.getMessage());
+            }
+        }
+
+        int cookieIndex = cursor.getColumnIndex(ConfigTable .COLUMN_COOKIE);
+        if (cookieIndex >= 0) {
+            serverConfig.setStringCookies(cursor.getString(cookieIndex));
+        }
+//        Log.d(TAG, "generateCookieDto: "+cookieDTO);
+        return serverConfig;
+    }
+
+
     private CookieDTO generateCookieDto(Cursor cursor) {
         CookieDTO cookieDTO = new CookieDTO();
         int headersIndex = cursor.getColumnIndex(CookieTable.COLUMN_HEADER);
@@ -306,6 +379,20 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         return cookieDTO;
     }
 
+    public ServerConfig getServerConfig(String serverName) {
+
+//        Log.d(TAG, "getCookieDto: "+serverName);
+        SQLiteDatabase db = this.getReadableDatabase();
+//        String[] columns = {CookieTable.COLUMN_HEADER};
+        String selection = ConfigTable.COLUMN_ID + " LIKE '%" + serverName + "%'";
+        Cursor cursor = db.query(ConfigTable.TABLE_NAME, null, selection, null, null, null, null);
+        if (cursor.moveToFirst()) {
+            return generateServerConfigObject(cursor);
+        }
+
+        return null;
+    }
+
     public CookieDTO getCookieDto(String serverName) {
 
 //        Log.d(TAG, "getCookieDto: "+serverName);
@@ -313,7 +400,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 //        String[] columns = {CookieTable.COLUMN_HEADER};
         String selection = CookieTable.COLUMN_ID + " LIKE '%" + serverName + "%'";
         Cursor cursor = db.query(CookieTable.TABLE_NAME, null, selection, null, null, null, null);
-        if (cursor.moveToFirst()){
+        if (cursor.moveToFirst()) {
             return generateCookieDto(cursor);
         }
 
@@ -782,7 +869,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 //        String sql = "SELECT * FROM " + MoviesTable.TABLE_NAME + " WHERE " + MoviesTable.COLUMN_IS_HISTORY + " = '1' ORDER BY " + MoviesTable.COLUMN_UPDATED_AT + " DESC";
         // Cursor c = db.rawQuery(sql, null);
 
-        String selection = MoviesTable.COLUMN_IS_HISTORY + " = ? AND " + MoviesTable.COLUMN_STUDIO + " != ? AND " +  MoviesTable.COLUMN_GROUP + " IS NULL";
+        String selection = MoviesTable.COLUMN_IS_HISTORY + " = ? AND " + MoviesTable.COLUMN_STUDIO + " != ? AND " + MoviesTable.COLUMN_GROUP + " IS NULL";
         String[] selectionArgs = {"1", Movie.SERVER_IPTV};
 
         if (tv) {
@@ -805,14 +892,12 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                     null,
                     sortOrder
             );
-            Log.d(TAG, "getAllHistoryMovies: "+c.getCount());
+            Log.d(TAG, "getAllHistoryMovies: " + c.getCount());
             movieArrayList = fetchMovieListFromDB(c);
 
-        }catch (Exception e){
-            Log.d(TAG, "getAllHistoryMovies: error: "+ e.getMessage());
+        } catch (Exception e) {
+            Log.d(TAG, "getAllHistoryMovies: error: " + e.getMessage());
         }
-
-
 
 
         //c.close();
@@ -1465,10 +1550,41 @@ public class MovieDbHelper extends SQLiteOpenHelper {
     public int deleteMovie(Movie movie) {
         String selection = MoviesTable.COLUMN_VIDEO_URL + " = ?";
         String[] selectionArgs = new String[]{movie.getVideoUrl()};
-        if (db == null){
+        if (db == null) {
             return 0;
         }
         return db.delete(MoviesTable.TABLE_NAME, selection, selectionArgs);
+    }
+
+    public ArrayList<ServerConfig> getAllServerConfigs() {
+        db = getReadableDatabase();
+
+        ArrayList<ServerConfig> servers = new ArrayList<>();
+//           String selection = "SELECT * FROM "+CookieTable.TABLE_NAME;
+
+        Cursor c = db.query(
+                ConfigTable.TABLE_NAME,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        //if (c.moveToFirst()){
+//        Log.d(TAG, "getAllCookieDto: count:" + c.getCount());
+        if (c.moveToFirst()) {
+            do {
+                try {
+                    ServerConfig server = generateServerConfigObject(c);
+//                        Log.d(TAG, "getAllCookieDto: server__:" + server);
+                    servers.add(server);
+                } catch (Exception exception) {
+                    Log.d(TAG, "generateCookieDto: error date: " + exception.getMessage());
+                }
+            } while (c.moveToNext());
+        }
+        return servers;
     }
 
     public ArrayList<CookieDTO> getAllCookieDto() {
@@ -1493,7 +1609,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 try {
                     CookieDTO server = generateCookieDto(c);
 //                        Log.d(TAG, "getAllCookieDto: server__:" + server);
-                        servers.add(server);
+                    servers.add(server);
                 } catch (Exception exception) {
                     Log.d(TAG, "generateCookieDto: error date: " + exception.getMessage());
                 }
@@ -1509,6 +1625,66 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
 //        Log.d(TAG, "saveServerConfigAsCookieDTO: " + serverConfig);
+        String selection = ConfigTable.COLUMN_ID + " = ?";
+        String[] selectionArgs = new String[]{serverConfig.getName()};
+        try (Cursor cursor = db.query(
+                ConfigTable.TABLE_NAME, null,
+                selection, selectionArgs, null, null, null)) {
+
+//            Log.d(TAG, "saveServerConfigAsCookieDTO: cursor:" + cursor.getCount());
+
+            if (serverConfig.getName() != null) {
+                values.put(ConfigTable.COLUMN_ID, serverConfig.getName());
+                values.put(ConfigTable.COLUMN_NAME, serverConfig.getName());
+            }
+
+            if (serverConfig.getLabel() != null) {
+                values.put(ConfigTable.COLUMN_LABEL, serverConfig.getLabel());
+            }
+
+            values.put(ConfigTable.COLUMN_IS_ACTIVE, serverConfig.isActive() ? 1 : 0);
+
+
+            if (serverConfig.getUrl() != null) {
+                values.put(ConfigTable.COLUMN_URL, serverConfig.getUrl());
+            }
+
+            if (serverConfig.getReferer() != null) {
+                values.put(ConfigTable.COLUMN_REFERER, serverConfig.getUrl());
+            }
+
+            values.put(ConfigTable.COLUMN_CREATED_AT, System.currentTimeMillis());
+
+            if (!serverConfig.getHeaders().isEmpty()) {
+                values.put(ConfigTable.COLUMN_HEADER, new JSONObject(serverConfig.getHeaders()).toString());
+            }
+
+            if (serverConfig.getStringCookies() != null) {
+                values.put(ConfigTable.COLUMN_COOKIE, serverConfig.getStringCookies());
+            }
+
+            db = this.getWritableDatabase();
+            if (cursor.getCount() > 0) {
+                Log.d(TAG, "saveServerConfig: update: " + values);
+                // Server entry already exists, update the headers and cookies
+
+                db.update(ConfigTable.TABLE_NAME, values, ConfigTable.COLUMN_ID + " = ?", new String[]{serverConfig.getName()});
+            } else {
+                // Server entry does not exist, insert a new row
+                Log.d(TAG, "saveServerConfig: insert: " + values);
+                db.insert(ConfigTable.TABLE_NAME, null, values);
+            }
+        }
+    }
+
+
+    public void saveServerConfig_old(ServerConfig serverConfig) {
+        ContentValues values = new ContentValues();
+
+
+        SQLiteDatabase db = this.getReadableDatabase();
+
+//        Log.d(TAG, "saveServerConfigAsCookieDTO: " + serverConfig);
         String selection = CookieTable.COLUMN_ID + " = ?";
         String[] selectionArgs = new String[]{serverConfig.getName()};
         try (Cursor cursor = db.query(
@@ -1517,33 +1693,33 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
 //            Log.d(TAG, "saveServerConfigAsCookieDTO: cursor:" + cursor.getCount());
 
-            if (serverConfig.getName() != null){
+            if (serverConfig.getName() != null) {
                 values.put(CookieTable.COLUMN_ID, serverConfig.getName());
             }
 
-            if (serverConfig.getUrl() != null){
+            if (serverConfig.getUrl() != null) {
                 values.put(CookieTable.COLUMN_REFERRER, serverConfig.getUrl());
             }
 
             values.put(CookieTable.COLUMN_CREATED_AT, System.currentTimeMillis());
 
-            if (!serverConfig.getHeaders().isEmpty()){
+            if (!serverConfig.getHeaders().isEmpty()) {
                 values.put(CookieTable.COLUMN_HEADER, new JSONObject(serverConfig.getHeaders()).toString());
             }
 
-            if (serverConfig.getStringCookies() != null){
+            if (serverConfig.getStringCookies() != null) {
                 values.put(CookieTable.COLUMN_COOKIE, serverConfig.getStringCookies());
             }
 
             db = this.getWritableDatabase();
             if (cursor.getCount() > 0) {
-                Log.d(TAG, "saveServerConfigAsCookieDTO: update: "+ values);
+                Log.d(TAG, "saveServerConfigAsCookieDTO: update: " + values);
                 // Server entry already exists, update the headers and cookies
 
                 db.update(CookieTable.TABLE_NAME, values, CookieTable.COLUMN_ID + " = ?", new String[]{serverConfig.getName()});
             } else {
                 // Server entry does not exist, insert a new row
-                Log.d(TAG, "saveServerConfigAsCookieDTO: insert: "+ values);
+                Log.d(TAG, "saveServerConfigAsCookieDTO: insert: " + values);
                 db.insert(CookieTable.TABLE_NAME, null, values);
             }
         }
@@ -1571,13 +1747,13 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
             db = this.getWritableDatabase();
             if (cursor.getCount() > 0) {
-                Log.d(TAG, "saveServerConfigAsCookieDTO: update: "+ values);
+                Log.d(TAG, "saveServerConfigAsCookieDTO: update: " + values);
                 // Server entry already exists, update the headers and cookies
 
                 db.update(CookieTable.TABLE_NAME, values, CookieTable.COLUMN_ID + " = ?", new String[]{serverConfig.getName()});
             } else {
                 // Server entry does not exist, insert a new row
-                Log.d(TAG, "saveServerConfigAsCookieDTO: insert: "+ values);
+                Log.d(TAG, "saveServerConfigAsCookieDTO: insert: " + values);
                 db.insert(CookieTable.TABLE_NAME, null, values);
             }
         }
@@ -1608,14 +1784,14 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
         String sql = "SELECT * FROM " + MoviesTable.TABLE_NAME +
                 " WHERE " + MoviesTable.COLUMN_STUDIO + " = " + Movie.SERVER_IPTV +
-                " AND " + MoviesTable.COLUMN_GROUP + " like %mbc% "+ MoviesTable.COLUMN_GROUP + " like %شاهد% " +
+                " AND " + MoviesTable.COLUMN_GROUP + " like %mbc% " + MoviesTable.COLUMN_GROUP + " like %شاهد% " +
                 " ORDER BY " + MoviesTable.COLUMN_UPDATED_AT + " DESC";
         // Cursor c = db.rawQuery(sql, null);
 
 //        String selection = MoviesTable.COLUMN_IS_HISTORY + " = ? AND " + MoviesTable.COLUMN_STUDIO + " != ?";
 //        String[] selectionArgs = {"1", Movie.SERVER_IPTV};
-        String selection = MoviesTable.COLUMN_STUDIO + " = '" + Movie.SERVER_IPTV + "' "+
-                " AND " + MoviesTable.COLUMN_GROUP + " LIKE '%mbc%' OR "+ MoviesTable.COLUMN_GROUP + " LIKE '%شاهد%' " ;
+        String selection = MoviesTable.COLUMN_STUDIO + " = '" + Movie.SERVER_IPTV + "' " +
+                " AND " + MoviesTable.COLUMN_GROUP + " LIKE '%mbc%' OR " + MoviesTable.COLUMN_GROUP + " LIKE '%شاهد%' ";
 
         String sortOrder = MoviesTable.COLUMN_UPDATED_AT + " DESC";
 

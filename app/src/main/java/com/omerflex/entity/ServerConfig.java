@@ -2,20 +2,19 @@ package com.omerflex.entity;
 
 import com.omerflex.server.Util;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ServerConfig {
 
     private String name;
-    private String displayName;
-    private  String url;
-    private  String webName;
+    private String label;
     private boolean isActive;
-    private String description;
-    private String date;
-    private String stringCookies;
+    private  String url;
     private String referer;
+    private Date createdAt;
+    private String stringCookies;
     private Map<String, String> headers;
 
     public ServerConfig (){
@@ -27,12 +26,12 @@ public class ServerConfig {
         return "ServerConfig{" +
                 "name='" + name + '\'' +
                 ", referer='" + referer + '\'' +
-                ", displayName='" + displayName + '\'' +
+                ", displayName='" + label + '\'' +
                 ", url='" + url + '\'' +
-                ", webName='" + webName + '\'' +
+//                ", webName='" + webName + '\'' +
                 ", isActive=" + isActive +
-                ", description='" + description + '\'' +
-                ", date='" + date + '\'' +
+//                ", description='" + description + '\'' +
+                ", date='" + createdAt + '\'' +
                 ", headers=" + headers +
                 ", stringCookies='" + stringCookies + '\'' +
                 '}';
@@ -46,12 +45,12 @@ public class ServerConfig {
         this.name = name;
     }
 
-    public String getDisplayName() {
-        return displayName;
+    public String getLabel() {
+        return label;
     }
 
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
+    public void setLabel(String label) {
+        this.label = label;
     }
 
     public String getUrl() {
@@ -62,14 +61,6 @@ public class ServerConfig {
         this.url = url;
     }
 
-    public String getWebName() {
-        return webName;
-    }
-
-    public void setWebName(String webName) {
-        this.webName = webName;
-    }
-
     public boolean isActive() {
         return isActive;
     }
@@ -78,20 +69,12 @@ public class ServerConfig {
         isActive = active;
     }
 
-    public String getDescription() {
-        return description;
+    public Date getCreatedAt() {
+        return createdAt;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getDate() {
-        return date;
-    }
-
-    public void setDate(String date) {
-        this.date = date;
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
     }
 
     public String getStringCookies() {

@@ -5,13 +5,15 @@ import android.webkit.CookieManager;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
-import com.omerflex.entity.dto.CookieDTO;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.AkwamServer;
+import com.omerflex.server.ArabSeedServer;
+import com.omerflex.server.CimaNowServer;
 import com.omerflex.server.FaselHdServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.MyCimaServer;
+import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
-import com.omerflex.server.Util;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
@@ -87,9 +89,9 @@ public class ServerConfigManager {
     }
 
     private static ArrayList<AbstractServer> initializeServersFromDB(MovieDbHelper dbHelper) {
-//        ArrayList<CookieDTO> serverConfigs = dbHelper.getAllCookieDto();
+        ArrayList<ServerConfig> serverConfigs = dbHelper.getAllServerConfigs();
 
-        ArrayList<CookieDTO> serverConfigs = new ArrayList<>();
+//        ArrayList<CookieDTO> serverConfigs = new ArrayList<>();
         Log.d(TAG, "initializeServersFromDB " + serverConfigs);
         if (serverConfigs.isEmpty()) {
             return DefaultServersConfig.getDefaultServers(dbHelper);
@@ -107,15 +109,15 @@ public class ServerConfigManager {
     }
 
 
-    public static boolean addServer(AbstractServer newServer) {
+    public static void addServer(AbstractServer newServer) {
         Log.d(TAG, "addConfig: " + newServer);
         for (AbstractServer server : servers) {
             if (server.getServerId().equals(newServer.getServerId())) {
-                return updateServer(newServer); // Return false if the config with the specified name already exists
+                updateServer(newServer); // Return false if the config with the specified name already exists
+                break;
             }
         }
         servers.add(newServer); // Add the new config
-        return true; // Return true indicating the config was added successfully
     }
 
     public static boolean updateServer(AbstractServer newServer) {
@@ -130,26 +132,28 @@ public class ServerConfigManager {
         return false;
     }
 
-    private static ArrayList<AbstractServer> generateServers(ArrayList<CookieDTO> serverConfigs) {
+    private static ArrayList<AbstractServer> generateServers(ArrayList<ServerConfig> serverConfigs) {
         Log.d(TAG, "generateServers ");
-        for (CookieDTO serverCookie : serverConfigs) {
+        for (ServerConfig serverConfig : serverConfigs) {
             try {
-                Log.d(TAG, "generateServers: server: " + serverCookie.name);
-                AbstractServer server = determineServer(serverCookie.name);
+                Log.d(TAG, "generateServers: server: " + serverConfig.getName());
+                AbstractServer server = determineServer(serverConfig.getName());
                 if (server == null) {
+                    Log.d(TAG, "generateServers: undefined server: "+ serverConfig.getName());
                     continue;
                 }
-                ServerConfig config = new ServerConfig();
-                config.setUrl(serverCookie.referer);
-                config.setReferer(serverCookie.referer);
-                config.setName(serverCookie.name);
-                config.setDate(serverCookie.date.toString());
-
-//                config.setHeaders(getMappedHeaders(serverCookie.headers));
-                Log.d(TAG, "generateServers: adding server:" + config);
-                config.setHeaders(Util.convertJsonToHashMap(serverCookie.headers));
-                config.setStringCookies(serverCookie.cookie);
-                ServerConfigManager.addConfig(config);
+//                ServerConfig config = new ServerConfig();
+//                config.setUrl(serverConfig.referer);
+//                config.setReferer(serverConfig.referer);
+//                config.setName(serverConfig.name);
+//                config.setCreatedAt(serverConfig.date);
+//
+////                config.setHeaders(getMappedHeaders(serverCookie.headers));
+//                Log.d(TAG, "generateServers: adding server:" + config);
+//                config.setHeaders(Util.convertJsonToHashMap(serverConfig.headers));
+//                config.setStringCookies(serverConfig.cookie);
+//                ServerConfigManager.addConfig(config);
+                ServerConfigManager.addConfig(serverConfig);
                 ServerConfigManager.addServer(server);
 //                Log.d(TAG, "generateServers: after adding servers.size: "+servers.size());
             } catch (Exception e) {
@@ -165,17 +169,24 @@ public class ServerConfigManager {
         switch (serverId) {
             case Movie.SERVER_MyCima:
                 return new MyCimaServer();
+            case Movie.SERVER_CimaNow:
+                return new CimaNowServer();
+            case Movie.SERVER_ARAB_SEED:
+                return new ArabSeedServer();
             case Movie.SERVER_FASELHD:
                 return new FaselHdServer();
-            case Movie.SERVER_OMAR:
-                return new OmarServer();
+            case Movie.SERVER_AKWAM:
+                return new AkwamServer();
+            case Movie.SERVER_OLD_AKWAM:
+                return new OldAkwamServer();
             case Movie.SERVER_IPTV:
                 return new IptvServer();
+            case Movie.SERVER_OMAR:
+                return new OmarServer();
 //                return MyCimaServer.getInstance(activity, fragment);
 //            case Movie.SERVER_AKWAM:
 //                return AkwamServer.getInstance(activity, fragment);
-//            case Movie.SERVER_OLD_AKWAM:
-//                return OldAkwamServer.getInstance(activity, fragment);
+
 //            case Movie.SERVER_CIMA4U:
 //                return Cima4uController.getInstance(fragment, activity);
 //            case Movie.SERVER_SHAHID4U:
@@ -184,8 +195,6 @@ public class ServerConfigManager {
 ////                return new SeriesTimeController(listRowAdapter, activity);
 //            case Movie.SERVER_CIMA_CLUB:
 //                return CimaClubServer.getInstance(fragment, activity);
-//            case Movie.SERVER_ARAB_SEED:
-//                return ArabSeedServer.getInstance(fragment, activity);
 
 //            case Movie.SERVER_WATAN_FLIX:
 //                return WatanFlixController.getInstance(fragment, activity);

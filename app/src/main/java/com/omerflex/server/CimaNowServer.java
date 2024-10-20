@@ -419,6 +419,35 @@ public class CimaNowServer extends AbstractServer{
             activityCallback.onInvalidCookie(movie, getLabel());
         }
 
+
+        // Find the img element inside the figure
+        Elements imgElements = doc.select("figure img");
+
+        // Extract the src attribute
+        if (!imgElements.isEmpty()) {
+            Element img = imgElements.first();
+            String cardImageUrl = img.attr("src");
+            movie.setBgImageUrl(cardImageUrl);
+            movie.setBackgroundImageUrl(cardImageUrl);
+            // Output the extracted image URL
+            System.out.println("cardImageUrl = " + cardImageUrl);
+        } else {
+            System.out.println("No img element found.");
+        }
+
+        // Select the <li> element with the attribute aria-label="story"
+        Element storyElement = doc.select("li[aria-label=story] p").first();
+
+        if (storyElement != null) {
+            // Extract the text inside the <p> tag
+            String des = storyElement.text();
+            System.out.println("Description: " + des);
+            movie.setDescription(des);
+        } else {
+            System.out.println("No story element found.");
+        }
+
+
         // Select all <li> elements that have a data-index attribute
         Elements movieElements = doc.select("li[data-index]");
 

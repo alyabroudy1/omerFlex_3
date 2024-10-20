@@ -108,7 +108,7 @@ public class ServerManager_old {
                 config.setUrl(serverCookie.referer);
                 config.setReferer(serverCookie.referer);
                 config.setName(serverCookie.name);
-                config.setDate(serverCookie.date.toString());
+                config.setCreatedAt(serverCookie.date);
 
                 config.setHeaders(getMappedHeaders(serverCookie.headers));
                 config.setStringCookies(serverCookie.cookie);
@@ -308,12 +308,12 @@ public class ServerManager_old {
                         Log.d(TAG, "updateServerConfig:"+ serverConfigDTO.name+", g:"+ githubDate + ", db:"+cookieDTO.date+", isNewDate:"+isNewDate);
                         if (isNewDate){
                             ServerConfig serverConfig = new ServerConfig();
-                            serverConfig.setDate(serverConfigDTO.date);
+                            serverConfig.setCreatedAt(githubDate);
                             serverConfig.setName(serverConfigDTO.name);
                             serverConfig.setUrl(serverConfigDTO.url);
-                            serverConfig.setDisplayName(serverConfigDTO.displayName);
-                            serverConfig.setWebName(serverConfigDTO.webName);
-                            serverConfig.setDescription(serverConfigDTO.description);
+                            serverConfig.setLabel(serverConfigDTO.label);
+//                            serverConfig.setWebName(serverConfigDTO.webName);
+//                            serverConfig.setDescription(serverConfigDTO.description);
                             serverConfig.setActive(serverConfigDTO.isActive);
                             dbHelper.saveServerConfigAsCookieDTO(serverConfig, githubDate);
                         }
