@@ -101,15 +101,21 @@ public abstract class MainViewControl extends SearchViewControl {
     protected void loadOmarServerResult(String query, AbstractServer server) {
         ExecutorService executor2 = Executors.newSingleThreadExecutor();
         executor2.submit(() -> {
+            Log.d(TAG, "loadOmarServerResult: before");
             ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
-
-            loadIptvServerHomepageResult();
+            Log.d(TAG, "loadOmarServerResult: after");
+            try {
+                loadIptvServerHomepageResult();
+            }catch (Exception e){
+                Log.d(TAG, "loadOmarServerResult: error: "+e.getMessage());
+            }
 //            loadHomepageHistoryRows();
         });
         executor2.shutdown();
     }
 
     private void loadIptvServerHomepageResult() {
+        Log.d(TAG, "loadIptvServerHomepageResult: ");
         AbstractServer server = ServerConfigManager.getServer(Movie.SERVER_IPTV);
         if (server == null){
             Log.d(TAG, "loadIptvServerHomepageResult: undefined iptv server");

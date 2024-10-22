@@ -89,7 +89,7 @@ public class IptvServer extends AbstractServer {
             activityCallback.onSuccess(iptvList, getLabel());
             Log.d(TAG, "getHomepageMovies: b:"+ iptvList);
         } catch (Exception exception) {
-            Log.d(TAG, "getHomepageMovies: c: "+exception.getMessage());
+            Log.d(TAG, "getHomepageMovies: error c: "+exception.getMessage());
             activityCallback.onInvalidLink(exception.getMessage());
         }
         return iptvList;

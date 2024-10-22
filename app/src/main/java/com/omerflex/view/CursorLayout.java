@@ -141,6 +141,10 @@ public class CursorLayout extends FrameLayout {
         //right: i=1 i2=-100
         //left: i=-1 i2=-100
         int keyCode = keyEvent.getKeyCode();
+        if (keyCode == KeyEvent.KEYCODE_BACK){
+            return super.dispatchKeyEvent(keyEvent);
+        }
+
         if (!(keyCode == 66 || keyCode == 160)) {
             switch (keyCode) {
                 case KeyEvent.KEYCODE_DPAD_UP:

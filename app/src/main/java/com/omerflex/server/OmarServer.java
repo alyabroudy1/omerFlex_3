@@ -103,7 +103,7 @@ public class OmarServer extends AbstractServer {
         for (MovieDTO movieDTO : searchResponse.result){
             try {
                 Movie movie = generateMovieObject(movieDTO);
-                Log.d(TAG, "generateMovieListFromSearchResponse: movie: "+ movie);
+//                Log.d(TAG, "generateMovieListFromSearchResponse: movie: "+ movie);
                 movieList.add(movie);
             }catch (Exception e){
                 Log.d(TAG, "generateMovieListFromSearchResponse: error:"+e.getMessage());

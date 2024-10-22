@@ -248,7 +248,12 @@ public abstract class SearchViewControl {
             int rowSize = adapter.size() - 1;
             while (rowSize >= defaultHeadersCounter) {
 //                                Log.d(TAG, "onItemClicked: remove row:" + iptvLastIndex);
-               removeRow(adapter, rowSize--);
+                try {
+                    removeRow(adapter, rowSize--);
+                }catch (Exception e){
+                    Log.d(TAG, "loadOmarServerResult: error: "+e.getMessage());
+                }
+
             }
             Log.d(TAG, "cleanIptvRows: done");
             return;
@@ -259,9 +264,10 @@ public abstract class SearchViewControl {
             while (rowSize >= defaultHeadersCounter) {
 //                                Log.d(TAG, "onItemClicked: remove row:" + iptvLastIndex);
                 try {
-                    adapter.remove(
-                            adapter.get((rowSize--)
-                            ));
+//                    adapter.remove(
+//                            adapter.get((rowSize--)
+//                            ));
+                    removeRow(adapter, rowSize--);
                 } catch (Exception exception) {
                     Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
                 }
@@ -305,7 +311,13 @@ public abstract class SearchViewControl {
 //                            HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, group);
 //                            IPTV_HEADER_ROWS_COUNTER++;
 //                            rowsAdapter.add(new ListRow(header, listRowAdapter));
-                            generateCategory(group, (ArrayList<Movie>) groupMovies, false);
+                    try {
+                        generateCategory(group, (ArrayList<Movie>) groupMovies, false);
+                    }catch (Exception e){
+                        Log.d(TAG, "loadOmarServerResult: error: generateCategory: "+e.getMessage());
+                    }
+
+
 //                        }
 //                    });
                 }
@@ -560,10 +572,12 @@ public abstract class SearchViewControl {
     public class SearchCallback implements ServerInterface.ActivityCallback<ArrayList<Movie>> {
         @Override
         public void onSuccess(ArrayList<Movie> result, String title) {
+            Log.d(TAG, "onSuccess: "+title);
             if (result == null || result.isEmpty()) {
                 Log.d(TAG, "onSuccess: search result is empty");
                 return;
             }
+
             generateCategory(title, result, true);
         }
 
@@ -579,7 +593,7 @@ public abstract class SearchViewControl {
 
         @Override
         public void onInvalidLink(ArrayList<Movie> result) {
-
+            Log.d(TAG, "onInvalidLink ");
         }
 
         @Override

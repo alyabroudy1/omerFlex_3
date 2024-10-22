@@ -97,11 +97,21 @@ public class MobileSearchResultActivity extends AppCompatActivity {
             @Override
             protected <T> void removeRow(T rowsAdapter, int i) {
                 if (rowsAdapter instanceof CategoryAdapter) {
-                    try {
-                        ((CategoryAdapter) rowsAdapter).remove(i);
-                    } catch (Exception exception) {
-                        Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
-                    }
+                        CategoryAdapter adapter = ((CategoryAdapter) rowsAdapter);
+                        try {
+                            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (i < adapter.getItemCount()){
+                                        adapter.remove(i);
+                                        adapter.notifyItemRemoved(i);
+                                    }
+                                }
+                            });
+
+                        } catch (Exception exception) {
+                            Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
+                        }
                 }
             }
 

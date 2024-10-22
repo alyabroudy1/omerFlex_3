@@ -167,7 +167,18 @@ public class MainFragment extends BrowseSupportFragment {
             protected <T> void removeRow(T rowsAdapter, int i) {
                 if (rowsAdapter instanceof ArrayObjectAdapter){
                     try {
-                        ((ArrayObjectAdapter) rowsAdapter).remove(i);
+                        ArrayObjectAdapter adapter = ((ArrayObjectAdapter) rowsAdapter);
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (adapter.size() > i ){
+                                    adapter.remove(adapter.get(i));
+                                    adapter.notifyItemRangeChanged(0, adapter.size());
+                                    totalHeadersCounter--;
+                                    Log.d(TAG, "run: item "+i+ " removed");
+                                }
+                            }
+                        });
                     } catch (Exception exception) {
                         Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
                     }

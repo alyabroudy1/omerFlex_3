@@ -82,8 +82,10 @@ public class MobileHomepageActivity extends AppCompatActivity {
                         new Handler(Looper.getMainLooper()).post(new Runnable() {
                             @Override
                             public void run() {
-                                adapter.remove(i);
-                                adapter.notifyItemRemoved(i);
+                                if (i < adapter.getItemCount()){
+                                    adapter.remove(i);
+                                    adapter.notifyItemRemoved(i);
+                                }
                             }
                         });
 
@@ -178,12 +180,31 @@ public class MobileHomepageActivity extends AppCompatActivity {
 
     private HorizontalMovieAdapter generateCategoryView(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
 //        Category category = new Category(title, movies);
-        Log.d(TAG, "generateCategoryView: " + movies);
-        HorizontalMovieAdapter adapter = categoryAdapter.addCategory(title, movies);
+        if (title == null){
+            title = "default";
+        }
+        Log.d(TAG, "generateCategoryView: " + title+", movies: "+movies);
+        HorizontalMovieAdapter adapter = null;
+        try {
+            adapter = categoryAdapter.addCategory(title, movies);
+        }catch (Exception e){
+            Log.d(TAG, "run: error notifying adapter: "+e.getMessage());
+            return null;
+        }
+
         if (isDefaultHeader) {
             defaultHeadersCounter++;
         }
-        categoryAdapter.notifyItemInserted(categoryAdapter.size() - 1);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    categoryAdapter.notifyItemInserted(categoryAdapter.getItemCount());
+                }catch (Exception e){
+                    Log.d(TAG, "run: error notifying adapter: "+e.getMessage());
+                }
+            }
+        });
 //        adapter.notifyItemInserted(categoryAdapter.size() - 1);
 //        new Handler(Looper.getMainLooper()).post(new Runnable() {
 //            @Override

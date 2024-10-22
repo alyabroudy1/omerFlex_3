@@ -103,7 +103,7 @@ public class CimaNowServer extends AbstractServer{
             // Extract the video URL from the anchor tag
             Element anchor = article.selectFirst("a");
             String title = anchor.attr("href");
-            Log.d(TAG, "generateSearchResultFromDoc: article: "+anchor);
+//            Log.d(TAG, "generateSearchResultFromDoc: article: "+anchor);
             if (title == null) {
                 if (article.attr("href") == null){
                     continue;
