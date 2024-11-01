@@ -93,7 +93,6 @@ public abstract class SearchViewControl {
                 return;
             }
 
-
             openDetailsActivity(movie, activity);
 
 

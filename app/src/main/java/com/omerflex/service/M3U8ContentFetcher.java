@@ -7,12 +7,14 @@ import androidx.annotation.RequiresApi;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.dto.GoogleFile;
+import com.omerflex.entity.dto.IptvSegmentDTO;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -30,6 +32,7 @@ import okio.ByteString;
 
 public class M3U8ContentFetcher {
 
+    static String TAG = "M3U8ContentFetcher";
     MovieDbHelper dbHelper;
     @RequiresApi(api = Build.VERSION_CODES.N)
     public static void main(String[] args) {
@@ -423,7 +426,251 @@ public class M3U8ContentFetcher {
         return new ArrayList<>();
     }
 
-    private static List<Movie> parseGroupNames(String m3u8Content, String hash) {
+    public static List<Movie> parseGroupNames(String m3u8Content, String hash) {
+        List<Movie> groupNames = new ArrayList<>();
+        int movieNameCounter = 0;
+
+        // Split content into segments using the delimiter "#EXTINF:"
+        String[] segments = m3u8Content.split("#EXTINF:");
+        // Remove the first empty element
+        List<String> segmentList = new ArrayList<>(Arrays.asList(segments));
+        segmentList.remove(0);
+
+        // Loop through the segments
+        for (int index = 0; index < segmentList.size(); index++) {
+            String segment = segmentList.get(index);
+
+            IptvSegmentDTO segmentDTO = generateSegmentDTO(segment); // Generate the DTO object
+
+            if (segmentDTO == null) {
+                Log.e("parseAndSave", "Error parsing segment: " + segment);
+                continue;
+            }
+
+            // Skip if the logo is a specific one
+            if ("https://bit.ly/3JQfa8u".equals(segmentDTO.tvgLogo)) {
+                continue;
+            }
+
+            Log.d(TAG, "parseGroupNames: "+segmentDTO);
+
+            Movie channel = new Movie();
+            channel.setTitle(segmentDTO.name);
+            channel.setVideoUrl(segmentDTO.url);
+//            channel.setTvgName(segmentDTO.getTvgName());
+            channel.setCardImageUrl(segmentDTO.tvgLogo);
+//            channel.setFileName(segmentDTO.getFileName());
+//            channel.setCredentialUrl(segmentDTO.getCredentialUrl());
+
+            String groupTitle = segmentDTO.groupTitle;
+            if (groupTitle == null || groupTitle.isEmpty()) {
+                Log.e("parseAndSave", "GroupTitle is missing for channel: " + segment);
+                groupTitle = segmentDTO.id;
+            }
+
+//            if(groupTitle == null) {
+//                movieGroupName = "undefined";
+//                channel.setTitle(movieGroupName +"-"+ movieNameCounter++);
+//            }
+
+            channel.setGroup(groupTitle);
+            channel.setStudio(Movie.SERVER_IPTV);
+            channel.setMainMovieTitle(hash);
+            channel.setState(Movie.VIDEO_STATE);
+
+            groupNames.add(channel);
+//            try {
+//                if (channel.getUrl().length() > 1500) {
+//                    throw new IllegalArgumentException("URL length exceeds limit");
+//                }
+//
+//                // Persist channel in your database (SQLite, Room, etc.)
+//                saveChannel(channel); // This should be your custom method for saving the channel
+//
+//            } catch (Exception e) {
+//                outputCallback.onOutput(false, channel);
+//            }
+
+        }
+
+        try {
+            // Save all changes (if using transactions or bulk inserts)
+            // commitTransaction(); // Implement this as per your persistence logic
+        } catch (Exception e) {
+            Log.e("parseAndSave", "Error saving to database", e);
+        }
+
+            return null;
+    }
+
+    // Method to extract a VLC option from a line in Android Java
+    private static String extractVlcOpt(String line, String option) {
+        // Create the regex pattern to find the option and everything after '='
+        String pattern = option + "=(.*)";
+
+        Pattern regex = Pattern.compile(pattern);
+        Matcher matcher = regex.matcher(line);
+
+        // Return the matched group if found, otherwise return null
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
+    }
+
+    private static IptvSegmentDTO generateSegmentDTO(String segment) {
+        try {
+            List<String> processedUrls = new ArrayList<>();
+
+            // Split the segment by new lines
+            String[] linesArray = segment.split("\n");
+            List<String> lines = Arrays.asList(linesArray);
+
+            // Step 2: Trim each line and remove any empty ones
+            List<String> cleanedLines = new ArrayList<>();
+            for (String line : lines) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    cleanedLines.add(line);
+                }
+            }
+
+            // Pop the first element of the lines
+            String infoLine = cleanedLines.isEmpty() ? null : cleanedLines.remove(0);
+
+            String url = null;
+//            Log.d(TAG, "generateSegmentDTO:cleanedLines: "+cleanedLines);
+            if (!cleanedLines.isEmpty()) {
+                // Extract the URL
+                url = extractUrl(cleanedLines);
+            }
+//            Log.d(TAG, "generateSegmentDTO: url: "+url);
+            if (url == null) {
+                return null;  // Exit if no URL is found
+            }
+
+//            String fileName = null;
+//            String credentialUrl = null;
+//
+//            try {
+//                URL parsedUrl = new URL(url);
+//                String host = parsedUrl.getHost();
+//
+//                if (host != null && host.contains("airmax")) {
+//                    String[] pathParts = parsedUrl.getPath().split("/");
+//                    String domain = parsedUrl.getProtocol() + "://" + host + (parsedUrl.getPort() != -1 ? ":" + parsedUrl.getPort() : "") + "/";
+//                    String username = pathParts.length > 0 ? pathParts[0] : "";
+//                    String password = pathParts.length > 1 ? pathParts[1] : "";
+//                    fileName = pathParts.length > 0 ? pathParts[pathParts.length - 1] : "";
+//
+//                    // Extract part after the last occurrence of '|'
+//                    if (fileName.contains("|")) {
+//                        fileName = fileName.split("\\|")[0];
+//                    }
+//                    credentialUrl = domain + username + "/" + password + "/";
+//                }
+//            } catch (MalformedURLException e) {
+//                e.printStackTrace();
+//                return null;  // Return null in case of URL parsing error
+//            }
+
+            // Extract attributes from the infoLine
+
+            String tvgId = extractAttribute(infoLine, "tvg-id");
+            String tvgName = extractAttribute(infoLine, "tvg-name");
+            String tvgLogo = extractAttribute(infoLine, "tvg-logo");
+            String groupTitle = extractAttribute(infoLine, "group-title");
+            String name = infoLine != null ? infoLine.substring(infoLine.lastIndexOf(",") + 1).trim() : "";
+
+            // Create the DTO and populate it
+            IptvSegmentDTO segmentDTO = new IptvSegmentDTO();
+            segmentDTO.id = (tvgId);
+            segmentDTO.tvgName = tvgName;
+            segmentDTO.tvgLogo = tvgLogo;
+            segmentDTO.groupTitle = groupTitle;
+            segmentDTO.name = name;
+            segmentDTO.url = url;
+//            segmentDTO.setFileName(fileName);
+//            segmentDTO.setCredentialUrl(credentialUrl);
+
+            return segmentDTO;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private static String extractUrl(List<String> lines) {
+        String referrer = null;
+        String userAgent = "airmaxtv"; // Default user-agent
+        String url = null;
+
+        // Iterate through each line in the list
+        for (String line : lines) {
+            line = line.trim(); // Trim the line
+
+            // If the line starts with "http", consider it as the URL
+            if (line.startsWith("http")) {
+                url = line;
+                continue;
+            }
+
+            // Check for VLC options
+            if (line.startsWith("#EXTVLCOPT:")) {
+                if (line.contains("http-user-agent=")) {
+                    userAgent = extractVlcOpt(line, "http-user-agent");
+                } else if (line.contains("http-referrer=")) {
+                    referrer = extractVlcOpt(line, "http-referrer");
+                }
+            }
+        }
+
+        // If no URL was found, use the last line as a fallback
+        if (url == null && !lines.isEmpty()) {
+            url = lines.get(lines.size() - 1).trim(); // Get the last line
+
+            if (!url.startsWith("#http")) {
+                return null;
+            }
+
+            // Replace '#http' with 'http' in the URL
+            url = url.replace("#http", "http");
+        }
+
+        // Append user-agent to the URL
+        if (url != null) {
+            url += "|user-agent=" + userAgent;
+
+            // If a referrer is found, append it to the URL as well
+            if (referrer != null) {
+                url += "&referrer=" + referrer;
+            }
+        }
+
+        return url;
+    }
+
+
+
+    // Method to extract an attribute from a line in Android Java
+    private static String extractAttribute(String line, String attribute) {
+        // Modify the regular expression to stop at " or ,
+        String pattern = attribute + "=\"([^\"]*)\"";
+
+        Pattern regex = Pattern.compile(pattern);
+        Matcher matcher = regex.matcher(line);
+
+        // Return the matched group if found, otherwise return null
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
+    }
+
+
+
+    public static List<Movie> parseGroupNames_2(String m3u8Content, String hash) {
         List<Movie> groupNames = new ArrayList<>();
        // Pattern mainPattern = Pattern.compile("#EXT(?:INF)?([^#]+)");
         Pattern mainPattern = Pattern.compile("#EXT(?:INF(?::-1,)?)?([^#]+)");
@@ -436,6 +683,7 @@ public class M3U8ContentFetcher {
            String mainMatcherGroup = mainMatcher.group(1);
             String movieLogo = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
               //Log.d("TAG", "parseGroupNames:main "+mainMatcherGroup);
+            Log.d(TAG, "parseGroupNames: mainMatcher: "+mainMatcherGroup);
             if (mainMatcherGroup != null){
               String tempMainGroup = mainMatcherGroup;
               if (tempMainGroup.contains("\\")){

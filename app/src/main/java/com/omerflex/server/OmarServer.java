@@ -18,6 +18,8 @@ import com.omerflex.entity.dto.LinkDTO;
 import com.omerflex.entity.dto.MovieDTO;
 import com.omerflex.entity.dto.SearchResponseDTO;
 
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
@@ -178,9 +180,9 @@ public class OmarServer extends AbstractServer {
 //            movie.setGroup(movieDTO.groupTitle);
             movie.setGroup(type);
 
-            if(fileName != null && credentialUrl != null){
-                videoLink = credentialUrl + fileName + "|user-agent=airmaxtv";
-            }
+//            if(fileName != null && credentialUrl != null){
+//                videoLink = credentialUrl + fileName + "|user-agent=airmaxtv";
+//            }
 //            Log.d(TAG, "generateMovieObject: "+credentialUrl + ", "+ movieDTO);
         }else {
             movieState = Movie.ITEM_STATE;
@@ -225,13 +227,39 @@ public class OmarServer extends AbstractServer {
 //                return fetchCookie(movie);
             case Movie.ACTION_WATCH_LOCALLY:
                 return fetchWatchLocally(movie, activityCallback);
-//            case Movie.RESOLUTION_STATE:
-//                return fetchResolutions(movie);
+            case Movie.RESOLUTION_STATE:
+                return fetchResolutions(movie, activityCallback);
 //            case Movie.VIDEO_STATE:
 //                return fetchVideo(movie);
             default:
                 return fetchItem(movie, activityCallback);
         }
+    }
+
+    private MovieFetchProcess fetchResolutions(Movie movie, ActivityCallback<Movie> activityCallback) {
+        Movie result = Movie.clone(movie);
+        try {
+            String initialUrl = movie.getVideoUrl(); // Replace with the initial URL
+            Connection connection = Jsoup.connect(initialUrl)
+                    .followRedirects(true); // Enable redirect following
+
+            // Execute the request and get the response
+            Connection.Response response = connection.execute();
+
+            // Get the document and final URL after redirection
+            Document document = response.parse();
+            String finalUrl = response.url().toString();
+
+            System.out.println("Final URL after redirect: " + finalUrl);
+//            System.out.println("Document content: " + document.body().text());
+            result.setVideoUrl(finalUrl);
+            result.setState(Movie.VIDEO_STATE);
+            activityCallback.onSuccess(result, getLabel());
+        } catch (Exception e) {
+            e.printStackTrace();
+            activityCallback.onInvalidLink(e.getMessage());
+        }
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, result);
     }
 
     public MovieFetchProcess fetchBrowseItem(Movie movie) {
@@ -312,6 +340,23 @@ public class OmarServer extends AbstractServer {
 
         return null;
     }
+
+//    public int fetchNextAction(Movie movie) {
+////        Log.d(TAG, "fetchNextAction: "+ (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) );
+//        if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) {
+//            return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
+//        }
+//        switch (movie.getState()) {
+//            case Movie.GROUP_OF_GROUP_STATE:
+//            case Movie.GROUP_STATE:
+//            case Movie.ITEM_STATE:
+//                return VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY;
+//            case Movie.BROWSER_STATE:
+//            case Movie.RESOLUTION_STATE:
+//                return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
+//        }
+//        return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
+//    }
 
 //    @Override
 //    public int fetchNextAction(Movie movie) {

@@ -1,5 +1,6 @@
 package com.omerflex.view;
 
+import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -11,31 +12,41 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.media3.common.AudioAttributes;
+import androidx.media3.common.C;
+import androidx.media3.common.Format;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.common.util.Util;
+import androidx.media3.datasource.DataSource;
+import androidx.media3.datasource.DefaultHttpDataSource;
+import androidx.media3.datasource.HttpDataSource;
+import androidx.media3.exoplayer.DefaultLoadControl;
+import androidx.media3.exoplayer.ExoPlaybackException;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.analytics.AnalyticsListener;
+import androidx.media3.exoplayer.audio.AudioSink;
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
+import androidx.media3.exoplayer.hls.HlsMediaSource;
+import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter;
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
+import androidx.media3.exoplayer.smoothstreaming.SsMediaSource;
+import androidx.media3.exoplayer.source.MediaSource;
+import androidx.media3.exoplayer.source.ProgressiveMediaSource;
+import androidx.media3.ui.AspectRatioFrameLayout;
+import androidx.media3.ui.PlayerView;
+import androidx.media3.ui.leanback.LeanbackPlayerAdapter;
 
-import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.PlaybackException;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.ext.leanback.LeanbackPlayerAdapter;
-import com.google.android.exoplayer2.source.MediaSource;
-import com.google.android.exoplayer2.source.ProgressiveMediaSource;
-import com.google.android.exoplayer2.source.dash.DashMediaSource;
-import com.google.android.exoplayer2.source.hls.HlsMediaSource;
-import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource;
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
-import com.google.android.exoplayer2.ui.StyledPlayerView;
-import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
-import com.google.android.exoplayer2.upstream.HttpDataSource;
-import com.google.android.exoplayer2.util.Util;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.service.database.MovieDbHelper;
 
+import java.nio.ByteBuffer;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
@@ -50,13 +61,14 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+@androidx.media3.common.util.UnstableApi
 public class ExoplayerMediaPlayer extends AppCompatActivity {
 
-    @Nullable private static SimpleExoPlayer player;
+    @Nullable private static ExoPlayer player;
     static String TAG = "Exoplayer";
 
     MovieDbHelper dbHelper;
-    StyledPlayerView playerView;
+    PlayerView playerView;
     private long backPressedTime;
     Movie movie;
 
@@ -92,13 +104,53 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         playerView = findViewById(R.id.player_view);
 
 
-        player = new SimpleExoPlayer.Builder(getApplicationContext()).build();
+//        player = new ExoPlayer.Builder(getApplicationContext()).build();
        // player.setPlayWhenReady(true);
         //leanbackPlayerAdapter = new LeanbackPlayerAdapter(this, player, 0);
         dbHelper = MovieDbHelper.getInstance(this);
          movie = com.omerflex.server.Util.recieveSelectedMovie(this);
 
         leanbackPlayerAdapter = new LeanbackPlayerAdapter(this.getApplicationContext(), player, 16);
+
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+//                if (webView.canGoBack()) {
+//                    webView.stopLoading(); // Stop loading the page
+//                    webView.goBack();      // Navigate back in WebView's history
+//                } else {
+//                    // If there's no history, close the activity
+//                    finish();
+//                }
+                handleBackPressed();
+            }
+        };
+
+        // Add the callback to the back pressed dispatcher
+        getOnBackPressedDispatcher().addCallback(this, callback);
+
+
+        // increase audio buffer
+        DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                        DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                        DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS)
+                .build();
+
+
+        player = new ExoPlayer.Builder(getApplicationContext())
+                .setLoadControl(loadControl)
+                .build();
+
+
+        // give audio focus for iptv live videos
+        player.setAudioAttributes(new AudioAttributes.Builder()
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .setUsage(C.USAGE_MEDIA)
+                .build(), true);
+
 
 
         //Create a trust manager that does not validate certificate chains
@@ -213,11 +265,34 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
             }
         });
 
+        player.addAnalyticsListener(new AnalyticsListener(){
+            @Override
+            public void onAudioSinkError(EventTime eventTime, Exception audioSinkError) {
+                Log.d(TAG, "onAudioSinkError: "+audioSinkError.getMessage());
+//                AnalyticsListener.super.onAudioSinkError(eventTime, audioSinkError);
+                MediaSource mediaSource = buildMediaSource(movie);
+                player.prepare(mediaSource);
+                player.play();
+            }
+        });
         player.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(PlaybackException error) {
+//            public void onPlayerError(ExoPlaybackException error) {
                 Log.d("TAG", "onPlayerError: xxxx:"+error.getMessage()+", "+error.errorCode+", "+ error.toString()+", "+movie.getVideoUrl());
-               int c = error.errorCode;
+
+                int c = error.errorCode;
+                if (c == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ){
+                    String studio = movie.getStudio();
+                    if (studio.equals(Movie.SERVER_OMAR) || studio.equals(Movie.SERVER_IPTV)){
+                        MediaSource mediaSource = buildMediaSource(movie);
+                        player.prepare(mediaSource);
+                        player.play();
+                        return;
+                    }
+                }
+
+
                 boolean deleteCond = c == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
                         || c == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
                         || c == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
@@ -238,10 +313,27 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
             @Override
             public void onPlaybackStateChanged(int playbackState) {
                 Log.d(TAG, "onPlaybackStateChanged: xxxx:"+playbackState);
+               String studio = movie.getStudio();
+                if (!studio.equals(Movie.SERVER_IPTV)
+                && !studio.equals(Movie.SERVER_OMAR)){
+                    return;
+                }
                 if (playbackState == Player.STATE_READY){
-                    if (movie.getStudio().equals(Movie.SERVER_IPTV)){
-                        dbHelper.addMovieToHistory(movie, false);
-                    }
+                    Log.d(TAG, "onPlaybackStateChanged: xxxx: STATE_READY");
+//                    player.play();
+                    return;
+//                    dbHelper.addMovieToHistory(movie, false);
+//                    if (player != null && player.getCurrentPosition() == 0){
+//                      //  player.seekTo(movie.getPlayedTime());
+//                    }
+                }
+                if (playbackState == Player.STATE_ENDED){
+                    Log.d(TAG, "onPlaybackStateChanged: xxxx: STATE_ENDED");
+                    MediaSource mediaSource = buildMediaSource(movie);
+                    player.prepare(mediaSource);
+                    player.play();
+                    return;
+//                    dbHelper.addMovieToHistory(movie, false);
 //                    if (player != null && player.getCurrentPosition() == 0){
 //                      //  player.seekTo(movie.getPlayedTime());
 //                    }
@@ -257,16 +349,18 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 
     }
 
-    @Override
-    public void onBackPressed() {
+
+    public void handleBackPressed() {
         //super.onBackPressed();
         Log.d("TAG", "onBackPressed: 1");
         //check if waiting time between the second click of back button is greater less than 2 seconds so we finish the app
         if (backPressedTime + 1500 > System.currentTimeMillis()) {
-            Log.d("TAG", "onBackPressed: 2");
+            Log.d("TAG", "onBackPressed: 2 +");
             if (player != null){
-            //    movie.setPlayedTime(String.valueOf(player.getCurrentPosition()));
+                Log.d("TAG", "onBackPressed: 2 player released");
+                //    movie.setPlayedTime(String.valueOf(player.getCurrentPosition()));
                // movie.save(dbHelper);
+                player.stop();
                 player.release();
             }
             finish();
@@ -278,7 +372,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
                 Toast.makeText(this, "Press back 2 time to exit", Toast.LENGTH_SHORT).show();
         }
         backPressedTime = System.currentTimeMillis();
-
+//        super.onBackPressed();
     }
 
     @Override
@@ -377,10 +471,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 // Create a SmoothStreaming media source pointing to a manifest uri.
                 mediaSource = new SsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
                 return mediaSource;
-            case C.CONTENT_TYPE_DASH:
-// Create a dash media source pointing to a dash manifest uri.
-                mediaSource = new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
-                return mediaSource;
+//            case C.CONTENT_TYPE_DASH:
+//// Create a dash media source pointing to a dash manifest uri.
+//                mediaSource = new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+//                return mediaSource;
             case C.CONTENT_TYPE_HLS:
 // Create a HLS media source pointing to a playlist uri.
                 HlsMediaSource hlsMediaSource = new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
@@ -468,8 +562,8 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         switch (type) {
             case C.CONTENT_TYPE_SS:
                 return new SsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
-            case C.CONTENT_TYPE_DASH:
-                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+//            case C.CONTENT_TYPE_DASH:
+//                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             case C.CONTENT_TYPE_HLS:
                 return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             default:
@@ -574,4 +668,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         playerView.setKeepScreenOn(true);
         Log.d("TAG", "onResume: yess");
     }
+
+
+
 }

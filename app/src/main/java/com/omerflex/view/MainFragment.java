@@ -781,17 +781,19 @@ public class MainFragment extends BrowseSupportFragment {
     Movie mm = new Movie();
 //    //String url = "https://ui.cima4u.bio/category/%D8%A7%D9%81%D9%84%D8%A7%D9%85-%D8%A7%D8%AC%D9%86%D8%A8%D9%8A/";
 //    //String url = "https://main4.ci4u.co/%d9%81%d9%8a%d9%84%d9%85-your-christmas-or-mine-2022-%d9%85%d8%aa%d8%b1%d8%ac%d9%85-%d8%a7%d9%88%d9%86-%d9%84%d8%a7%d9%8a%d9%86/?wat=1";
-////    String url = "https://cimatube.cc/embed1/29f1d50ae92194ed586eb34c47a41945";
+//    String url = "https://cimatube.cc/embed1/29f1d50ae92194ed586eb34c47a41945";
+//    String url = "http://194.164.53.40/movie/fetch/476.ts";
+    String url = "https://airmax.boats:443/auth/klAOuM1eGh8S_Lad-zHd3tRQQNJwPy1xC9daIKIlJuJa8zkzWpcOan7LNqE9MedsBm09PjbO3z6TCiFHsThjg12o-u_0Ww3o-KVci707p08j-Koinxoj9Y2raOyRkw_gr2ryf7Ym05pUaypNUlIacLXMdHBxaKoqnFMeCkcp71RgpYPmy4ufp1dvhmwFGpXt_XE6SzUrixQBykbQsx7juDx9NqP_jZboMASNoLFq9cTm2dnpEidnkvrWbV8yPlWAiBfBYKGgc-JzAlbEo_XaFeoyQPAjMzYke7_R0YbPF216F3UGKoxOz62NakIOPllj71AJFID2EOM-b00cRvcxTPmRrJV927RnWnhRhxw-zc58ubdxI6xeqEY8kPduZg3skgZTkEMUdHIhvxFZ4S6LxbdPz8LRYtCUtkzCDAMoWPGU2ZMHlOMRrQGjBHmVBlpwQWfbMsu8Dva3Djgg8z0MicYYB2bxGAgyRhc_oRTF3meVkzTickaaKmduESCg_QmBNzUjmKCPGwxg26OT2WxlnpxsbFELoqiaR0P8Lflm6poO0_u-ES4FHMX0oiikTLQTirIs3N9TcyYZMyp75kCrJQkHQ9yII3eLeRU322WzRv-9CiPzeijfs94mlzBBNZtbgLSD_6yjnSh-jW0pHYC3DA";
 ////    String url = "https://www.faselhd.express/video_player?uid=0&vid=863adbd5b09c0b764128cec2dcb1d84f&img=https://img.scdns.io/thumb/863adbd5b09c0b764128cec2dcb1d84f/large.jpg&nativePlayer=true";
 //    String url = "https://www.faselhd.link/movies/%d9%81%d9%8a%d9%84%d9%85-sonic-hedgehog-2020-%d9%85%d8%aa%d8%b1%d8%ac%d9%85-ct";
 //    String url = "https://tgb4.top15top.shop/0bboz4svw11q/Sonic_the_Hedgehog_2020_Bluray-1080p.Weciima.mp4.html?Key=ibPyARbr1aJuVz7ibn-kng&Expires=1728899987|referer=https://wecima.movie/";
 //    String url = "https://deva-cpmav9sk6x33.cimanowtv.com/uploads/2024/10/17/_Cima-Now.CoM_%20El.Moass.Osman.S06E03.HD/[Cima-Now.CoM]%20El.Moass.Osman.S06E03.HD-480p.mp4|Referer=https://deva-cpmav9sk6x33.cimanowtv.com/e/2ss18e78qfgj";
 //    String url = "https://deva-cpmav9sk6x35.cimanowtv.com/uploads/2024/10/18/_Cima-Now.CoM_%20Bagman.2024.HD/[Cima-Now.CoM]%20Bagman.2024.HD-480p.mp4|sec-ch-ua=\"Chromium\";v=\"130\", \"Android WebView\";v=\"130\", \"Not?A_Brand\";v=\"99\"&sec-ch-ua-mobile=?1&Accept=*/*&sec-ch-ua-platform=\"Android\"&User-Agent=Mozilla/5.0 (Linux; Android 14; SM-S908B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36&Referer=https://deva-cpmav9sk6x35.cimanowtv.com/e/525yih97u1vs&Accept-Encoding=identity;q=1, *;q=0&Range=bytes=0-";
-    String url = "blob:https://vk.com/d08eb16f-d03e-4743-8a27-8158f72c1c7b|Referer=https://vk.com/&User-Agent=Android 8";
+//    String url = "blob:https://vk.com/d08eb16f-d03e-4743-8a27-8158f72c1c7b|Referer=https://vk.com/&User-Agent=Android 8";
     mm.setVideoUrl(url);
     mm.setStudio(Movie.SERVER_CimaNow);
-//    mm.setState(Movie.VIDEO_STATE);
-    mm.setState(Movie.RESOLUTION_STATE);
+    mm.setState(Movie.VIDEO_STATE);
+//    mm.setState(Movie.RESOLUTION_STATE);
 //    mm.setState(Movie.BROWSER_STATE);
 //
 //            Map<String, String> headers = Util.extractHeaders(url);
@@ -799,12 +801,97 @@ public class MainFragment extends BrowseSupportFragment {
 //            headers.forEach((key, value) -> System.out.println(key + ": " + value));
 //
 //
-//Util.openExoPlayer(mm, getActivity(), false);
-Util.openBrowserIntent(mm, fragment, false, false);
+Util.openExoPlayer(mm, getActivity(), false);
+//Util.openBrowserIntent(mm, fragment, false, false);
 //Util.openExternalVideoPlayer(mm, getActivity());
 //    Intent browse = new Intent(getActivity(), BrowserActivity.class);
 //     browse.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
 //     getActivity().startActivity(browse);
+//            String urlAuth = "http://airmaxtv.de/airmaxfree/IBO/auth";
+//
+//            HashMap<String, String> headers = new HashMap<>();
+//            headers.put("User-Agent", "smart-tv");
+//            headers.put("Content-Type", "application/json; charset=utf-8");
+//            headers.put("Host", "airmaxtv.de");
+//            headers.put("Connection", "Keep-Alive");
+//            headers.put("Accept-Encoding", "gzip");
+////            headers.put("Content-Length", "357");
+//
+//
+//            try {
+////              Document doc = Jsoup.connect(urlAuth)
+//////                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+////                        .headers(headers)
+//////                        .cookies(config.getMappedCookies())
+//////                    .userAgent("Android 7")
+//////                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+////                        .followRedirects(true)
+////                        .ignoreHttpErrors(true)
+////                        .ignoreContentType(true)
+////                        .timeout(0)
+////                        .get();
+//String urlUp = "http://airmaxtv.de/airmaxfree/IBO/update";
+//                Document doc2 = Jsoup.connect(urlUp)
+////                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+//                        .headers(headers)
+////                        .cookies(config.getMappedCookies())
+////                    .userAgent("Android 7")
+////                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+//                        .followRedirects(true)
+//                        .ignoreHttpErrors(true)
+//                        .ignoreContentType(true)
+//                        .timeout(0)
+//                        .data("mimeType", "application/json; charset=utf-8")
+//                        .data("text",  "{\"data\":\"eyJtYWNfYWRkcmVzcyI6IjNiOjZiOjUzOmJhOmU4OjA42zRmIiwicGxheWxpc3RfaWQiOiI5MCIsInBs\\nYXlsaXN0X25hbWUiOiJhaXJNQVggU2VydmVyIDEiLCJwbGF5bGlzdF91cmwiOiJodHRwOlwvXC9h\\naXJtYXhsaXZlLmJvYXRzXC9nZXQucGhwP3VzZXJuYW1lPWFpcm1heHR2JnBhc3N3b3JkPTU1NDg1\\nMzU0Jm91dHB1dD10cyZ0eXBlPW0zdV9wbHVzIiwicGxheWxpc3RfdHlwZSI6ImdlbmVyYWwiLCJh\\ncHBfdHlwZSI6ImFuZHJvaWQifQ==Qe\"}")
+//                        .post();
+//                Log.d(TAG, "test: "+doc2.outerHtml());
+////            String docTitle = doc.title();
+////            Log.d(TAG, "getRequestDoc: " + docTitle);
+////            if (docTitle.contains("Just a moment")) {
+////                return fetchDocUsingWebView(url);
+////            }
+//
+//            } catch (IOException e) {
+//                //builder.append("Error : ").append(e.getMessage()).append("\n");
+//                Log.i(TAG, "error: test: " + e.getMessage());
+//            }
+
+
+//            M3U8ContentFetcher mFetcher = new M3U8ContentFetcher();
+            String contents = "\n" +
+                    "#EXTINF:-1 tvg-id=\"ZarokTV.tr\" tvg-logo=\"https://i.imgur.com/o0eevnb.png\" group-title=\"\uD83C\uDDF9\uD83C\uDDF7 Turkey\",Zarok TV\n" +
+                    "https://zindikurmanci.zaroktv.com.tr/hls/stream.m3u8\n" +
+                    "\n" +
+                    "\n" +
+                    "\n" +
+                    "\n" +
+                    "#EXTM3U\n" +
+                    "#EXTINF:-1 tvg-name=\"Das Erste Ⓖ\" tvg-logo=\"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Das_Erste_2014.svg/640px-Das_Erste_2014.svg.png\" tvg-id=\"DasErste.de\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",Das Erste Ⓖ\n" +
+                    "https://mcdn.daserste.de/daserste/de/master.m3u8\n" +
+                    "#EXTINF:1 tvg-id=\"RTLZweiDeutschland.de\" tvg-language=\"German\" tvg-logo=\"https://i.imgur.com/0dDMVLa.png\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",RTL Zwei\n" +
+                    "https://s6.hopslan.com/rtl2x1/tracks-v1a1/mono.m3u8\n" +
+                    "#EXTINF:1 tvg-id=\"RTLZweiDeutschland.de\" tvg-language=\"German\" tvg-logo=\"https://i.imgur.com/0dDMVLa.png\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",RTL Zwei+\n" +
+                    "http://178.219.128.68:64888/RTL2"
+                    ;
+
+//            List<Movie> movies = M3U8ContentFetcher.parseGroupNames(contents, "hash");
+//            Log.d(TAG, "movies: "+ movies);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 //hhhhhhh
