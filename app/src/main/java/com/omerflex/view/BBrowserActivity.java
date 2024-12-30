@@ -45,6 +45,7 @@ import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.ServerManager;
 
 import java.net.MalformedURLException;
@@ -171,7 +172,7 @@ public class BBrowserActivity extends AppCompatActivity {
             }
         };
 
-        server = ServerManager.determineServer(movie, null, BBrowserActivity.this, null);
+        server = ServerConfigManager.getServer(movie.getStudio());
 
 
 

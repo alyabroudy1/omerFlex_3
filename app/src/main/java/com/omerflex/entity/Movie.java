@@ -35,7 +35,7 @@ public class Movie implements Parcelable {
     public final static String SERVER_CIMA_CLUB = "cimaclub";
     public final static String SERVER_GOOGLE = "google";
     public final static String SERVER_IPTV = "Iptv";
-    public final static String SERVER_KOORA_LIVE = "KooraLive";
+    public final static String SERVER_KOORA_LIVE = "koora";
     public final static String SERVER_ARAB_SEED = "arabseed";
     public final static String SERVER_WATAN_FLIX = "watanflix";
     public final static int GROUP_OF_GROUP_STATE = 0;

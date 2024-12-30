@@ -2,8 +2,6 @@ package com.omerflex.server;
 
 import android.os.Build;
 import android.util.Log;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebView;
 
 import androidx.annotation.RequiresApi;
 
@@ -101,11 +99,6 @@ public class IptvServer extends AbstractServer {
     }
 
     @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
-
-    }
-
-    @Override
     public int detectMovieState(Movie movie) {
         return 0;
     }
@@ -129,11 +122,14 @@ public class IptvServer extends AbstractServer {
 //        });
 //    }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    public CompletableFuture<Map<String, List<Movie>>> fetchAndGroupM3U8ContentAsync(Movie movie, MovieDbHelper dbHelper) {
-        CompletableFuture<List<Movie>> futureMovieList = contentFetcher.fetchM3U8ContentAsync(movie, dbHelper);
-
-        return futureMovieList.thenApplyAsync(IptvServer::groupMoviesByGroup);
+//    @RequiresApi(api = Build.VERSION_CODES.N)
+//    public CompletableFuture<Map<String, List<Movie>>> fetchAndGroupM3U8ContentAsync(Movie movie, MovieDbHelper dbHelper) {
+//        CompletableFuture<List<Movie>> futureMovieList = contentFetcher.fetchM3U8ContentAsync(movie, dbHelper);
+//
+//        return futureMovieList.thenApplyAsync(IptvServer::groupMoviesByGroup);
+//    }
+    public HashMap<String, ArrayList<Movie>> fetchAndGroupM3U8ContentAsync(Movie movie, MovieDbHelper dbHelper) {
+        return contentFetcher.fetchM3U8ContentAsync(movie, dbHelper);
     }
 
 

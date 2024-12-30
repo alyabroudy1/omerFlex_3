@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -293,32 +294,32 @@ public class MovieDbHelper extends SQLiteOpenHelper {
     private ServerConfig generateServerConfigObject(Cursor cursor) {
         ServerConfig serverConfig = new ServerConfig();
 
-        int nameIndex = cursor.getColumnIndex(ConfigTable .COLUMN_ID);
+        int nameIndex = cursor.getColumnIndex(ConfigTable.COLUMN_ID);
         if (nameIndex >= 0) {
             serverConfig.setName(cursor.getString(nameIndex));
         }
 
-        int labelIndex = cursor.getColumnIndex(ConfigTable .COLUMN_LABEL);
+        int labelIndex = cursor.getColumnIndex(ConfigTable.COLUMN_LABEL);
         if (labelIndex >= 0) {
             serverConfig.setLabel(cursor.getString(labelIndex));
         }
 
-        int isActiveIndex = cursor.getColumnIndex(ConfigTable .COLUMN_IS_ACTIVE);
+        int isActiveIndex = cursor.getColumnIndex(ConfigTable.COLUMN_IS_ACTIVE);
         if (isActiveIndex >= 0) {
             serverConfig.setActive(cursor.getInt(isActiveIndex) == 1);
         }
 
-        int urlIndex = cursor.getColumnIndex(ConfigTable .COLUMN_URL);
+        int urlIndex = cursor.getColumnIndex(ConfigTable.COLUMN_URL);
         if (urlIndex >= 0) {
             serverConfig.setUrl(cursor.getString(urlIndex));
         }
 
-        int refererIndex = cursor.getColumnIndex(ConfigTable .COLUMN_REFERER);
+        int refererIndex = cursor.getColumnIndex(ConfigTable.COLUMN_REFERER);
         if (refererIndex >= 0) {
             serverConfig.setReferer(cursor.getString(refererIndex));
         }
 
-        int dateIndex = cursor.getColumnIndex(ConfigTable .COLUMN_CREATED_AT);
+        int dateIndex = cursor.getColumnIndex(ConfigTable.COLUMN_CREATED_AT);
         if (dateIndex >= 0) {
             try {
                 serverConfig.setCreatedAt(new Date(cursor.getLong(dateIndex)));
@@ -327,16 +328,16 @@ public class MovieDbHelper extends SQLiteOpenHelper {
             }
         }
 
-        int headersIndex = cursor.getColumnIndex(ConfigTable .COLUMN_HEADER);
+        int headersIndex = cursor.getColumnIndex(ConfigTable.COLUMN_HEADER);
         if (headersIndex >= 0) {
             try {
                 serverConfig.setHeaders(Util.convertJsonToHashMap(cursor.getString(headersIndex)));
             } catch (JSONException e) {
-                Log.d(TAG, "generateServerConfigObject: error retrieving headers as hash: "+e.getMessage());
+                Log.d(TAG, "generateServerConfigObject: error retrieving headers as hash: " + e.getMessage());
             }
         }
 
-        int cookieIndex = cursor.getColumnIndex(ConfigTable .COLUMN_COOKIE);
+        int cookieIndex = cursor.getColumnIndex(ConfigTable.COLUMN_COOKIE);
         if (cookieIndex >= 0) {
             serverConfig.setStringCookies(cursor.getString(cookieIndex));
         }
@@ -698,14 +699,71 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
     }
 
+    public void addMainMovieToHistory_old(Movie movie) {
+        db = getWritableDatabase();
+
+        String mainMovieTitle = movie.getMainMovieTitle();
+        if (mainMovieTitle == null) {
+            mainMovieTitle = movie.getVideoUrl();
+        }
+        String mainMovieTitlePath = mainMovieTitle;
+        try {
+            Uri uri = Uri.parse(mainMovieTitle);
+            mainMovieTitlePath = uri.getPath();
+        } catch (Exception e) {
+            Log.d(TAG, "search: fail parsing url: " + e.getMessage());
+        }
+
+
+//        if (mainMovie.getIsHistory() == 1) {
+//            return;
+//        }
+        Log.d(TAG, "addMainMovieToHistory:ss " + mainMovieTitlePath);
+//        Log.d(TAG, "tag:ss " + movie.getMainMovie());
+
+        ContentValues cv = new ContentValues();
+        cv.put(MoviesTable.COLUMN_IS_HISTORY, 1);
+        cv.put(MoviesTable.COLUMN_UPDATED_AT, new Date().getTime());
+
+        String selection = MoviesTable.COLUMN_VIDEO_URL + " = ? ";
+        String[] selectionArgs = new String[]{mainMovieTitlePath};
+        // Check if the movie exists in the database
+        Cursor cursor = db.query(
+                MoviesTable.TABLE_NAME,
+                null,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null
+        );
+
+        if (cursor != null && cursor.getCount() > 0) {
+            // The movie is already in the database, update it
+            long updateResult = db.update(MoviesTable.TABLE_NAME, cv, selection, selectionArgs);
+            //cursor.close();
+        } else {
+            // The movie is not found, insert it as a new record
+            movie.setIsHistory(1);
+            cv = getContentValueMovie(cv, movie);
+            long insertResult = db.insert(MoviesTable.TABLE_NAME, null, cv);
+        }
+    }
+
     public void addMainMovieToHistory(Movie movie) {
         db = getWritableDatabase();
 
-
+//try {
+//                    Uri uri = Uri.parse(url);
+//                    m.setMainMovieTitle(uri.getPath());
+//                }catch (Exception e){
+//                    Log.d(TAG, "search: fail parsing url: "+ e.getMessage());
+//                }
         Movie mainMovie = movie.getMainMovie();
         if (mainMovie == null) {
             mainMovie = movie;
         }
+
 
 //        if (mainMovie.getIsHistory() == 1) {
 //            return;
@@ -1233,7 +1291,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         return db.delete(MoviesTable.TABLE_NAME, selection, selectionArgs);
     }
 
-    public List<Movie> getMovieListByHash(String hash) {
+    public HashMap<String, ArrayList<Movie>> getMovieListByHash(String hash) {
         db = getReadableDatabase();
       /*  String selection = MoviesTable.COLUMN_VIDEO_URL + " = ? " +
                 " AND " + QuestionsTable.COLUMN_DIFFICULTY + " = ? ";   */
@@ -1253,7 +1311,19 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 null,
                 null
         );
-        return fetchMovieListFromDB(c);
+        Log.d(TAG, "getMovieListByHash: " + c.getCount());
+        HashMap<String, ArrayList<Movie>> groupedMovies = new HashMap<>();
+        for (Movie movie : fetchMovieListFromDB(c)) {
+
+            if (!groupedMovies.containsKey(movie.getGroup())) {
+                groupedMovies.put(movie.getGroup(), new ArrayList<>());
+            }
+
+            // Add the movie to the corresponding group
+            groupedMovies.get(movie.getGroup()).add(movie);
+        }
+
+        return groupedMovies;
     }
 
     public List<Movie> findSubListByMainMovieLink(String studio, String mainMovieLink) {
@@ -1429,6 +1499,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 movie.setDescription(c.getString(hashIndex));
             }
         }
+        Log.d(TAG, "findIptvListByHash: " + movie);
         return movie;
     }
 

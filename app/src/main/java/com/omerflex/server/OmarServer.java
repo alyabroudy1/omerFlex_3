@@ -378,8 +378,8 @@ public class OmarServer extends AbstractServer {
 //    }
 
     @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
-        return;
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request){
+        return false;
     }
 
 //    public Movie fetchToWatchLocally(Movie movie) {

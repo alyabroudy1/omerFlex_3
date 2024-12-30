@@ -8,6 +8,7 @@ import com.omerflex.server.ArabSeedServer;
 import com.omerflex.server.CimaNowServer;
 import com.omerflex.server.FaselHdServer;
 import com.omerflex.server.IptvServer;
+import com.omerflex.server.KooraServer;
 import com.omerflex.server.MyCimaServer;
 import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
@@ -74,7 +75,7 @@ public class DefaultServersConfig {
         faselConfig.setName(Movie.SERVER_FASELHD);
         faselConfig.setUrl("https://faselhd.center");
         faselConfig.setReferer("https://faselhd.center/");
-        ServerConfigManager.addConfig(faselConfig, dbHelper);
+//        ServerConfigManager.addConfig(faselConfig, dbHelper);
 
         AbstractServer faselhd = new FaselHdServer();
 //        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
@@ -110,7 +111,7 @@ public class DefaultServersConfig {
         iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
         iptvConfig.setReferer("https://drive.google.com/");
         iptvConfig.setActive(true);
-        ServerConfigManager.addConfig(iptvConfig);
+//        ServerConfigManager.addConfig(iptvConfig);
 
         AbstractServer iptv = new IptvServer();
         ServerConfigManager.addConfig(iptvConfig, dbHelper);
@@ -127,6 +128,19 @@ public class DefaultServersConfig {
         AbstractServer omarServer = new OmarServer();
         ServerConfigManager.addConfig(omarConfig, dbHelper);
         ServerConfigManager.addServer(omarServer);
+
+        //        ### Koora ###
+        ServerConfig kooraConfig = new ServerConfig();
+        kooraConfig.setActive(true);
+        kooraConfig.setName(Movie.SERVER_KOORA_LIVE);
+        kooraConfig.setUrl("https://kooora.live-koora.live");
+        kooraConfig.setReferer("https://kooora.live-koora.live/");
+//        ServerConfigManager.addConfig(kooraConfig, dbHelper);
+
+        AbstractServer koora = new KooraServer();
+//        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
+        ServerConfigManager.addConfig(kooraConfig, dbHelper);
+        ServerConfigManager.addServer(koora);
 
 //        //### cimaclub ###
 //        ServerConfig cimaclubConfig = new ServerConfig();

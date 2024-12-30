@@ -15,11 +15,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Matcher;
@@ -41,35 +39,24 @@ public class M3U8ContentFetcher {
         Movie iptvList = new Movie();
         iptvList.setTitle("iptvList");
         iptvList.setVideoUrl(m3u8Url);
-
-        CompletableFuture<List<Movie>> futureMovieList = fetchM3U8ContentAsync(iptvList, null);
-
-        futureMovieList.thenAccept(movieList -> {
-            System.out.println("Movie List Size: " + movieList.size());
-            for (Movie movie : movieList) {
-                Log.d("TAG", "main: " + movie.toString());
-            }
-        });
-        // Wait for the asynchronous task to complete
-        try {
-            futureMovieList.get(); // This blocks until the task is complete
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
+//
+//        HashMap<String, List<Movie>> futureMovieList = fetchM3U8ContentAsync(iptvList, null);
+//if (futureMovieList.isEmpty()){
+//    return;
+//}
+//            System.out.println("Movie List Size: " + futureMovieList.size());
+//            for (Movie movie : futureMovieList) {
+//                Log.d("TAG", "main: " + movie.toString());
+//            }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    public static CompletableFuture<List<Movie>> fetchM3U8ContentAsync(Movie iptvList, MovieDbHelper dbHelper) {
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
-        return CompletableFuture.supplyAsync(() -> {
+    public static HashMap<String, ArrayList<Movie>> fetchM3U8ContentAsync(Movie iptvList, MovieDbHelper dbHelper) {
             try {
-                List<Movie> tempList = fetchM3U8Content(iptvList, dbHelper);
-                return tempList;
+                return fetchM3U8Content(iptvList, dbHelper);
             } catch (IOException e) {
                 e.printStackTrace();
-                return new ArrayList<>();
+                return new HashMap<String, ArrayList<Movie>>();
             }
-        }, executor);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -356,12 +343,12 @@ public class M3U8ContentFetcher {
         }
     }
 
-    private static List<Movie> fetchM3U8Content(Movie iptvList, MovieDbHelper dbHelper) throws IOException {
+    private static HashMap<String, ArrayList<Movie>> fetchM3U8Content(Movie iptvList, MovieDbHelper dbHelper) throws IOException {
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(iptvList.getVideoUrl())
                 .build();
-        List<Movie> movieList = new ArrayList<>();
+        HashMap<String, ArrayList<Movie>> movieList = new HashMap<String, ArrayList<Movie>>();
 
         try (Response response = client.newCall(request).execute()) {
             if (response.isSuccessful()) {
@@ -372,28 +359,42 @@ public class M3U8ContentFetcher {
 
                 // Calculate the hash value (SHA-256 in this example)
                 String hashValue = calculateHash(bytes, "SHA-256");
-                iptvList.setDescription(hashValue);
-                Log.d("TAG", "fetchM3U8Content: hash:"+hashValue);
+//                iptvList.setDescription(hashValue);
+//                Log.d("TAG", "fetchM3U8Content: hash:"+hashValue);
 
-              Movie existingList = dbHelper.findIptvListByHash(iptvList.getDescription());
-              if (existingList != null){
-                  Log.d("TAG", "fetchM3U8Content: xxx: database");
-                  movieList = dbHelper.getMovieListByHash(hashValue);
-              }else {
-                  Log.d("TAG", "fetchM3U8Content: xxx: new fetch");
+//              Movie existingList = dbHelper.findIptvListByHash(iptvList.getDescription());
+                movieList = dbHelper.getMovieListByHash(hashValue);
+//              if (existingList != null){
+                  Log.d("TAG", "fetchM3U8Content: db " +
+                          " . "+ movieList.size());
+//              }else {
+                if (movieList.isEmpty()){
+                    Log.d("TAG", "fetchM3U8Content: xxx: new fetch");
+                    movieList = parseGroupNames(body, hashValue);
+                }
+
                   //  Log.d("TAG", "fetchM3U8Content: body:"+body);
-                  dbHelper.saveIptvList(iptvList);
-                  movieList = parseGroupNames(body, hashValue);
-                  final List<Movie> movieListFinal = new ArrayList<>(movieList);
-                  // Save movieList in a background thread
-                  new Thread(new Runnable() {
-                      @Override
-                      public void run() {
-                          dbHelper.saveMovieList(movieListFinal);
-                      }
-                  }).start();
 
-              }
+                Log.d(TAG, "fetchM3U8Content: size: "+ movieList.size());
+//                  final HashMap<String, ArrayList<Movie>> movieListFinal = movieList;
+//                  // Save movieList in a background thread
+//                  if (!movieList.isEmpty()){
+                      for (String group : movieList.keySet()) {
+//                    Log.d(TAG, "generateIptvRows: group: "+group);
+//                    Log.d(TAG, "generateIptvRows: list: "+futureGroupedMovies.get(group));
+                          if (movieList.get(group) == null || movieList.get(group).isEmpty()) {
+                              continue;
+                          }
+                         ArrayList<Movie> finalMovieList = movieList.get(group);
+                          new Thread(new Runnable() {
+                              @Override
+                              public void run() {
+                                  dbHelper.saveMovieList(finalMovieList);
+                              }
+                          }).start();
+                      }
+//                  }
+//              }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -401,33 +402,35 @@ public class M3U8ContentFetcher {
         return movieList;
     }
 
-    private List<Movie> fetchIpv(MovieDbHelper dbHelper) {
-        String m3u8Url = "https://github.com/Free-TV/IPTV/blob/master/playlist.m3u8"; // Replace with the actual URL
+//    private List<Movie> fetchIpv(MovieDbHelper dbHelper) {
+//        String m3u8Url = "https://github.com/Free-TV/IPTV/blob/master/playlist.m3u8"; // Replace with the actual URL
+//
+//        Queue<Movie> movieQueue = new ConcurrentLinkedQueue<>();
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    Movie iptvList = new Movie();
+//                    iptvList.setTitle("iptvList");
+//                    iptvList.setVideoUrl(m3u8Url);
+//                    HashMap<String, List<Movie>>tempList = fetchM3U8Content(iptvList, dbHelper);
+//                    movieQueue.addAll(tempList);
+//
+//                } catch (IOException e) {
+//                    Log.d("TAG", "run: xxx error:" + e.getMessage());
+//                    e.printStackTrace();
+//                }
+//            }
+//        }).start();
+//
+//      //  Log.d("TAG", "fetchIpv: soosos:" + movieQueue.size());
+//        return new ArrayList<>();
+//    }
 
-        Queue<Movie> movieQueue = new ConcurrentLinkedQueue<>();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Movie iptvList = new Movie();
-                    iptvList.setTitle("iptvList");
-                    iptvList.setVideoUrl(m3u8Url);
-                    List<Movie> tempList = fetchM3U8Content(iptvList, dbHelper);
-                    movieQueue.addAll(tempList);
-
-                } catch (IOException e) {
-                    Log.d("TAG", "run: xxx error:" + e.getMessage());
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-
-      //  Log.d("TAG", "fetchIpv: soosos:" + movieQueue.size());
-        return new ArrayList<>();
-    }
-
-    public static List<Movie> parseGroupNames(String m3u8Content, String hash) {
-        List<Movie> groupNames = new ArrayList<>();
+    public static HashMap<String, ArrayList<Movie>> parseGroupNames(String m3u8Content, String hash) {
+//        Log.d(TAG, "parseGroupNames: ");
+        // HashMap to store movies grouped by their group names
+        HashMap<String, ArrayList<Movie>> groupedMovies = new HashMap<>();
         int movieNameCounter = 0;
 
         // Split content into segments using the delimiter "#EXTINF:"
@@ -435,6 +438,7 @@ public class M3U8ContentFetcher {
         // Remove the first empty element
         List<String> segmentList = new ArrayList<>(Arrays.asList(segments));
         segmentList.remove(0);
+        ArrayList<String> urlList = new ArrayList<>();
 
         // Loop through the segments
         for (int index = 0; index < segmentList.size(); index++) {
@@ -451,8 +455,13 @@ public class M3U8ContentFetcher {
             if ("https://bit.ly/3JQfa8u".equals(segmentDTO.tvgLogo)) {
                 continue;
             }
-
-            Log.d(TAG, "parseGroupNames: "+segmentDTO);
+            // skip duplicated link
+            if (urlList.contains(segmentDTO.url)){
+                Log.d(TAG, "parseGroupNames: duplicated link: " + segmentDTO.url);
+                continue;
+            }
+            urlList.add(segmentDTO.url);
+//            Log.d(TAG, "parseGroupNames: "+segmentDTO);
 
             Movie channel = new Movie();
             channel.setTitle(segmentDTO.name);
@@ -477,8 +486,15 @@ public class M3U8ContentFetcher {
             channel.setStudio(Movie.SERVER_IPTV);
             channel.setMainMovieTitle(hash);
             channel.setState(Movie.VIDEO_STATE);
+//            Log.d(TAG, "parseGroupNames: "+channel);
+            // Check if the group already exists in the map
+            if (!groupedMovies.containsKey(groupTitle)) {
+                groupedMovies.put(groupTitle, new ArrayList<>());
+            }
 
-            groupNames.add(channel);
+            // Add the movie to the corresponding group
+            groupedMovies.get(groupTitle).add(channel);
+
 //            try {
 //                if (channel.getUrl().length() > 1500) {
 //                    throw new IllegalArgumentException("URL length exceeds limit");
@@ -492,15 +508,15 @@ public class M3U8ContentFetcher {
 //            }
 
         }
+//
+//        try {
+//            // Save all changes (if using transactions or bulk inserts)
+//            // commitTransaction(); // Implement this as per your persistence logic
+//        } catch (Exception e) {
+//            Log.e("parseAndSave", "Error saving to database", e);
+//        }
 
-        try {
-            // Save all changes (if using transactions or bulk inserts)
-            // commitTransaction(); // Implement this as per your persistence logic
-        } catch (Exception e) {
-            Log.e("parseAndSave", "Error saving to database", e);
-        }
-
-            return null;
+            return groupedMovies;
     }
 
     // Method to extract a VLC option from a line in Android Java

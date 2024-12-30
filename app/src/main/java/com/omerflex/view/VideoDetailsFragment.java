@@ -136,8 +136,12 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             return;
         }
 
-        mSelectedMovie = Util.recieveSelectedMovie(getActivity());
+        mSelectedMovie = Util.recieveSelectedMovie(getActivity().getIntent());
+        Log.d(TAG, "start: mainMovieTitle:"+ mSelectedMovie.getMainMovieTitle());
         listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
+
+        // default value in case of activity result
+        clickedMovieAdapter = listRowAdapter;
 //            mSelectedMovie.setMainMovie(mSelectedMovieMainMovie);
 
         //very important to initialize all required
@@ -170,6 +174,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
     private void initializeThings() {
         dbHelper = MovieDbHelper.getInstance(getActivity());
+        movieHandler = new Handler();
 
         mDetailsBackground = new DetailsSupportFragmentBackgroundController(this);
         detailsDescriptionPresenter = new DetailsDescriptionPresenter();
@@ -307,20 +312,8 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             }
 //                            if (mSelectedMovie.getSubList() != null) {
                             listRowAdapter.addAll(0, result.getSubList());
-                            Movie firstSubMovie = result.getSubList().get(0);
-                            if (firstSubMovie != null) {
-                                boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE;
-                                boolean watchOmarCond = result.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
-                                if (watchCond || watchOmarCond) {
-                                    Log.d(TAG, "onSuccess: watchCond");
-                                    getActivity().runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            loadActionRow();
-                                        }
-                                    });
-                                }
-                            }
+                            evaluateWatchAction(result);
+
                             //todo test
 //                            removeInvalidLinks(mSelectedMovie.getSubList());
 
@@ -335,8 +328,9 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
                         @Override
                         public void onInvalidCookie(Movie result, String title) {
+                            Log.d(TAG, "onInvalidCookie: 338: "+ result);
                             result.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
-                            Util.openBrowserIntent(result, getActivity(), false, true);
+                            Util.openBrowserIntent(result, fragment, false, true);
                         }
 
                         @Override
@@ -407,6 +401,27 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 //            hideProgressDialog();
 //        }
 
+    }
+
+    private void evaluateWatchAction(Movie movie) {
+        Movie firstSubMovie = movie;
+        if (!movie.getSubList().isEmpty()){
+            firstSubMovie = movie.getSubList().get(0);
+        }
+
+        boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE;
+        boolean watchOmarCond = firstSubMovie.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
+//        boolean watchOmarCond = result.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
+        Log.d(TAG, "evaluateWatchAction: " + watchCond + ", "+ firstSubMovie);
+        if (watchCond || watchOmarCond) {
+            Log.d(TAG, "onSuccess: watchCond");
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    loadActionRow();
+                }
+            });
+        }
     }
 
     private void removeInvalidLinks(List<Movie> subList) {
@@ -748,9 +763,10 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
                                 @Override
                                 public void onInvalidCookie(Movie result, String title) {
+                                    Log.d(TAG, "onInvalidCookie: 752"+ result);
                                     hideProgressDialog(false);
                                     result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
-                                    Util.openBrowserIntent(result, getActivity(), false, true);
+                                    Util.openBrowserIntent(result, fragment, false, true);
                                 }
 
                                 @Override
@@ -1055,23 +1071,28 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 //    }
 
     private void updateCurrentMovieView(Movie movie){
-        movieHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                mSelectedMovie = movie;
+//        movieHandler.post(new Runnable() {
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                mSelectedMovie = movie;
 //                if (movie.getSubList() != null) {
 //                    listRowAdapter.addAll(listRowAdapter.size(), movie.getSubList());
 //                }
-                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
-                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
-                loadActionRow();
+                mSelectedMovie.setDescription(movie.getDescription());
+//                mSelectedMovie.setTitle("hhhhhh");
+
+//                Log.d(TAG, "run: updateCurrentMovieView: "+ mSelectedMovie.getDescription());
+//                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+//                mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
+                evaluateWatchAction(movie);
                 try {
                     initializeBackground(movie);
                 }catch (Exception e){
                     Log.d(TAG, "run: error updating background: "+e.getMessage());
                 }
-            }
-        });
+//            }
+//        }).start();
 
 
     }

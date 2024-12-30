@@ -4,19 +4,13 @@ import android.app.Activity;
 import android.util.Log;
 
 import androidx.fragment.app.Fragment;
-import androidx.leanback.widget.ArrayObjectAdapter;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
-import com.omerflex.server.AbstractServer;
-import com.omerflex.server.FaselHdServer;
-import com.omerflex.server.MyCimaServer;
-import com.omerflex.server.OmarServer;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.IOException;
@@ -233,74 +227,74 @@ public class ServerManager {
 
 
 
-    public AbstractServer determineServer(String serverName) {
-        if (serverName == null) {
-            return null;
-        }
-        Log.d(TAG, "determineServer: " + serverName);
-        switch (serverName) {
-            case Movie.SERVER_MyCima:
-                return new MyCimaServer();
-            case Movie.SERVER_FASELHD:
-                return new FaselHdServer();
-//                return MyCimaServer.getInstance(activity, fragment);
-//            case Movie.SERVER_AKWAM:
-//                return AkwamServer.getInstance(activity, fragment);
-//            case Movie.SERVER_OLD_AKWAM:
-//                return OldAkwamServer.getInstance(activity, fragment);
-//            case Movie.SERVER_CIMA4U:
-//                return Cima4uController.getInstance(fragment, activity);
-//            case Movie.SERVER_SHAHID4U:
-//                return Shahid4uController.getInstance(fragment, activity);
+//    public AbstractServer determineServer(String serverName) {
+//        if (serverName == null) {
+//            return null;
+//        }
+//        Log.d(TAG, "determineServer: " + serverName);
+//        switch (serverName) {
+//            case Movie.SERVER_MyCima:
+//                return new MyCimaServer();
+//            case Movie.SERVER_FASELHD:
+//                return new FaselHdServer();
+////                return MyCimaServer.getInstance(activity, fragment);
+////            case Movie.SERVER_AKWAM:
+////                return AkwamServer.getInstance(activity, fragment);
+////            case Movie.SERVER_OLD_AKWAM:
+////                return OldAkwamServer.getInstance(activity, fragment);
+////            case Movie.SERVER_CIMA4U:
+////                return Cima4uController.getInstance(fragment, activity);
+////            case Movie.SERVER_SHAHID4U:
+////                return Shahid4uController.getInstance(fragment, activity);
+//////            case Movie.SERVER_SERIES_TIME:
+//////                return new SeriesTimeController(listRowAdapter, activity);
+////            case Movie.SERVER_CIMA_CLUB:
+////                return CimaClubServer.getInstance(fragment, activity);
+////            case Movie.SERVER_ARAB_SEED:
+////                return ArabSeedServer.getInstance(fragment, activity);
+////            case Movie.SERVER_IPTV:
+////                return IptvServer.getInstance(activity, fragment);
+////            case Movie.SERVER_OMAR:
+////                return OmarServer.getInstance(activity, fragment);
+////            case Movie.SERVER_WATAN_FLIX:
+////                return WatanFlixController.getInstance(fragment, activity);
+////            case Movie.SERVER_KOORA_LIVE:
+////                return new KooraLiveController(listRowAdapter, activity);
+//        }
+//        return null;
+//    }
+
+//    public static AbstractServer determineServer(Movie movie, ArrayObjectAdapter listRowAdapter, Activity activity, Fragment fragment) {
+//        switch (movie.getStudio()) {
+//            case Movie.SERVER_MyCima:
+//                return new MyCimaServer();
+//            case Movie.SERVER_FASELHD:
+//                return new FaselHdServer();
+//                        case Movie.SERVER_OMAR:
+//                return new OmarServer();
+////            case Movie.SERVER_AKWAM:
+////                return AkwamServer.getInstance(activity, fragment);
+////            case Movie.SERVER_OLD_AKWAM:
+////                return OldAkwamServer.getInstance(activity, fragment);
+////            case Movie.SERVER_CIMA4U:
+////                return Cima4uController.getInstance(fragment, activity);
+////            case Movie.SERVER_SHAHID4U:
+////                return Shahid4uController.getInstance(fragment, activity);
 ////            case Movie.SERVER_SERIES_TIME:
 ////                return new SeriesTimeController(listRowAdapter, activity);
-//            case Movie.SERVER_CIMA_CLUB:
-//                return CimaClubServer.getInstance(fragment, activity);
-//            case Movie.SERVER_ARAB_SEED:
-//                return ArabSeedServer.getInstance(fragment, activity);
-//            case Movie.SERVER_IPTV:
-//                return IptvServer.getInstance(activity, fragment);
-//            case Movie.SERVER_OMAR:
-//                return OmarServer.getInstance(activity, fragment);
-//            case Movie.SERVER_WATAN_FLIX:
-//                return WatanFlixController.getInstance(fragment, activity);
-//            case Movie.SERVER_KOORA_LIVE:
-//                return new KooraLiveController(listRowAdapter, activity);
-        }
-        return null;
-    }
-
-    public static AbstractServer determineServer(Movie movie, ArrayObjectAdapter listRowAdapter, Activity activity, Fragment fragment) {
-        switch (movie.getStudio()) {
-            case Movie.SERVER_MyCima:
-                return new MyCimaServer();
-            case Movie.SERVER_FASELHD:
-                return new FaselHdServer();
-                        case Movie.SERVER_OMAR:
-                return new OmarServer();
-//            case Movie.SERVER_AKWAM:
-//                return AkwamServer.getInstance(activity, fragment);
-//            case Movie.SERVER_OLD_AKWAM:
-//                return OldAkwamServer.getInstance(activity, fragment);
-//            case Movie.SERVER_CIMA4U:
-//                return Cima4uController.getInstance(fragment, activity);
-//            case Movie.SERVER_SHAHID4U:
-//                return Shahid4uController.getInstance(fragment, activity);
-//            case Movie.SERVER_SERIES_TIME:
-//                return new SeriesTimeController(listRowAdapter, activity);
-//            case Movie.SERVER_CIMA_CLUB:
-//                return CimaClubServer.getInstance(fragment, activity);
-//            case Movie.SERVER_ARAB_SEED:
-//                return ArabSeedServer.getInstance(fragment, activity);
-//            case Movie.SERVER_IPTV:
-//                return IptvServer.getInstance(activity, fragment);
-//            case Movie.SERVER_WATAN_FLIX:
-//                return WatanFlixController.getInstance(fragment, activity);
-//            case Movie.SERVER_KOORA_LIVE:
-//                return new KooraLiveController(listRowAdapter, activity);
-            //todo: very important handle unknown servers
-            default:
-                return new MyCimaServer();
-        }
-    }
+////            case Movie.SERVER_CIMA_CLUB:
+////                return CimaClubServer.getInstance(fragment, activity);
+////            case Movie.SERVER_ARAB_SEED:
+////                return ArabSeedServer.getInstance(fragment, activity);
+////            case Movie.SERVER_IPTV:
+////                return IptvServer.getInstance(activity, fragment);
+////            case Movie.SERVER_WATAN_FLIX:
+////                return WatanFlixController.getInstance(fragment, activity);
+////            case Movie.SERVER_KOORA_LIVE:
+////                return new KooraLiveController(listRowAdapter, activity);
+//            //todo: very important handle unknown servers
+//            default:
+//                return new MyCimaServer();
+//        }
+//    }
 }

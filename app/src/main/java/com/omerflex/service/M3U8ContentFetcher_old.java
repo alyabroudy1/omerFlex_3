@@ -375,7 +375,7 @@ public class M3U8ContentFetcher_old {
               Movie existingList = dbHelper.findIptvListByHash(iptvList.getDescription());
               if (existingList != null){
                   Log.d("TAG", "fetchM3U8Content: xxx: database");
-                  movieList = dbHelper.getMovieListByHash(hashValue);
+//                  movieList = dbHelper.getMovieListByHash(hashValue);
               }else {
                   Log.d("TAG", "fetchM3U8Content: xxx: new fetch");
                   //  Log.d("TAG", "fetchM3U8Content: body:"+body);

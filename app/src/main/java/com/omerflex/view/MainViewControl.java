@@ -11,7 +11,6 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.IptvServer;
-import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
@@ -40,9 +39,18 @@ public abstract class MainViewControl extends SearchViewControl {
                 return;
             }
 
-            if (server instanceof OldAkwamServer) {
-                return;
-            }
+//            if (
+//                    server instanceof KooraServer //||
+////                    server instanceof OldAkwamServer //||
+////                    server instanceof AkwamServer ||
+////                    server instanceof ArabSeedServer ||
+////                    server instanceof CimaNowServer ||
+////                    server instanceof FaselHdServer ||
+////                    server instanceof OmarServer ||
+////                    server instanceof MyCimaServer
+//            ) {
+//                return;
+//            }
 
             if (server instanceof OmarServer) {
                 loadOmarServerResult(finalQuery, server);
@@ -62,11 +70,13 @@ public abstract class MainViewControl extends SearchViewControl {
                             }
                             updateMovieListOfMovieAdapter(result, serverAdapter);
 //                                    loadMoviesRow(server, serverAdapter, result);
-                            Movie sampleMovie = result.get(0);
-                            if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
-                                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
-                                if (null != config) {
-                                    updateDomain(sampleMovie.getVideoUrl(), config, dbHelper);
+                            if (server.shouldUpdateDomainOnSearchResult()){
+                                Movie sampleMovie = result.get(0);
+                                if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
+                                    ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+                                    if (null != config) {
+                                        updateDomain(sampleMovie.getVideoUrl(), config, dbHelper);
+                                    }
                                 }
                             }
                         }
@@ -101,9 +111,9 @@ public abstract class MainViewControl extends SearchViewControl {
     protected void loadOmarServerResult(String query, AbstractServer server) {
         ExecutorService executor2 = Executors.newSingleThreadExecutor();
         executor2.submit(() -> {
-            Log.d(TAG, "loadOmarServerResult: before");
-            ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
-            Log.d(TAG, "loadOmarServerResult: after");
+//            Log.d(TAG, "loadOmarServerResult: before");
+           ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
+//            Log.d(TAG, "loadOmarServerResult: after");
             try {
                 loadIptvServerHomepageResult();
             }catch (Exception e){

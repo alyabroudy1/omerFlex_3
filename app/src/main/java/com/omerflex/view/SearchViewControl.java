@@ -15,7 +15,13 @@ import androidx.leanback.widget.ListRow;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.AkwamServer;
+import com.omerflex.server.ArabSeedServer;
+import com.omerflex.server.CimaNowServer;
 import com.omerflex.server.IptvServer;
+import com.omerflex.server.KooraServer;
+import com.omerflex.server.MyCimaServer;
+import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
@@ -25,9 +31,8 @@ import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -52,7 +57,7 @@ public abstract class SearchViewControl {
     protected abstract <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader);
 
     protected abstract <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie);
-
+    protected abstract void updateCurrentMovie(Movie movie);
     public <T> void handleMovieItemClick(Movie movie, int position, T rowsAdapter, T clickedRow, int defaultHeadersCounter) {
         Log.d(TAG, "handleMovieItemClick: super");
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -81,6 +86,7 @@ public abstract class SearchViewControl {
             }
 
             if (movie.getStudio().equals(Movie.SERVER_IPTV)) {
+                Log.d(TAG, "handleMovieItemClick: SERVER_IPTV");
                 //todo: add info to say if next already clicked, and handle the rest
                 handleIptvClickedItem(movie, position, rowsAdapter, defaultHeadersCounter);
                 return;
@@ -90,6 +96,13 @@ public abstract class SearchViewControl {
             if (movie.getState() == Movie.NEXT_PAGE_STATE) {
                 //todo: add info to say if next already clicked, and handle the rest
                 handleNextPageMovieClick(clickedRow, movie);
+                return;
+            }
+
+            if (movie.getState() == Movie.BROWSER_STATE) {
+                Log.d(TAG, "handleMovieItemClick: BROWSER_STATE");
+                //todo: add info to say if next already clicked, and handle the rest
+                Util.openBrowserIntent(movie, activity, false, false);
                 return;
             }
 
@@ -237,6 +250,7 @@ public abstract class SearchViewControl {
         cleanIptvRows(rowsAdapter, defaultHeadersCounter);
 
         //generate iptv rows
+        Log.d(TAG, "handleIptvClickedItem: generateIptvRows");
         generateIptvRows(movie);
     }
 
@@ -279,6 +293,7 @@ public abstract class SearchViewControl {
     protected abstract <T> void removeRow(T rowsAdapter, int i);
 
     private void generateIptvRows(Movie movie) {
+        Log.d(TAG, "generateIptvRows: "+movie.getVideoUrl());
         try {
 //           showProgressDialog();
 //        todo
@@ -286,7 +301,29 @@ public abstract class SearchViewControl {
             if (iptvServer == null) {
                 return;
             }
-            CompletableFuture<Map<String, List<Movie>>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
+//            CompletableFuture<Map<String, List<Movie>>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            executor.submit(() -> {
+                HashMap<String, ArrayList<Movie>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
+                Log.d(TAG, "generateIptvRows: " + futureGroupedMovies.size());
+
+                // Print grouped movies
+                for (String group : futureGroupedMovies.keySet()) {
+//                    Log.d(TAG, "generateIptvRows: group: "+group);
+//                    Log.d(TAG, "generateIptvRows: list: "+futureGroupedMovies.get(group));
+                    if (futureGroupedMovies.get(group) == null || futureGroupedMovies.get(group).isEmpty()){
+                        continue;
+                    }
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                           generateCategory(group, futureGroupedMovies.get(group), false);
+                        }
+                    });
+                }
+
+            });
+            executor.shutdown();
 
             new Handler(Looper.getMainLooper()).post(new Runnable() {
                 @Override
@@ -295,36 +332,28 @@ public abstract class SearchViewControl {
                 }
             });
 
-            futureGroupedMovies.thenAcceptAsync(groupedMovies -> {
-                for (Map.Entry<String, List<Movie>> entry : groupedMovies.entrySet()) {
-                    String group = entry.getKey();
-                    List<Movie> groupMovies = entry.getValue();
-                    // Creating a movie magic show with your UI update!
-//                            getActivity().runOnUiThread(() -> {
-//                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
-////                            iptvList.addAll(groupMovies);
-//                            listRowAdapter.addAll(0, groupMovies);
-//                            HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, group);
-//                            IPTV_HEADER_ROWS_COUNTER++;
-//                            rowsAdapter.add(new ListRow(header, listRowAdapter));
-                    try {
-                        generateCategory(group, (ArrayList<Movie>) groupMovies, false);
-                    }catch (Exception e){
-                        Log.d(TAG, "loadOmarServerResult: error: generateCategory: "+e.getMessage());
-                    }
-
-
-//                        }
-//                    });
-                }
-            }).exceptionally(e -> {
-                // Handle any exceptions with grace (and maybe a touch of humor!)
-                Log.e(TAG, "Something went wrong: " + e.getMessage());
-                return null;
-            });
+//            futureGroupedMovies.thenAcceptAsync(groupedMovies -> {
+//                if (groupedMovies == null){
+//                    return;
+//                }
+//                for (Map.Entry<String, List<Movie>> entry : groupedMovies.entrySet()) {
+//                    String group = entry.getKey();
+//                    List<Movie> groupMovies = entry.getValue();
+//                    try {
+//                        generateCategory(group, (ArrayList<Movie>) groupMovies, false);
+//                    }catch (Exception e){
+//                        Log.d(TAG, "loadOmarServerResult: error: generateCategory: "+e.getMessage());
+//                    }
+//
+//
+////                        }
+////                    });
+//                }
+//            }).exceptionally(e -> {
+//                // Handle any exceptions with grace (and maybe a touch of humor!)
+//                Log.e(TAG, "Something went wrong: " + e.getMessage());
+//                return null;
+//            });
 
 
 // This line waits for the completion of the future
@@ -370,17 +399,19 @@ public abstract class SearchViewControl {
 //                if (server == null || server.getConfig() == null|| !server.getConfig().isActive()){
 //                    continue;
 //                }
-//                if (
-//                        server instanceof OldAkwamServer ||
-//                                server instanceof CimaClubServer ||
-////                                    server instanceof FaselHdController ||
-//                                    server instanceof AkwamServer ||
-//                                    server instanceof ArabSeedServer ||
-//                                    server instanceof IptvServer ||
-//                                    server instanceof MyCimaServer
-//                ) {
-//                    continue;
-//                }
+                Log.d(TAG, "loadCategoriesInBackground: "+ server.getServerId());
+                if (
+                        server instanceof OldAkwamServer ||
+                                server instanceof AkwamServer ||
+                                server instanceof ArabSeedServer ||
+                                server instanceof CimaNowServer ||
+//                                server instanceof FaselHdServer ||
+                                server instanceof OmarServer ||
+                                server instanceof KooraServer ||
+                                server instanceof MyCimaServer
+                ) {
+                    continue;
+                }
 
                 loadServerRow(server, finalQuery);
             }
@@ -468,7 +499,7 @@ public abstract class SearchViewControl {
 
         // cases:
         // 5.Movie.REQUEST_CODE_MOVIE_LIST to extend the movie list in row
-        // should update:
+        // should pdate:
         // 1.movie list
 
         // returned from Browser result:
@@ -482,12 +513,18 @@ public abstract class SearchViewControl {
             return;
         }
 
-        Movie resultMovie = (Movie) data.getParcelableExtra(DetailsActivity.MOVIE);
+        Movie resultMovie = Util.recieveSelectedMovie(data);
+//        Movie resultMovie = (Movie) data.getParcelableExtra(DetailsActivity.MOVIE);
+//        Movie mainMovie = (Movie) data.getParcelableExtra(DetailsActivity.MAIN_MOVIE);
+//        if (resultMovie != null && mainMovie != null){
+//            resultMovie.setMainMovie(mainMovie);
+//        }
         if (requestCode == Movie.REQUEST_CODE_EXOPLAYER) {
-            if (resultMovie == null) {
-                Log.d(TAG, "onActivityResult: empty result movie");
-                return;
-            }
+//            if (resultMovie == null) {
+//                Log.d(TAG, "onActivityResult: REQUEST_CODE_EXOPLAYER but empty result movie");
+//                return;
+//            }
+            Log.d(TAG, "onActivityResult: REQUEST_CODE_EXOPLAYER");
             Util.openExoPlayer(resultMovie, activity, true);
             // todo: handle dbHelper
 //            updateRelatedMovieItem(clickedHorizontalMovieAdapter, clickedMovieIndex, resultMovie);
@@ -497,11 +534,11 @@ public abstract class SearchViewControl {
         }
 
         if (requestCode == Movie.REQUEST_CODE_EXTERNAL_PLAYER) {
-            if (resultMovie == null) {
-                Log.d(TAG, "onActivityResult: empty result movie");
-                return;
-            }
-            Log.d(TAG, "onActivityResult: "+resultMovie);
+//            if (resultMovie == null) {
+//                Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER but empty result movie");
+//                return;
+//            }
+            Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: "+resultMovie);
             Util.openExternalVideoPlayer(resultMovie, activity);
             // todo: handle dbHelper
 //            updateRelatedMovieItem(clickedHorizontalMovieAdapter, clickedMovieIndex, resultMovie);
@@ -511,11 +548,24 @@ public abstract class SearchViewControl {
         }
 
 
-        ArrayList<Movie> resultMovieSublist = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
-        if (resultMovieSublist != null && !resultMovieSublist.isEmpty() && clickedAdapter != null) {
+//        ArrayList<Movie> resultMovieSublist = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
+
+        if (resultMovie.getSubList() != null && !resultMovie.getSubList().isEmpty() && clickedAdapter != null) {
 //            updateMovieListOfHorizontalMovieAdapter(resultMovieSublist);
-            updateMovieListOfMovieAdapter(resultMovieSublist, clickedAdapter);
+            Log.d(TAG, "onActivityResult: updateMovieListOfMovieAdapter");
+            updateCurrentMovie(resultMovie);
+
+            for (Movie mov : resultMovie.getSubList()) {
+                Log.d(TAG, "onActivityResult: mov main: 44: "+ mov.getMainMovie());
+            }
+
+            updateMovieListOfMovieAdapter((ArrayList<Movie>) resultMovie.getSubList(), clickedAdapter);
         }
+        Log.d(TAG, "onActivityResult: end: "+ resultMovie.getSubList());
+//        Log.d(TAG, "onActivityResult: end: movie: "+ resultMovie);
+//        Log.d(TAG, "onActivityResult: end: clickedAdapter: "+ clickedAdapter);
+//        updateClickedMovieItem(clickedAdapter, clickedMovieIndex, resultMovie);
+//        updateMovieListOfMovieAdapter(resultMovieSublist, clickedAdapter);
 //        Gson gson = new Gson();
 //
 //        Movie resultMovie = (Movie) data.getSerializableExtra(DetailsActivity.MOVIE);

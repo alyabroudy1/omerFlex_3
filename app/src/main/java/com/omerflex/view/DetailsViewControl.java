@@ -216,6 +216,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
 
             @Override
             public void onInvalidCookie(Movie result, String title) {
+                Log.d(TAG, "onInvalidCookie: " + result);
                 result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
                 if (fragment != null) {
                     Util.openBrowserIntent(result, fragment, true, true);

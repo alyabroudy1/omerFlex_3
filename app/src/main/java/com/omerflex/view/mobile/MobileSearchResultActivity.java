@@ -130,6 +130,11 @@ public class MobileSearchResultActivity extends AppCompatActivity {
                 // Handle other adapter types similarly
             }
 
+            @Override
+            protected void updateCurrentMovie(Movie movie) {
+                Log.d(TAG, "updateCurrentMovie: MobileSearchResult");
+            }
+
 
             protected <T> void updateMovieListOfMovieAdapter(ArrayList<Movie> movies, T clickedAdapter) {
 //                updateMovieListOfHorizontalMovieAdapter(movies);

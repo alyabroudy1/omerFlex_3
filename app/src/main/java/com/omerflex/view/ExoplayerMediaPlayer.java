@@ -1,6 +1,5 @@
 package com.omerflex.view;
 
-import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,7 +17,6 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
-import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -27,14 +25,9 @@ import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.exoplayer.DefaultLoadControl;
-import androidx.media3.exoplayer.ExoPlaybackException;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.analytics.AnalyticsListener;
-import androidx.media3.exoplayer.audio.AudioSink;
-import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
-import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter;
-import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.smoothstreaming.SsMediaSource;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
@@ -46,7 +39,6 @@ import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.service.database.MovieDbHelper;
 
-import java.nio.ByteBuffer;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
@@ -108,7 +100,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
        // player.setPlayWhenReady(true);
         //leanbackPlayerAdapter = new LeanbackPlayerAdapter(this, player, 0);
         dbHelper = MovieDbHelper.getInstance(this);
-         movie = com.omerflex.server.Util.recieveSelectedMovie(this);
+         movie = com.omerflex.server.Util.recieveSelectedMovie(getIntent());
 
         leanbackPlayerAdapter = new LeanbackPlayerAdapter(this.getApplicationContext(), player, 16);
 

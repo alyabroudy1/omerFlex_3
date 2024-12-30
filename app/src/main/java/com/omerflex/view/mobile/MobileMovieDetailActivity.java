@@ -73,7 +73,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
         activity = this;
         dbHelper = MovieDbHelper.getInstance(activity);
 
-        mSelectedMovie = Util.recieveSelectedMovie(activity);
+        mSelectedMovie = Util.recieveSelectedMovie(getIntent());
 //        server = ServerManager.determineServer(mSelectedMovie, null, activity, null);
         server = ServerConfigManager.getServer(mSelectedMovie.getStudio());
 

@@ -200,6 +200,11 @@ public class MainFragment extends BrowseSupportFragment {
                 // Handle other adapter types similarly
             }
 
+            @Override
+            protected void updateCurrentMovie(Movie movie) {
+                Log.d(TAG, "updateCurrentMovie: MainFragment");
+            }
+
 
             protected <T> void updateMovieListOfMovieAdapter(ArrayList<Movie> movies, T clickedAdapter) {
 //                updateMovieListOfHorizontalMovieAdapter(movies);

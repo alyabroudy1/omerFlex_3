@@ -71,6 +71,43 @@ public class Util {
         }
     }
 
+    public static String urlExtractor(String videoUrl) {
+        String baseUrl = null;
+        try {
+            // Create a URI object from the videoUrl string
+            URI uri = new URI(videoUrl);
+
+            // Extract the scheme (e.g., "https") and authority (e.g., "www.faselhd.express") from the URI
+            String scheme = uri.getScheme();
+            String authority = uri.getAuthority();
+
+            // Combine scheme and authority to form the base URL
+            baseUrl = scheme + "://" + authority;
+
+            // Print the base URL
+            System.out.println("Base URL: " + baseUrl);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return baseUrl;
+    }
+
+    public static Map<String, String> parseParamsToMap(String params) {
+        params = params.substring(params.indexOf("||") + 2);
+        Map<String, String> map = new HashMap<>();
+        String[] pairs;
+        if (params.contains("&")) {
+            pairs = params.split("&");
+        } else {
+            pairs = new String[]{params};
+        }
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            map.put(pair.substring(0, idx), pair.substring(idx + 1));
+        }
+        return map;
+    }
+
     public static String getValidReferer(String referer) {
         String result = referer;
         if (referer != null) {
@@ -198,18 +235,22 @@ public class Util {
     public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult) {
         Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class), withSubList);
         if (openForResult) {
+            exoIntent.putExtra("openedForResult", true);
             Objects.requireNonNull(activity).startActivityForResult(exoIntent, movie.getFetch());
             return;
         }
+        exoIntent.putExtra("openedForResult", false);
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 
     public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult) {
         Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), BrowserActivity.class), withSubList);
         if (openForResult) {
+            exoIntent.putExtra("openedForResult", true);
             fragment.startActivityForResult(exoIntent, movie.getFetch());
             return;
         }
+        exoIntent.putExtra("openedForResult", false);
         fragment.startActivity(exoIntent);
     }
 
@@ -269,8 +310,7 @@ public class Util {
     }
 
 
-    public static Movie recieveSelectedMovie(Activity activity) {
-        Intent intent = activity.getIntent();
+    public static Movie recieveSelectedMovie(Intent intent) {
         Movie movie = (Movie) intent.getParcelableExtra(DetailsActivity.MOVIE);
 
         if (movie == null) {
@@ -278,6 +318,7 @@ public class Util {
             movie.setTitle("حدث خطأ...");
             return movie;
         }
+
 
         Movie mSelectedMovieMainMovie = (Movie) intent.getParcelableExtra(DetailsActivity.MAIN_MOVIE);
         ArrayList<Movie> movieSublist = intent.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);

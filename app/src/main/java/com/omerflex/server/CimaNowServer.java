@@ -1,8 +1,6 @@
 package com.omerflex.server;
 
 import android.util.Log;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebView;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
@@ -20,10 +18,6 @@ public class CimaNowServer extends AbstractServer{
 
     static String TAG = "CimaNowServer";
     static String WEBSITE_URL = "https://cimanow.cc";
-    @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
-
-    }
 
     @Override
     protected String getSearchUrl(String query) {

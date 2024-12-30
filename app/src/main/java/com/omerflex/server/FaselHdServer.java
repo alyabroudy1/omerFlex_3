@@ -27,6 +27,8 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
+import com.omerflex.service.HtmlPageService;
+import com.omerflex.service.LinkFilterService;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
@@ -91,7 +93,8 @@ public class FaselHdServer extends AbstractServer {
         }
 
         Log.d(TAG, "result stop title: " + doc.title());
-        if (doc.title().contains("moment")) {
+//        if (doc.title().contains("moment")) {
+        if (true) {
 //            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";
@@ -166,11 +169,13 @@ public class FaselHdServer extends AbstractServer {
                 } else {
                     a.setState(Movie.ITEM_STATE);
                 }
+
                 Movie m = new Movie();
                 m.setTitle(title);
                 m.setDescription("");
                 m.setStudio(Movie.SERVER_FASELHD);
                 m.setVideoUrl(videoUrl);
+                m.setMainMovieTitle(videoUrl);
                 m.setCardImageUrl(image);
                 m.setBackgroundImageUrl(image);
                 m.setBgImageUrl(image);
@@ -183,8 +188,38 @@ public class FaselHdServer extends AbstractServer {
             }
 
         }
+
+        Movie nextPage = getNextPage(doc);
+        if (nextPage != null){
+            movieList.add(nextPage);
+        }
         activityCallback.onSuccess(movieList, getLabel());
         return movieList;
+    }
+
+    private Movie getNextPage(Document doc) {
+
+        //nextpage
+        // Find the anchor element with the text "›"
+        Elements elements = doc.select("a.page-link:contains(›)");
+
+        if (elements.isEmpty()) {
+            return null;
+        }
+        Movie nextPage = new Movie();
+            // Get the href attribute of the first matching element
+        String videoUrl = elements.first().attr("href");
+        nextPage.setTitle("التالي");
+        nextPage.setDescription("0");
+        nextPage.setStudio(Movie.SERVER_FASELHD);
+        nextPage.setVideoUrl(videoUrl);
+        nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
+        nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
+        nextPage.setState(Movie.NEXT_PAGE_STATE);
+        nextPage.setMainMovie(nextPage);
+        nextPage.setMainMovieTitle(videoUrl);
+
+        return nextPage;
     }
 
     @Override
@@ -200,7 +235,7 @@ public class FaselHdServer extends AbstractServer {
     @Override
     protected String getSearchUrl(String query) {
         String searchUrl = query;
-        if (query.contains("http")) {
+        if (query.contains("http") || query.contains("www")) {
             return query;
         }
         String webLink = getConfig().getUrl();
@@ -381,8 +416,6 @@ public class FaselHdServer extends AbstractServer {
 
     private MovieFetchProcess fetchGroupOfGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
-
-
 //            Document doc = Jsoup.connect(movie.getVideoUrl())
 //                    .cookies(getMapCookies())
 //                    .headers(headers)
@@ -493,6 +526,10 @@ public class FaselHdServer extends AbstractServer {
 
     private MovieFetchProcess fetchGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
+        if (true){
+            activityCallback.onInvalidCookie(movie, getLabel());
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
+        }
 
         Document doc = this.getRequestDoc(movie.getVideoUrl());
         if (doc == null) {
@@ -625,7 +662,8 @@ public class FaselHdServer extends AbstractServer {
         }
         Log.i(TAG, "result stop title: " + doc.title());
 
-        if (doc.title().contains("moment")) {
+//        if (doc.title().contains("moment")) {
+        if (true) {
             Movie clonedMovie = Movie.clone(movie);
             clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
@@ -956,14 +994,6 @@ public class FaselHdServer extends AbstractServer {
         return true;
     }
 
-    @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
-        //todo implement or optimize
-//        headers = request.getRequestHeaders();
-//        Log.d(TAG, "shouldInterceptRequest: headers:" + headers.toString());
-//        super.shouldInterceptRequest(view, request);
-    }
-
     public void fetchWebResult(Movie movie) {
 //        WebView webView = activity.findViewById(R.id.webView);
 //        webView.loadUrl(movie.getVideoUrl());
@@ -1233,7 +1263,7 @@ public class FaselHdServer extends AbstractServer {
                 //inject js code
                 // server.onLoadResource(activity, webView, url, movie);
                 //clean webpage from ads
-                BrowserActivity.cleanWebPage(view);
+                HtmlPageService.cleanWebPage(view);
 
                 if (!(url.contains("/?s=") || url.contains("/search"))) {
                     //scrolling to video
@@ -1271,7 +1301,7 @@ public class FaselHdServer extends AbstractServer {
                     }
 
                     //fetch video
-                    if (BrowserActivity.isVideo(url, movie) && !url.equals(currentVideoUrl)) {
+                    if (LinkFilterService.isVideo(url, movie) && !url.equals(currentVideoUrl)) {
                         String newUrl = url;
                         // server.setHeaders(headers);
                         //server.setCookies(cookieManager.getCookie(movie.getVideoUrl()));
@@ -1381,7 +1411,9 @@ public class FaselHdServer extends AbstractServer {
                         "    let post = {};" +
                         "    let postDiv = postDivs[i];" +
                         "    post.title = postDiv.getElementsByTagName(\"img\")[0].alt;" +
-                        "    post.videoUrl = postDiv.getElementsByTagName(\"a\")[0].href;" +
+                        "    let link = postDiv.getElementsByTagName(\"a\")[0].href;" +
+                        "    post.videoUrl = link;" +
+                        "    post.mainMovieTitle = link;" +
                         "    post.cardImageUrl = postDiv.getElementsByTagName(\"img\")[0].getAttribute('data-src');" +
                         "    post.bgImageUrl = post.cardImageUrl;" +
                         "    post.backgroundImageUrl = post.cardImageUrl;" +
@@ -1404,80 +1436,97 @@ public class FaselHdServer extends AbstractServer {
                         "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
                         "}" +
                         "});";
-            } else if (movie.getState() == Movie.GROUP_OF_GROUP_STATE) {
+            }
+            else if (movie.getState() == Movie.GROUP_OF_GROUP_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED GROUP_OF_GROUP_STATE");
-                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                        "let seasons = document.querySelectorAll('.seasonDiv');" +
-                        "if (seasons.length > 0){" +
-                        "let postList = [];" +
-                        "let description = document.getElementsByClassName(\"singleDesc\")[0].innerHTML.replace(/<.*?>/g, \"\").replace(/(\\r\\n|\\n|\\r)/gm,\"\");" +
-                        "for (let i = 0; i < seasons.length; i++) {" +
-                        "    let post = {};" +
-                        "    let season = seasons[i];" +
-                        "    post.videoUrl = 'https://www.faselhd.ac/'+ season.getAttribute('onclick').match(/\\?p=.[^']*/);;" +
-                        //   "    post.videoUrl = 'https://www.faselhd.club/?p='+ season.getAttribute('data-href');" +
-                        "    post.title = season.querySelector('.title').textContent;" +
-                        "    post.cardImageUrl = season.querySelector('[data-src]').getAttribute('data-src');" +
-                        "    post.bgImageUrl = post.cardImageUrl;" +
-                        "    post.description = description;" +
-                        "    let spans = season.querySelectorAll('.seasonMeta');" +
-                        "    for (let j = 0; j < spans.length; j++) {" +
-                        "        post.rate = spans[j].querySelector('*').textContent;" +
-                        "        break;" +
-                        "    }" +
-                        "    post.state = 1;" +
-                        "    post.studio = '" + Movie.SERVER_FASELHD + "';" +
-                        "    postList.push(post);" +
-                        "}" +
-                        "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
-                        "}" +
+                script = "document.addEventListener(\"DOMContentLoaded\", function () {\n" +
+                        "let posterImg = document.querySelector(\".posterImg\");\n" +
+                        "let backgroundImage = posterImg?.querySelector(\"img\")?.getAttribute(\"src\") || \"\";\n" +
+                        "let trailer = posterImg?.querySelector(\"a\")?.getAttribute(\"href\") || \"\";\n" +
+                        "\n" +
+                        "let singleDesc = document.querySelector(\".singleDesc\");\n" +
+                        "let description = singleDesc?.querySelector(\"p\")?.textContent.trim() || singleDesc?.textContent.trim() || \"\";\n" +
+                        "\n" +
+                        "let seasons = document.querySelectorAll(\".seasonDiv\");\n" +
+                        "let postList = [];\n" +
+                        "\n" +
+                        "if (seasons.length === 0) {\n" +
+                        "    console.log(\"No seasons found.\"); // Handle empty seasons gracefully\n" +
+                        "} else {\n" +
+                        "    seasons.forEach(function (season) {\n" +
+                        "        let post = {};\n" +
+                        "        let title = season.querySelector(\".title\")?.textContent || \"\";\n" +
+                        "        let imgElement = season.querySelector(\"img\");\n" +
+                        "        let cardImageUrl = imgElement?.getAttribute(\"data-src\") || imgElement?.getAttribute(\"src\") || \"\";\n" +
+                        "        let onclickAttr = season.getAttribute(\"onclick\");\n" +
+                        "        let spans = season.querySelectorAll(\".seasonMeta\");\n" +
+                        "\n" +
+                        "        post.videoUrl = onclickAttr?.match(/\\?p=.[^']*/)?.[0]\n" +
+                        "            ? `"+getConfig().getUrl()+"/${onclickAttr.match(/\\?p=.[^']*/)[0]}`\n" +
+                        "            : \"\";\n" +
+                        "\n" +
+                        "        post.title = title;\n" +
+                        "        post.cardImageUrl = cardImageUrl;\n" +
+                        "        post.bgImageUrl = cardImageUrl;\n" +
+                        "        post.description = description;\n" +
+                        "\n" +
+                        "        post.rate = \"\";\n" +
+                        "        spans.forEach(function (span) {\n" +
+                        "            let rateElement = span.querySelector(\"*\");\n" +
+                        "            if (rateElement) {\n" +
+                        "                post.rate = rateElement.textContent;\n" +
+                        "            }\n" +
+                        "        });\n" +
+                        "\n" +
+                        "        post.state = 1;\n" +
+                        "        post.studio = \""+Movie.SERVER_FASELHD+"\";\n" +
+                        "\n" +
+                        "        postList.push(post);\n" +
+                        "    });\n" +
+                        "\n" +
+                        "    console.log(postList.length); // Use or process postList as needed\n" +
+                        "    MyJavaScriptInterface.myMethod(JSON.stringify(postList));\n" +
+                        "}\n" +
                         "});";
             }
             else if (movie.getState() == Movie.GROUP_STATE) {
                 Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED GROUP_STATE");
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                        "const description = document.getElementsByClassName('singleDesc')[0].innerHTML.replace(/<.*?>/g, '').replace(/(\\\\\\\\r\\\\\\\\n|\\\\\\\\n|\\\\\\\\r)/gm,'');\n" +
-                        "                        const boxs = document.getElementsByClassName('seasonDiv active');\n" +
-                        "                        const postList = [];\n" +
-                        "                        if (boxs.length === 0){\n" +
-                        "                        let title = document.getElementsByClassName('h1 title')[0].text;\n" +
-                        "                        let cardImageUrl = document.getElementsByClassName('img-fluid')[0].getAttribute('src');\n" +
-                        "                        let divs = document.getElementById('epAll').querySelectorAll('[href]');\n" +
-                        "                        for (const div of divs) {\n" +
-                        "                        let post = {};\n" +
-                        "                        post.cardImageUrl = cardImageUrl;\n" +
-                        "                        post.bgImageUrl = cardImageUrl;\n" +
-                        "                        post.backgroundImageUrl = cardImageUrl;\n" +
-                        "                        post.videoUrl = div.getAttribute('href');\n" +
-                        "                        post.title = div.innerHTML.replace(/<.*?>/g, '').replace(/(\\\\\\\\r\\\\\\\\n|\\\\\\\\n|\\\\\\\\r)/gm,'').trim();\n" +
-                        "                        post.description = description;\n" +
-                        "                        post.state = 2;\n" +
-                        "                        post.rate = '';\n" +
-                        "                        post.studio = 'FaselHd';\n" +
-                        "                        postList.push(post);\n" +
-                        "                        }\n" +
-                        "                        }else{\n" +
-                        "                        for (let i = 0; i < boxs.length; i++) {\n" +
-                        "                        let title = boxs[i].getElementsByClassName('title')[0].textContent;\n" +
-                        "                        let cardImageUrl = boxs[i].querySelectorAll('[data-src]')[0].getAttribute('data-src');\n" +
-                        "                        let divs = document.getElementById('epAll').getElementsByTagName('a');\n" +
-                        "                        for (const div of divs) {\n" +
-                        "                        let post = {};\n" +
-                        "                        post.cardImageUrl = cardImageUrl;\n" +
-                        "                        post.bgImageUrl = cardImageUrl;\n" +
-                        "                        post.backgroundImageUrl = cardImageUrl;\n" +
-                        "                        post.videoUrl = div.getAttribute('href');\n" +
-                        "                        post.title = div.innerHTML.replace(/<.*?>/g, '').replace(/(\\\\\\\\r\\\\\\\\n|\\\\\\\\n|\\\\\\\\r)/gm,'').trim();\n" +
-                        "                        post.description = description;\n" +
-                        "                        post.state = 2;\n" +
-                        "                        post.rate = '';\n" +
-                        "    post.studio = '" + Movie.SERVER_FASELHD + "';" +
-                        "                        postList.push(post);\n" +
-                        "                        }\n" +
-                        "                        }\n" +
-                        "                        }" +
-                        "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
-                        // "MyJavaScriptInterface.myMethod(postList.length);" +
+                        "// Parsing the background image\n" +
+                        "let posterImg = document.querySelector(\".posterImg\");\n" +
+                        "let backgroundImage = posterImg?.querySelector(\"img\")?.getAttribute(\"src\") || \"\";\n" +
+                        "\n" +
+                        "// Parsing the description\n" +
+                        "let singleDesc = document.querySelector(\".singleDesc\");\n" +
+                        "let description = singleDesc?.querySelector(\"p\")?.textContent.trim() || singleDesc?.textContent.trim() || \"\";\n" +
+                        "\n" +
+                        "// Parsing the episodes or seasons\n" +
+                        "let episodeContainer = document.getElementById(\"epAll\");\n" +
+                        "let episodeList = episodeContainer ? episodeContainer.querySelectorAll(\"a\") : null;\n" +
+                        "\n" +
+                        "let postList = [];\n" +
+                        "\n" +
+                        "// Handle episodes if they exist\n" +
+                        "if (episodeList) {\n" +
+                        "    episodeList.forEach(function (episodeDiv) {\n" +
+                        "        let post = {};\n" +
+                        "        post.title = episodeDiv.textContent.trim();\n" +
+                        "        post.videoUrl = episodeDiv.getAttribute(\"href\") || \"\";\n" +
+                        "        post.cardImageUrl = backgroundImage;\n" +
+                        "        post.bgImageUrl = backgroundImage;\n" +
+                        "        post.backgroundImageUrl = backgroundImage;\n" +
+                        "        post.description = description;\n" +
+                        "        post.state = 2; // ITEM_STATE equivalent\n" +
+                        "        post.rate = \"\"; // Placeholder for rate\n" +
+                        "        post.studio = \""+Movie.SERVER_FASELHD+"\"; // Example studio name\n" +
+                        "        postList.push(post);\n" +
+                        "    });\n" +
+                        "} else {\n" +
+                        "    console.log(\"No episodes found.\");\n" +
+                        "}\n" +
+                        "\n" +
+                        "// Send the processed data back to the native interface\n" +
+                        "    MyJavaScriptInterface.myMethod(JSON.stringify(postList));\n" +
                         "});";
             }
             else if (movie.getState() == Movie.ITEM_STATE) {
@@ -1491,59 +1540,54 @@ public class FaselHdServer extends AbstractServer {
                         "});";
 
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {"
-                        + "let posterImg = document.querySelector('.posterImg');"
-                        + "let backgroundImage = '';"
-                        + "let description = '';"
-                        + "if (posterImg) {"
-                        + "    let bgImage = posterImg.querySelector('img');"
-                        + "    if (bgImage) {"
-                        + "        backgroundImage = bgImage.getAttribute('src');"
-                        + "    }"
-                        + "}"
-                        + "let singleDesc = document.querySelector('.singleDesc');"
-                        + "if (singleDesc) {"
-                        + "    let desElement = singleDesc.querySelector('p');"
-                        + "    if (desElement) {"
-                        + "        description = desElement.textContent;"
-                        + "    } else {"
-                        + "        description = singleDesc.textContent;"
-                        + "    }"
-                        + "}"
-                        + "movie.setDescription(description);"
-                        + "movie.setBackgroundImageUrl(backgroundImage);"
-                        + "let resolutionsTab = document.querySelector('.signleWatch');"
-                        + "if (resolutionsTab) {"
-                        + "    let episodeList = resolutionsTab.getElementsByTagName('li');"
-                        + "    for (let episodeDiv of episodeList) {"
-                        + "        let a = Object.assign({}, movie);"
-                        + "        let title = '';"
-                        + "        let titleElem = episodeDiv.querySelector('a');"
-                        + "        if (titleElem) {"
-                        + "            title = titleElem.textContent;"
-                        + "        }"
-                        + "        let link = '';"
-                        + "        let linkElem = episodeDiv.getAttribute('onclick');"
-                        + "        if (linkElem) {"
-                        + "            link = linkElem.replace('player_iframe.location.href = ', '').replace(/'/g, '');"
-                        + "            link += Util.generateHeadersForVideoUrl(getConfig().getHeaders());"
-                        + "        }"
-                        + "        console.log('Fasel server element found: ' + link);"
-                        + "        a.setTitle(title);"
-                        + "        a.setVideoUrl(link);"
-                        + "        a.setCardImageUrl(movie.getCardImageUrl());"
-                        + "        a.setRate(movie.getRate());"
-                        + "        a.setState(Movie.RESOLUTION_STATE);"
-                        + "        a.setTrailerUrl(movie.getTrailerUrl());"
-                        + "        a.setDescription(description);"
-                        + "        a.setStudio(Movie.SERVER_FASELHD);"
-                        + "        a.setBackgroundImageUrl(backgroundImage);"
-                        + "        if (!movie.getSubList()) {"
-                        + "            movie.setSubList([]);"
-                        + "        }"
-                        + "        movie.addSubList(a);"
-                        + "    }"
-                        + "}"
-                        + "});";
+                        + "let postList = [];\n" +
+                        "\n" +
+                        "// Parsing the poster image\n" +
+                        "let posterImg = document.querySelector(\".posterImg\");\n" +
+                        "let backgroundImage = posterImg?.querySelector(\"img\")?.getAttribute(\"src\") || \"\";\n" +
+                        "\n" +
+                        "// Parsing the description\n" +
+                        "let singleDesc = document.querySelector(\".singleDesc\");\n" +
+                        "let description = singleDesc?.querySelector(\"p\")?.textContent.trim() || singleDesc?.textContent.trim() || \"\";\n" +
+                        "\n" +
+                        "// Parsing the resolutions tab\n" +
+                        "let resolutionsTab = document.querySelector(\".signleWatch\");\n" +
+                        "if (resolutionsTab) {\n" +
+//                        "let headers = \""+ Util.generateHeadersForVideoUrl(getConfig().getHeaders()) +"\";" +
+                        "    let episodeList = resolutionsTab.querySelectorAll(\"li\");\n" +
+                        "\n" +
+                        "    episodeList.forEach(function (episodeDiv) {\n" +
+                        "        let post = {}; // Create a new post object for each episode\n" +
+                        "\n" +
+                        "        // Parsing title\n" +
+                        "        let titleElement = episodeDiv.querySelector(\"a\");\n" +
+                        "        post.title = titleElement?.textContent.trim() || \"\";\n" +
+                        "\n" +
+                        "        // Parsing video link\n" +
+                        "        let onclickAttr = episodeDiv.getAttribute(\"onclick\");\n" +
+                        "        let link = onclickAttr\n" +
+                        "            ? onclickAttr.replace(\"player_iframe.location.href = \", \"\").replace(/'/g, \"\").trim()\n" +
+                        "            : \"\";\n" +
+                        "        // Append headers or additional parameters if required\n" +
+                        "        post.videoUrl = link;"+
+                        "\n" +
+                        "        // Assign other properties\n" +
+                        "        post.cardImageUrl = backgroundImage;\n" +
+                        "        post.bgImageUrl = backgroundImage;\n" +
+                        "        post.backgroundImageUrl = backgroundImage;\n" +
+                        "        post.description = description;\n" +
+                        "        post.rate = \"\";\n" +
+                        "        post.state = "+Movie.RESOLUTION_STATE+";"+ // Assuming RESOLUTION_STATE equivalent\n" +
+                        "        post.trailerUrl = \"\";\n" +
+                        "        post.studio = \""+Movie.SERVER_FASELHD+"\"; // Example studio\n" +
+                        "\n" +
+                        "        // Add the post to the postList\n" +
+                        "        postList.push(post);\n" +
+                        "    });\n" +
+                        "}\n" +
+                        "\n" +
+                        "    MyJavaScriptInterface.myMethod(JSON.stringify(postList));\n" +
+                        "});";
 
 
             } else if (movie.getState() == Movie.RESOLUTION_STATE) {
@@ -1588,7 +1632,11 @@ public class FaselHdServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getConfig().getUrl() + "/most_recent", activityCallback);
+//        return search(getConfig().getUrl() + "/most_recent", activityCallback);
+        return search("la casa", activityCallback);
     }
 
+    public String getCustomUserAgent(int state) {
+        return "Android 7";
+    }
 }

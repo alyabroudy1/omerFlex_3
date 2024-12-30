@@ -3,8 +3,6 @@ package com.omerflex.server;
 import android.app.Activity;
 import android.content.Intent;
 import android.util.Log;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebView;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
@@ -106,11 +104,6 @@ public class MyCimaServer extends AbstractServer {
 
         activityCallback.onSuccess(movieList, getLabel());
         return movieList;
-    }
-
-    @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
-
     }
 
     protected String getSearchUrl(String query) {
@@ -864,5 +857,9 @@ public class MyCimaServer extends AbstractServer {
     @Override
     public String getLabel() {
         return "ماي سيما";
+    }
+
+    public String getCustomUserAgent(int state) {
+        return "Android 7";
     }
 }

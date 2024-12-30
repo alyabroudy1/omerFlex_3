@@ -2,12 +2,12 @@ package com.omerflex.server;
 
 import android.app.Activity;
 import android.util.Log;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
+import com.omerflex.service.ServerConfigManager;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
@@ -16,6 +16,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -342,10 +343,7 @@ public class AkwamServer extends AbstractServer {
         return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
     }
 
-    @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
 
-    }
 
     private MovieFetchProcess fetchGroupOfGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         //Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
@@ -984,5 +982,22 @@ public class AkwamServer extends AbstractServer {
     @Override
     public String getLabel() {
         return "أكوام";
+    }
+
+    public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie){
+        Movie resultMovie = movies.isEmpty() ? movie : movies.get(0);
+        resultMovie.setMainMovie(movie.getMainMovie());
+
+        ServerConfig config = getConfig();
+
+        Log.d(TAG, "handleAkwamServer: resultActivity finish");
+        String movieReferer = Util.getValidReferer(movie.getVideoUrl());
+        if (config != null) {
+            config.setReferer(movieReferer);
+            config.setUrl(movieReferer);
+            //update config in the ServerConfigManager and in the db being handled in BrowserActivity
+            ServerConfigManager.updateConfig(config);
+        }
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_UPDATE_CONFIG_AND_RETURN_RESULT, resultMovie);
     }
 }

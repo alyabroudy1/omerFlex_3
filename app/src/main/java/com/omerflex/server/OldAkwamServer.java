@@ -18,6 +18,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class OldAkwamServer extends AbstractServer {
     ArrayObjectAdapter listRowAdapter;
@@ -164,11 +165,6 @@ public class OldAkwamServer extends AbstractServer {
 
         return nextPage;
 
-
-    }
-
-    @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
 
     }
 
@@ -887,7 +883,9 @@ public class OldAkwamServer extends AbstractServer {
             if (state == Movie.RESOLUTION_STATE) {
                 if (movie.getVideoUrl().contains("download")) {
                     //var x = document.getElementsByClassName("download_button")[0].getAttribute("href"); x;
-                    script = "var targetNode = document.getElementsByClassName('download_timer')[0];\n" +
+                    script ="var timeHolder = document.getElementById('timer');" +
+                            "if (timeHolder) { timeHolder.scrollIntoView({ behavior: 'smooth', block: 'center' }); }" +
+                            "var targetNode = document.getElementsByClassName('download_timer')[0];" +
                             "var config = { attributes: true, childList: true, subtree: true };\n" +
                             "\n" +
                             "var callback = function(mutationsList, observer) {\n" +
@@ -941,7 +939,9 @@ public class OldAkwamServer extends AbstractServer {
 //                                              ;
                 } else {
                     //var x = document.getElementsByClassName("unauth_capsule clearfix")[0].getElementsByTagName("a")[0].getAttribute("ng-href");
-                    script = "var targetNode = document.getElementsByClassName('download_timer')[0];\n" +
+                    script ="var timeHolder = document.getElementById('timer');" +
+                            "if (timeHolder) { timeHolder.scrollIntoView({ behavior: 'smooth', block: 'center' }); }" +
+                            "var targetNode = document.getElementsByClassName('download_timer')[0];" +
                             "var config = { attributes: true, childList: true, subtree: true };\n" +
                             "\n" +
                             "var callback = function(mutationsList, observer) {\n" +
@@ -999,4 +999,21 @@ public class OldAkwamServer extends AbstractServer {
     public String getServerId() {
         return Movie.SERVER_OLD_AKWAM;
     }
+
+    public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie){
+        Movie resultMovie = movies.isEmpty() ? movie : movies.get(0);
+        resultMovie.setMainMovie(movie.getMainMovie());
+        Log.d(TAG, "handleAkwamServer: resultActivity finish");
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_UPDATE_CONFIG_AND_RETURN_RESULT, resultMovie);
+    }
+
+    public boolean shouldUpdateDomainOnSearchResult(){
+        return false;
+    }
+
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request){
+        return false;
+    }
+
+
 }

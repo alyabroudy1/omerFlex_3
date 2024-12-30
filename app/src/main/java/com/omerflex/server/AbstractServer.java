@@ -15,6 +15,7 @@ import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public abstract class AbstractServer implements ServerInterface {
 
@@ -92,6 +93,18 @@ public abstract class AbstractServer implements ServerInterface {
             return false;
         }
 
+
+        if (movie.getState() == Movie.COOKIE_STATE || !Util.shouldOverrideUrlLoading(newUrl)) {
+            if (url.startsWith("##")) {
+                url = url.replace("##", "");
+            }
+            Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
+            view.loadUrl(url);
+            return true;
+            //  CURRENT_WEB_NAME = getWebName(url);
+        }
+
+
         return true;
     }
     /**
@@ -101,7 +114,7 @@ public abstract class AbstractServer implements ServerInterface {
     protected Document getRequestDoc(String url) {
         Document doc = null;
         ServerConfig config = getConfig();
-//        Log.d(TAG, "getRequestDoc: "+config);
+        Log.d(TAG, "getRequestDoc: "+url);
         try {
             doc = Jsoup.connect(url)
 //                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
@@ -112,7 +125,8 @@ public abstract class AbstractServer implements ServerInterface {
                     .followRedirects(true)
                     .ignoreHttpErrors(true)
                     .ignoreContentType(true)
-                    .timeout(16000)
+//                    .timeout(16000)
+                    .timeout(0)
                     .get();
 
 //            String docTitle = doc.title();
@@ -158,7 +172,9 @@ public abstract class AbstractServer implements ServerInterface {
         }
     }
 
-    public abstract void shouldInterceptRequest(WebView view, WebResourceRequest request);
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request){
+        return true;
+    }
 
     protected abstract String getSearchUrl(String query);
 
@@ -171,6 +187,22 @@ public abstract class AbstractServer implements ServerInterface {
 
     public abstract String getWebScript(int mode, Movie movie);
 
+    public String getCustomUserAgent(int state){
+        String defaultUserAgent = "Android 7";
+        switch (state){
+            case Movie.COOKIE_STATE:
+                return defaultUserAgent;
+            default:
+                return null;
+        }
+    }
 
+    public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie){
+        movie.setSubList(movies);
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_DETAILS_ACTIVITY_REQUIRE, movie);
+    }
 
+    public boolean shouldUpdateDomainOnSearchResult(){
+        return true;
+    }
 }

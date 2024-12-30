@@ -18,6 +18,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 
 /**
  * from SearchActivity or MainActivity -> item -> resolutions
@@ -164,10 +165,10 @@ public class ArabSeedServer extends AbstractServer {
 //                    break;
         }
 
-            //nextpage
-            Movie nextPage = generateNextPage(doc);
+        //nextpage
+        Movie nextPage = generateNextPage(doc);
 
-        if (nextPage != null){
+        if (nextPage != null) {
             movieList.add(nextPage);
         }
         activityCallback.onSuccess(movieList, getLabel());
@@ -177,36 +178,37 @@ public class ArabSeedServer extends AbstractServer {
     private Movie generateNextPage(Document doc) {
 
         Elements footerUls = doc.getElementsByClass("next page-numbers");
-        if (footerUls.isEmpty()){
+        Log.d(TAG, "search: footerUls:" + footerUls.size());
+        if (footerUls.isEmpty()) {
             return null;
         }
-        Log.d(TAG, "search: footerUls:" + footerUls.size());
         String nextPageLink = "";
         for (Element ul : footerUls) {
             nextPageLink = ul.attr("href");
-            if (nextPageLink == null){
+            if (nextPageLink == null) {
                 return null;
             }
             break;
         }
+        nextPageLink = getConfig().getUrl() + nextPageLink;
         Movie nextPage = new Movie();
         nextPage.setTitle("التالي");
         nextPage.setDescription("0");
         nextPage.setStudio(Movie.SERVER_ARAB_SEED);
-        nextPage.setVideoUrl(getConfig() + nextPageLink);
+        nextPage.setVideoUrl(nextPageLink);
         nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
         nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
         nextPage.setState(Movie.NEXT_PAGE_STATE);
         nextPage.setRate("");
         nextPage.setMainMovie(nextPage);
-        nextPage.setMainMovieTitle(getConfig() + nextPageLink);
+        nextPage.setMainMovieTitle(nextPageLink);
         Log.d(TAG, "search: nextPage:" + nextPageLink);
         return nextPage;
     }
 
     @Override
-    public void shouldInterceptRequest(WebView view, WebResourceRequest request) {
-
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request) {
+        return false;
     }
 
     @Override
@@ -363,7 +365,6 @@ public class ArabSeedServer extends AbstractServer {
         }
 
 
-
 //            Document doc = Jsoup.connect(url)
 //                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
 //                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
@@ -471,7 +472,7 @@ public class ArabSeedServer extends AbstractServer {
                         */
             }
         }
-activityCallback.onSuccess(movie, getLabel());
+        activityCallback.onSuccess(movie, getLabel());
     /*        movie.save(dbHelper);
         } else {
             Log.d(TAG, "fetchGroup: source db");
@@ -774,7 +775,6 @@ activityCallback.onSuccess(movie, getLabel());
 ////        simpleWebView.loadUrl(newUrl);
 //        return newUrl;
 //    }
-
     private boolean isSeries(Movie movie) {
         String u = movie.getVideoUrl();
         return u.contains("/series") || u.contains("/movies");
@@ -804,7 +804,7 @@ activityCallback.onSuccess(movie, getLabel());
 
     @Override
     public int detectMovieState(Movie movie) {
-        if (isSeries(movie)){
+        if (isSeries(movie)) {
             return Movie.GROUP_OF_GROUP_STATE;
         }
         return Movie.ITEM_STATE;
@@ -961,5 +961,32 @@ activityCallback.onSuccess(movie, getLabel());
     @Override
     public String getServerId() {
         return Movie.SERVER_ARAB_SEED;
+    }
+
+    public String getCustomUserAgent(int state) {
+        return "Android 7";
+    }
+
+    public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie) {
+        // just return the result if its browse state
+        if (movie.getState() == Movie.BROWSER_STATE) {
+            movie.setSubList(movies);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_RETURN_RESULT, movie);
+        }
+        return super.handleJSResult(elementJson, movies, movie);
+    }
+
+    public boolean shouldOverrideUrlLoading(Movie movie, WebView view, WebResourceRequest request) {
+        String url = request.getUrl().toString();
+        String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
+        if (url.contains("/e/")) {
+            Log.d(TAG, "shouldOverrideUrlLoading:0b false: " + url);
+            return false;
+        }
+        if (newUrl.contains("gameland")) {
+            Log.d(TAG, "shouldOverrideUrlLoading:0c false: " + url);
+            return false;
+        }
+        return super.shouldOverrideUrlLoading(movie, view, request);
     }
 }
