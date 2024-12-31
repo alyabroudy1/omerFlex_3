@@ -782,6 +782,7 @@ public class BrowserActivity extends AppCompatActivity {
             movie.setSubList(
                     movies
             );
+            Log.d(TAG, "handleJSResultMovieUpdate: mainMovie: "+ movie.getMainMovie());
             setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
             finish();
         }

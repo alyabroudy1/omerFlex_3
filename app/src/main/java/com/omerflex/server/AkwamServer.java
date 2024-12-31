@@ -682,21 +682,22 @@ public class AkwamServer extends AbstractServer {
                     String pLink = link.attr("href");
                     Matcher matcher = pattern.matcher(pLink);
                     if (matcher.find()) {
-                        Log.i("akwam url3", pLink);
+                        Log.i(TAG, "akwam url3" +pLink);
                         url = pLink;
                     }
                 }
             }
-            Log.i(TAG, "FetchOneLink url3:" + url);
+            Log.i(TAG, "FetchOneLink url3: " + url);
 
             url = url + "|referer=" + getConfig().getReferer();
             resolution.setVideoUrl(url);//####
             resolution.setState(Movie.VIDEO_STATE);
-            if (movie.getSubList() == null) {
-                movie.setSubList(new ArrayList<>());
+            if (resolution.getSubList() == null) {
+                resolution.setSubList(new ArrayList<>());
             }
 //            movie.addSubList(resolution);
             activityCallback.onSuccess(resolution, getLabel());
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, resolution);
         } else {
             Movie newMovie = Movie.clone(movie);
             newMovie.setVideoUrl(url);
@@ -706,10 +707,6 @@ public class AkwamServer extends AbstractServer {
             activityCallback.onInvalidCookie(newMovie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, newMovie);
         }
-
-        activityCallback.onSuccess(movie, getLabel());
-
-        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
 //    /**

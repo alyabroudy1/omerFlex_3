@@ -137,7 +137,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         }
 
         mSelectedMovie = Util.recieveSelectedMovie(getActivity().getIntent());
-        Log.d(TAG, "start: mainMovieTitle:"+ mSelectedMovie.getMainMovieTitle());
+        Log.d(TAG, "start: mainMovie:"+ mSelectedMovie.getMainMovie());
         listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
 
         // default value in case of activity result
@@ -234,7 +234,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
             @Override
             protected <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie) {
-//                Log.d(TAG, "updateClickedMovieItem: "+ clickedAdapter);
+                Log.d(TAG, "updateClickedMovieItem: "+ clickedAdapter);
                 if (clickedAdapter instanceof ArrayObjectAdapter) {
                     ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
                     Log.d(TAG, "updateClickedMovieItem: "+ adapter.size()+ ", index: "+clickedMovieIndex);
@@ -866,7 +866,8 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             clickedMovieIndex = clickedMovieAdapter.indexOf(movie);
             generateMovieHistory(mSelectedMovie, movie);
 //            handleItemClick(itemViewHolder, item, rowViewHolder, row);
-            detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,(ListRow) row, defaultHeadersCounter);
+            detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,clickedMovieAdapter, defaultHeadersCounter);
+//            detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,(ListRow) row, defaultHeadersCounter);
         }
 
     }

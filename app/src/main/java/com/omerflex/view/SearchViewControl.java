@@ -15,13 +15,8 @@ import androidx.leanback.widget.ListRow;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.AkwamServer;
-import com.omerflex.server.ArabSeedServer;
-import com.omerflex.server.CimaNowServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.KooraServer;
-import com.omerflex.server.MyCimaServer;
-import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
@@ -57,7 +52,9 @@ public abstract class SearchViewControl {
     protected abstract <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader);
 
     protected abstract <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie);
+
     protected abstract void updateCurrentMovie(Movie movie);
+
     public <T> void handleMovieItemClick(Movie movie, int position, T rowsAdapter, T clickedRow, int defaultHeadersCounter) {
         Log.d(TAG, "handleMovieItemClick: super");
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -149,7 +146,7 @@ public abstract class SearchViewControl {
 //                            @Override
 //                            public void run() {
                         new Handler(Looper.getMainLooper()).post(() -> {
-                            Log.d(TAG, "runOnUiThread run: " + clickedRow);
+//                            Log.d(TAG, "runOnUiThread run: " + clickedRow);
                             if (clickedRow instanceof ListRow) {
                                 ListRow adapterRow = (ListRow) clickedRow;
                                 ArrayObjectAdapter adapter = (ArrayObjectAdapter) adapterRow.getAdapter();
@@ -263,8 +260,8 @@ public abstract class SearchViewControl {
 //                                Log.d(TAG, "onItemClicked: remove row:" + iptvLastIndex);
                 try {
                     removeRow(adapter, rowSize--);
-                }catch (Exception e){
-                    Log.d(TAG, "loadOmarServerResult: error: "+e.getMessage());
+                } catch (Exception e) {
+                    Log.d(TAG, "loadOmarServerResult: error: " + e.getMessage());
                 }
 
             }
@@ -293,7 +290,7 @@ public abstract class SearchViewControl {
     protected abstract <T> void removeRow(T rowsAdapter, int i);
 
     private void generateIptvRows(Movie movie) {
-        Log.d(TAG, "generateIptvRows: "+movie.getVideoUrl());
+        Log.d(TAG, "generateIptvRows: " + movie.getVideoUrl());
         try {
 //           showProgressDialog();
 //        todo
@@ -311,13 +308,13 @@ public abstract class SearchViewControl {
                 for (String group : futureGroupedMovies.keySet()) {
 //                    Log.d(TAG, "generateIptvRows: group: "+group);
 //                    Log.d(TAG, "generateIptvRows: list: "+futureGroupedMovies.get(group));
-                    if (futureGroupedMovies.get(group) == null || futureGroupedMovies.get(group).isEmpty()){
+                    if (futureGroupedMovies.get(group) == null || futureGroupedMovies.get(group).isEmpty()) {
                         continue;
                     }
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
                         @Override
                         public void run() {
-                           generateCategory(group, futureGroupedMovies.get(group), false);
+                            generateCategory(group, futureGroupedMovies.get(group), false);
                         }
                     });
                 }
@@ -399,16 +396,16 @@ public abstract class SearchViewControl {
 //                if (server == null || server.getConfig() == null|| !server.getConfig().isActive()){
 //                    continue;
 //                }
-                Log.d(TAG, "loadCategoriesInBackground: "+ server.getServerId());
+                Log.d(TAG, "loadCategoriesInBackground: " + server.getServerId());
                 if (
-                        server instanceof OldAkwamServer ||
-                                server instanceof AkwamServer ||
-                                server instanceof ArabSeedServer ||
-                                server instanceof CimaNowServer ||
+//                        server instanceof OldAkwamServer ||
+//                                server instanceof AkwamServer ||
+//                                server instanceof ArabSeedServer ||
+//                                server instanceof CimaNowServer ||
 //                                server instanceof FaselHdServer ||
-                                server instanceof OmarServer ||
-                                server instanceof KooraServer ||
-                                server instanceof MyCimaServer
+//                                server instanceof OmarServer ||
+//                                server instanceof MyCimaServer ||
+                                server instanceof KooraServer
                 ) {
                     continue;
                 }
@@ -538,7 +535,7 @@ public abstract class SearchViewControl {
 //                Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER but empty result movie");
 //                return;
 //            }
-            Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: "+resultMovie);
+            Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
             Util.openExternalVideoPlayer(resultMovie, activity);
             // todo: handle dbHelper
 //            updateRelatedMovieItem(clickedHorizontalMovieAdapter, clickedMovieIndex, resultMovie);
@@ -552,16 +549,15 @@ public abstract class SearchViewControl {
 
         if (resultMovie.getSubList() != null && !resultMovie.getSubList().isEmpty() && clickedAdapter != null) {
 //            updateMovieListOfHorizontalMovieAdapter(resultMovieSublist);
-            Log.d(TAG, "onActivityResult: updateMovieListOfMovieAdapter");
+//            Log.d(TAG, "onActivityResult: updateMovieListOfMovieAdapter: "+ resultMovie);
             updateCurrentMovie(resultMovie);
+//            Log.d(TAG, "onActivityResult: updateMovieListOfMovieAdapter: mainMovie: "+ resultMovie.getMainMovie());
 
-            for (Movie mov : resultMovie.getSubList()) {
-                Log.d(TAG, "onActivityResult: mov main: 44: "+ mov.getMainMovie());
-            }
+            updateMainMovieOnJsResult(resultMovie.getMainMovie(), resultMovie.getSubList());
 
             updateMovieListOfMovieAdapter((ArrayList<Movie>) resultMovie.getSubList(), clickedAdapter);
         }
-        Log.d(TAG, "onActivityResult: end: "+ resultMovie.getSubList());
+//        Log.d(TAG, "onActivityResult: end: "+ resultMovie.getSubList());
 //        Log.d(TAG, "onActivityResult: end: movie: "+ resultMovie);
 //        Log.d(TAG, "onActivityResult: end: clickedAdapter: "+ clickedAdapter);
 //        updateClickedMovieItem(clickedAdapter, clickedMovieIndex, resultMovie);
@@ -618,10 +614,24 @@ public abstract class SearchViewControl {
 ////        updateRelatedMovieAdapter(mSelectedMovie);
     }
 
+    private void updateMainMovieOnJsResult(Movie mainMovie, List<Movie> subList) {
+        if (subList.isEmpty()) {
+            return;
+        }
+        for (Movie mov : subList) {
+            if (mainMovie == null) {
+                mainMovie = mov;
+            }
+            mov.setMainMovie(mainMovie);
+            subList.set(subList.indexOf(mov), mov);
+//            Log.d(TAG, "onActivityResult: mov main: 44: "+ mov.getMainMovie());
+        }
+    }
+
     public class SearchCallback implements ServerInterface.ActivityCallback<ArrayList<Movie>> {
         @Override
         public void onSuccess(ArrayList<Movie> result, String title) {
-            Log.d(TAG, "onSuccess: "+title);
+            Log.d(TAG, "onSuccess: " + title);
             if (result == null || result.isEmpty()) {
                 Log.d(TAG, "onSuccess: search result is empty");
                 return;

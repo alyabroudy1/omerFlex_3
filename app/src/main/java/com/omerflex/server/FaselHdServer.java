@@ -93,8 +93,7 @@ public class FaselHdServer extends AbstractServer {
         }
 
         Log.d(TAG, "result stop title: " + doc.title());
-//        if (doc.title().contains("moment")) {
-        if (true) {
+        if (doc.title().contains("moment")) {
 //            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";
@@ -526,10 +525,6 @@ public class FaselHdServer extends AbstractServer {
 
     private MovieFetchProcess fetchGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
-        if (true){
-            activityCallback.onInvalidCookie(movie, getLabel());
-            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
-        }
 
         Document doc = this.getRequestDoc(movie.getVideoUrl());
         if (doc == null) {
@@ -662,8 +657,7 @@ public class FaselHdServer extends AbstractServer {
         }
         Log.i(TAG, "result stop title: " + doc.title());
 
-//        if (doc.title().contains("moment")) {
-        if (true) {
+        if (doc.title().contains("moment")) {
             Movie clonedMovie = Movie.clone(movie);
             clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
@@ -1635,8 +1629,8 @@ public class FaselHdServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-//        return search(getConfig().getUrl() + "/most_recent", activityCallback);
-        return search("la casa", activityCallback);
+        return search(getConfig().getUrl() + "/most_recent", activityCallback);
+//        return search("la casa", activityCallback);
     }
 
     public String getCustomUserAgent(int state) {

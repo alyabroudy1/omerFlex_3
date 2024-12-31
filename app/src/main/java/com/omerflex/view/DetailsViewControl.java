@@ -210,7 +210,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
         MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
             @Override
             public void onSuccess(Movie result, String title) {
-                Util.openExternalVideoPlayer(movie, activity);
+                Util.openExternalVideoPlayer(result, activity);
                 updateClickedMovieItem(clickedRow, position, result);
             }
 

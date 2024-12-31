@@ -148,16 +148,21 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         //Create a trust manager that does not validate certificate chains
         TrustManager[] trustAllCerts = new TrustManager[] {
                 new X509TrustManager() {
+
                     public X509Certificate[] getAcceptedIssuers()
                     {
-                        return null;
+                        Log.d(TAG, "getAcceptedIssuers: ");
+                        return new X509Certificate[0];
+//                        return null;
                     }
                     public void checkClientTrusted(X509Certificate[] certs, String authType)
                     {
+                        Log.d(TAG, "checkClientTrusted: ");
                         //
                     }
                     public void checkServerTrusted(X509Certificate[] certs, String authType)
                     {
+                        Log.d(TAG, "checkServerTrusted: "+ movie.getVideoUrl());
                         //
                     }
                 }
@@ -169,6 +174,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
         } catch (KeyManagementException | NoSuchAlgorithmException e) {
+            Log.d(TAG, "onCreate: error: "+e.getMessage());
             e.printStackTrace();
         }
 
@@ -214,6 +220,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         MediaSource mediaSource = buildMediaSource(movie);
 
         player.prepare(mediaSource);
+        Log.d(TAG, "onCreate: player.prepare(mediaSource) ");
 
         playerView.setControllerAutoShow(false);
 
@@ -222,6 +229,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         playerView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                Log.d(TAG, "onTouch: ");
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     // Save the initial x position of the touch event
                     ExoplayerMediaPlayer.initialX = event.getX();
@@ -420,7 +428,8 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 
                 return dataSource;
             };
-        } else if (url.contains("|")){
+        } 
+        else if (url.contains("|")){
             String[] splitString = url.split("\\|");
             url = splitString[0];
             dataSourceFactory = () -> {
@@ -452,6 +461,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory)
                 .createMediaSource(MediaItem.fromUri(uri));
 
+//        acceptAllSSLCertificate(dataSourceFactory);
         int type = Util.inferContentType(uri);
 
         Log.d("TAG", "buildMediaSource: play: "+type+", "+ uri);
@@ -487,6 +497,38 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 //        return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
     }
 
+//    private void acceptAllSSLCertificate(DataSource.Factory dataSourceFactory) {
+//        try {
+//            // Set up SSL context to trust all certificates
+//            SSLContext sslContext = SSLContext.getInstance("TLS");
+//            TrustManager[] trustManagers = new TrustManager[]{
+//                    new X509TrustManager() {
+//                        @Override
+//                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+//                            // Do nothing
+//                        }
+//
+//                        @Override
+//                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+//                            // Do nothing
+//                        }
+//
+//                        @Override
+//                        public X509Certificate[] getAcceptedIssuers() {
+//                            return new X509Certificate[0];
+//                        }
+//                    }
+//            };
+//
+//            sslContext.init(null, trustManagers, new java.security.SecureRandom());
+//
+//            // Use the custom SSL context
+//            dataSourceFactory.setSslSocketFactory(sslContext.getSocketFactory());
+//        } catch (NoSuchAlgorithmException | KeyManagementException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
     private MediaSource buildMediaSource(Movie movie) {
         updateMovieUrlToHttps(movie);
 
@@ -502,12 +544,12 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         }
         DataSource.Factory dataSourceFactory = createDataSourceFactory(cleanUrl, headers);
 
-        Log.d("TAG", "buildMediaSource: " + cleanUrl);
+        Log.d("TAG", "buildMediaSource: cleanUrl:" + cleanUrl);
         Uri uri = Uri.parse(cleanUrl);
 
         MediaSource mediaSource = createMediaSource(dataSourceFactory, uri, movie);
-        Log.d(TAG, "buildMediaSource: "+mediaSource.toString());
-        Log.d("TAG", "buildMediaSource: play: " + Util.inferContentType(uri) + ", " + uri);
+        Log.d(TAG, "buildMediaSource: mediaSource: "+mediaSource.toString());
+        Log.d("TAG", "buildMediaSource: done: " + Util.inferContentType(uri) + ", " + uri);
         return mediaSource;
     }
 
@@ -530,6 +572,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
                         .setConnectTimeoutMs(60000)
                         .setReadTimeoutMs(60000);
                 DataSource dataSource = httpDataSourceFactory.createDataSource();
+                Log.d(TAG, "createDataSourceFactory:setRequestHeaders: "+dataSource.toString());
                     setRequestHeaders(dataSource, headers);
 
                 return dataSource;
@@ -539,9 +582,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
     private void setRequestHeaders(DataSource dataSource, Map<String, String> headers) {
         Log.d("TAG", "buildMediaSource: extracted headers: " + headers);
 
-        headers.forEach((key, value) ->
-                ((HttpDataSource) dataSource).setRequestProperty(key, value)
-        );
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            ((HttpDataSource) dataSource).setRequestProperty(entry.getKey(), entry.getValue());
+        }
+        Log.d(TAG, "buildMediaSource: extracted headers: done");
     }
 
     private MediaSource createMediaSource(DataSource.Factory dataSourceFactory, Uri uri, Movie movie) {
@@ -660,7 +704,5 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         playerView.setKeepScreenOn(true);
         Log.d("TAG", "onResume: yess");
     }
-
-
 
 }
