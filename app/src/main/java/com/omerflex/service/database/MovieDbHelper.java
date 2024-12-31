@@ -750,6 +750,56 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         }
     }
 
+    public void addMainMovieToHistory_old_3(Movie movie) {
+        db = getWritableDatabase();
+
+//try {
+//                    Uri uri = Uri.parse(url);
+//                    m.setMainMovieTitle(uri.getPath());
+//                }catch (Exception e){
+//                    Log.d(TAG, "search: fail parsing url: "+ e.getMessage());
+//                }
+        String mainMovieTitle = movie.getMainMovieTitle();
+        if (mainMovieTitle == null) {
+            mainMovieTitle = movie.getVideoUrl();
+        }
+
+
+//        if (mainMovie.getIsHistory() == 1) {
+//            return;
+//        }
+        Log.d(TAG, "addMainMovieToHistory:ss " + mainMovieTitle);
+//        Log.d(TAG, "tag:ss " + movie.getMainMovie());
+
+        ContentValues cv = new ContentValues();
+        cv.put(MoviesTable.COLUMN_IS_HISTORY, 1);
+        cv.put(MoviesTable.COLUMN_UPDATED_AT, new Date().getTime());
+
+        String selection = MoviesTable.COLUMN_VIDEO_URL + " = ? ";
+        String[] selectionArgs = new String[]{mainMovieTitle};
+        // Check if the movie exists in the database
+        Cursor cursor = db.query(
+                MoviesTable.TABLE_NAME,
+                null,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null
+        );
+
+        if (cursor != null && cursor.getCount() > 0) {
+            // The movie is already in the database, update it
+            long updateResult = db.update(MoviesTable.TABLE_NAME, cv, selection, selectionArgs);
+            //cursor.close();
+        } else {
+            // The movie is not found, insert it as a new record
+            movie.setIsHistory(1);
+            cv = getContentValueMovie(cv, movie);
+            long insertResult = db.insert(MoviesTable.TABLE_NAME, null, cv);
+        }
+    }
+
     public void addMainMovieToHistory(Movie movie) {
         db = getWritableDatabase();
 

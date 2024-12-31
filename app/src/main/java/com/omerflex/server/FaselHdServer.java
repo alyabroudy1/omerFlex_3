@@ -1461,10 +1461,11 @@ public class FaselHdServer extends AbstractServer {
                         "        let onclickAttr = season.getAttribute(\"onclick\");\n" +
                         "        let spans = season.querySelectorAll(\".seasonMeta\");\n" +
                         "\n" +
-                        "        post.videoUrl = onclickAttr?.match(/\\?p=.[^']*/)?.[0]\n" +
+                        "        let link = onclickAttr?.match(/\\?p=.[^']*/)?.[0]\n" +
                         "            ? `"+getConfig().getUrl()+"/${onclickAttr.match(/\\?p=.[^']*/)[0]}`\n" +
                         "            : \"\";\n" +
-                        "\n" +
+                        "    post.videoUrl = link;" +
+                        "    post.mainMovieTitle = link;" +
                         "        post.title = title;\n" +
                         "        post.cardImageUrl = cardImageUrl;\n" +
                         "        post.bgImageUrl = cardImageUrl;\n" +
@@ -1511,7 +1512,9 @@ public class FaselHdServer extends AbstractServer {
                         "    episodeList.forEach(function (episodeDiv) {\n" +
                         "        let post = {};\n" +
                         "        post.title = episodeDiv.textContent.trim();\n" +
-                        "        post.videoUrl = episodeDiv.getAttribute(\"href\") || \"\";\n" +
+                        "        let link = episodeDiv.getAttribute(\"href\") || \"\";\n" +
+                        "    post.videoUrl = link;" +
+                        "    post.mainMovieTitle = link;" +
                         "        post.cardImageUrl = backgroundImage;\n" +
                         "        post.bgImageUrl = backgroundImage;\n" +
                         "        post.backgroundImageUrl = backgroundImage;\n" +
@@ -1570,7 +1573,7 @@ public class FaselHdServer extends AbstractServer {
                         "            : \"\";\n" +
                         "        // Append headers or additional parameters if required\n" +
                         "        post.videoUrl = link;"+
-                        "\n" +
+                        "    post.mainMovieTitle = link;" +
                         "        // Assign other properties\n" +
                         "        post.cardImageUrl = backgroundImage;\n" +
                         "        post.bgImageUrl = backgroundImage;\n" +
