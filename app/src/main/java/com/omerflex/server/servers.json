@@ -89,6 +89,15 @@
       "isActive": true,
       "description": "description",
       "date": "2025-01-18T12:30:00"
+    },
+    {
+      "name": "app",
+      "displayName": "app",
+      "url": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/omerFlex.apk",
+      "webName": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/",
+      "isActive": true,
+      "description": "app update",
+      "date": "2025-01-18T12:30:00"
     }
   ]
 }
