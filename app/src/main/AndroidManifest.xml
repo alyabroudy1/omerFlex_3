@@ -3,6 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -14,8 +21,8 @@
 
     <application
         android:allowBackup="true"
-        android:enableOnBackInvokedCallback="true"
         android:banner="@drawable/app_icon_your_company"
+        android:enableOnBackInvokedCallback="true"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -27,22 +34,23 @@
         <activity
             android:name=".view.mobile.MobileMovieDetailActivity"
             android:exported="false"
-            android:theme="@style/AppMobileTheme"/>
+            android:theme="@style/AppMobileTheme" />
         <activity
             android:name=".view.mobile.MobileSearchResultActivity"
             android:exported="false"
-            android:theme="@style/AppMobileTheme"/>
-<!--        <activity-->
-<!--            android:name=".view.mobile.MobileHomepageActivity"-->
-<!--            android:exported="true"-->
-<!--            android:theme="@style/AppMobileTheme">-->
-<!--            <intent-filter>-->
-<!--                <action android:name="android.intent.action.MAIN" />-->
-
-<!--                <category android:name="android.intent.category.LAUNCHER" />-->
-<!--            </intent-filter>-->
-<!--        </activity>-->
-        <activity android:name=".view.mobile.MobileWelcomeActivity" android:screenOrientation="landscape" android:exported="true">
+            android:theme="@style/AppMobileTheme" /> <!-- <activity -->
+        <!-- android:name=".view.mobile.MobileHomepageActivity" -->
+        <!-- android:exported="true" -->
+        <!-- android:theme="@style/AppMobileTheme"> -->
+        <!-- <intent-filter> -->
+        <!-- <action android:name="android.intent.action.MAIN" /> -->
+        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
+        <!-- </intent-filter> -->
+        <!-- </activity> -->
+        <activity
+            android:name=".view.mobile.MobileWelcomeActivity"
+            android:exported="true"
+            android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -102,6 +110,16 @@
             android:name=".view.ExoplayerMediaPlayer"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.AppCompat" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

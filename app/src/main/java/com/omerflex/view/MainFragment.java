@@ -40,6 +40,7 @@ import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
+import com.omerflex.service.UpdateService;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
@@ -85,6 +86,8 @@ public class MainFragment extends BrowseSupportFragment {
     int clickedMovieIndex = 0;
     //*****
 
+    UpdateService updateService;
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate");
@@ -123,7 +126,8 @@ public class MainFragment extends BrowseSupportFragment {
         fragment = this;
         activity = getActivity();
         dbHelper = MovieDbHelper.getInstance(activity);
-        serverManager = new ServerManager(activity, fragment);
+        updateService = new UpdateService(activity);
+        serverManager = new ServerManager(activity, fragment, updateService);
         serverManager.updateServers();
         rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
         iptvList = new ArrayList<>();
@@ -136,6 +140,7 @@ public class MainFragment extends BrowseSupportFragment {
             Log.d(TAG, "onDestroy: " + mBackgroundTimer.toString());
             mBackgroundTimer.cancel();
         }
+        updateService.handleOnDestroy();
     }
 
     private void loadRows() {
@@ -208,6 +213,8 @@ public class MainFragment extends BrowseSupportFragment {
 
             protected <T> void updateMovieListOfMovieAdapter(ArrayList<Movie> movies, T clickedAdapter) {
 //                updateMovieListOfHorizontalMovieAdapter(movies);
+                Log.d(TAG, "updateMovieListOfMovieAdapter: MainFragment");
+                Log.d(TAG, clickedAdapter.toString());
                 if (clickedAdapter instanceof ArrayObjectAdapter) {
                     ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
                     extendMovieListOfHorizontalMovieAdapter(movies, adapter);
@@ -224,17 +231,25 @@ public class MainFragment extends BrowseSupportFragment {
     }
 
     private void extendMovieListOfHorizontalMovieAdapter(ArrayList<Movie> movies, ArrayObjectAdapter adapter) {
+        Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: ");
         if (adapter == null) {
             Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: undefined adapter");
             return;
         }
+        try {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-//                Log.d(TAG, "run: adapter> " + objectAdapter.size());
+                Log.d(TAG, "run: adapter> " + adapter.size());
+
                 adapter.addAll(adapter.size(), movies);
+
+
             }
         });
+        }catch (Exception e){
+            Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: error: "+e.getMessage());
+        }
     }
 
     private void updateRelatedMovieItem(ArrayObjectAdapter adapter, int clickedMovieIndex, Movie resultMovie) {
@@ -510,6 +525,7 @@ public class MainFragment extends BrowseSupportFragment {
 
         mainViewControl.onActivityResult(requestCode, resultCode, data, clickedMovieAdapter, clickedMovieIndex);
         super.onActivityResult(requestCode, resultCode, data);
+        updateService.handleOnActivityResult(requestCode, resultCode, data);
 //
 //        if (resultCode != Activity.RESULT_OK || data == null) {
 //            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
@@ -656,7 +672,11 @@ public class MainFragment extends BrowseSupportFragment {
 
     }
 
-
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        updateService.handleOnRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
 
     private void test() {
 

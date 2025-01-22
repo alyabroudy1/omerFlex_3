@@ -1135,7 +1135,7 @@ public class BrowserActivity extends AppCompatActivity {
                         urlNotificationBar.setVisibility(View.GONE);
                     }
                 };
-                autoHideHandler.postDelayed(autoHideRunnable, 7000);
+                autoHideHandler.postDelayed(autoHideRunnable, 10000);
             }
         }
 
@@ -1268,6 +1268,10 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         private boolean shouldCleanWebPage(String url) {
+            Log.d(TAG, "shouldCleanWebPage: "+ url);
+            if (movie.getStudio().equals(Movie.SERVER_KOORA_LIVE)) {
+                return false;
+            }
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
                 return !movie.getVideoUrl().contains("vidmoly") &&
                         movie.getState() == Movie.RESOLUTION_STATE &&

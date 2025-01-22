@@ -83,19 +83,19 @@ public abstract class MainViewControl extends SearchViewControl {
 
                         @Override
                         public void onInvalidCookie(ArrayList<Movie> result, String title) {
-                            Log.d(TAG, "onInvalidCookie: " + result);
+                            Log.d(TAG, "onInvalidCookie: MainViewController LoadRows: " + result);
 //                                    loadMoviesRow(server, serverAdapter, result);
                             updateMovieListOfMovieAdapter(result, serverAdapter);
                         }
 
                         @Override
                         public void onInvalidLink(ArrayList<Movie> result) {
-
+                            Log.d(TAG, "onInvalidLink: ");
                         }
 
                         @Override
                         public void onInvalidLink(String message) {
-
+                            Log.d(TAG, "onInvalidLink: "+message);
                         }
                     });
                 } catch (Exception exception) {

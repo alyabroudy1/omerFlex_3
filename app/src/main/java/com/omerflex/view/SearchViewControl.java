@@ -404,7 +404,8 @@ public abstract class SearchViewControl {
 //                                server instanceof CimaNowServer ||
 //                                server instanceof FaselHdServer ||
 //                                server instanceof OmarServer ||
-//                                server instanceof MyCimaServer ||
+//                                server instanceof IptvServer ||
+//                                server instanceof MyCimaServer //||
                                 server instanceof KooraServer
                 ) {
                     continue;
@@ -413,7 +414,7 @@ public abstract class SearchViewControl {
                 loadServerRow(server, finalQuery);
             }
 
-            loadHomepageHistoryRows();
+//            loadHomepageHistoryRows();
         });
         executor.shutdown();
     }
@@ -647,6 +648,8 @@ public abstract class SearchViewControl {
                 Log.d(TAG, "onInvalidCookie: search result is empty");
                 return;
             }
+
+            Log.d(TAG, "onInvalidCookie: generateCategory");
             generateCategory(title, result, true);
         }
 

@@ -121,40 +121,101 @@ public class KooraServer extends AbstractServer {
             return movieList;
         }
 
-        Elements containers = doc.select("div.match-container");
+        // Find all divs that contain match-related info (dynamically)
+        Elements matches = doc.select("div:has(div:matches(\\d{1,2}:\\d{2} (AM|PM)))");
+        // Select each match block (instead of relying on class names)
+//        Elements matchBlocks = doc.select("div:has(div:matchesOwn(\\d{1,2}:\\d{2} (AM|PM)))");
 
-        for (Element container : containers) {
-            Element link = container.selectFirst("a");
-            String videoUrl = link != null ? link.attr("href") : "";
+        for (Element match : matches) {
+            // Ensure the div has at least 3 direct child divs (to confirm it's a match container)
+            Log.d(TAG, "match div size: " + match.select("> div").size());
+            if (match.select("> div").size() != 3) {
+                continue; // Skip if it has less than 3 divs
+            }
 
-            String rightTeam = container.selectFirst(".right-team .team-name").text();
-            String leftTeam = container.selectFirst(".left-team .team-name").text();
-            String title = leftTeam + " - " + rightTeam;
+            // Extract team names (avoid picking up status messages)
+            Elements teamNames = match.select("div:has(img) + div:matchesOwn([\\p{InArabic}]+)");
 
-            Element cardImageElement = container.selectFirst(".left-team .team-logo img");
-            String cardImage = cardImageElement != null ? cardImageElement.attr("data-src") : "";
+            String team1 = (teamNames.size() > 0 && teamNames.get(0) != null) ? teamNames.get(0).text().trim() : "N/A";
+            String team2 = (teamNames.size() > 1 && teamNames.get(1) != null) ? teamNames.get(1).text().trim() : "N/A";
 
-            Element matchTimeElem = container.selectFirst("#match-time");
-            String matchTime = matchTimeElem != null ? matchTimeElem.text() : "";
+            // Extract match time
+            Element timeElement = match.selectFirst("span:matchesOwn(\\d{1,2}:\\d{2} (AM|PM))");
+            String matchTime = (timeElement != null) ? timeElement.text().trim() : "N/A";
 
-            Element resultDescElem = container.selectFirst(".date.end");
-            String resultDescription = resultDescElem != null ? resultDescElem.text() : "";
-            String description = resultDescription + " at " + matchTime;
+            // Extract match status (should be different from team names)
+            Element statusElement = match.selectFirst("div:matchesOwn(لم تبدأ بعد|مباشر|منتهية|انتهت)");
+            String matchStatus = (statusElement != null) ? statusElement.text().trim() : "N/A";
+
+            // Extract the match link
+            String matchLink = "N/A";
+            Element parentDiv = match.parent();
+            if (parentDiv != null) {
+                Element linkElement = parentDiv.selectFirst("a[href]");
+                if (linkElement != null) {
+                    matchLink = linkElement.attr("href").trim();
+                }
+            }
+
+            String title = team1 + "-" + team2;
+            String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
 
             Movie m = new Movie();
             m.setTitle(title);
-            m.setDescription(description);
+            m.setDescription(matchTime);
             m.setStudio(Movie.SERVER_KOORA_LIVE);
             m.setState(Movie.BROWSER_STATE);
-            m.setVideoUrl(videoUrl);
-            m.setRate(description);
-            m.setCardImageUrl(cardImage);
-            m.setBackgroundImageUrl(cardImage);
-            m.setBgImageUrl(cardImage);
+            m.setVideoUrl(matchLink);
+            m.setRate(matchTime);
+            m.setCardImageUrl(cardImageUrl);
             m.setSearchContext(searchContext);
             m.setMainMovie(m);
             movieList.add(m);
+
+            // Print extracted match details
+            System.out.println("=================================");
+            System.out.println("Team 1: " + team1);
+            System.out.println("Team 2: " + team2);
+            System.out.println("Match Time: " + matchTime);
+            System.out.println("Match Status: " + matchStatus);
+            System.out.println("Match Link: " + matchLink);
         }
+
+
+//        Elements containers = doc.select("div.match-container");
+//        Log.d(TAG, "search: containers: "+containers.size());
+//        for (Element container : containers) {
+//            Element link = container.selectFirst("a");
+//            String videoUrl = link != null ? link.attr("href") : "";
+//
+//            String rightTeam = container.selectFirst(".right-team .team-name").text();
+//            String leftTeam = container.selectFirst(".left-team .team-name").text();
+//            String title = leftTeam + " - " + rightTeam;
+//
+//            Element cardImageElement = container.selectFirst(".left-team .team-logo img");
+//            String cardImage = cardImageElement != null ? cardImageElement.attr("data-src") : "";
+//
+//            Element matchTimeElem = container.selectFirst("#match-time");
+//            String matchTime = matchTimeElem != null ? matchTimeElem.text() : "";
+//
+//            Element resultDescElem = container.selectFirst(".date.end");
+//            String resultDescription = resultDescElem != null ? resultDescElem.text() : "";
+//            String description = resultDescription + " at " + matchTime;
+//
+//            Movie m = new Movie();
+//            m.setTitle(title);
+//            m.setDescription(description);
+//            m.setStudio(Movie.SERVER_KOORA_LIVE);
+//            m.setState(Movie.BROWSER_STATE);
+//            m.setVideoUrl(videoUrl);
+//            m.setRate(description);
+//            m.setCardImageUrl(cardImage);
+//            m.setBackgroundImageUrl(cardImage);
+//            m.setBgImageUrl(cardImage);
+//            m.setSearchContext(searchContext);
+//            m.setMainMovie(m);
+//            movieList.add(m);
+//        }
 
         activityCallback.onSuccess(movieList, getLabel());
         return movieList;
@@ -1363,6 +1424,7 @@ public class KooraServer extends AbstractServer {
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
 //        return search(getConfig().getUrl() + "matches-today", activityCallback);
         return search(getConfig().getUrl() + "/matches-today/", activityCallback);
+//        return search(getConfig().getUrl() + "/matches-yesterday/", activityCallback);
     }
 
     public boolean shouldUpdateDomainOnSearchResult(){

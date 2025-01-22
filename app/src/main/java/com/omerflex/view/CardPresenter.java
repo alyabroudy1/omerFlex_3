@@ -107,8 +107,8 @@ public class CardPresenter extends Presenter {
             if (cookies == null) {
                 cookies = "";
             }
-            Log.d(TAG, "onBindViewHolder: cookies: " + cookies);
-            Log.d(TAG, "onBindViewHolder: headers: " + config.getHeaders());
+//            Log.d(TAG, "onBindViewHolder: cookies: " + cookies);
+//            Log.d(TAG, "onBindViewHolder: headers: " + config.getHeaders());
             LazyHeaders.Builder builder = new LazyHeaders.Builder()
                     .addHeader("Cookie", cookies);
 
@@ -116,21 +116,30 @@ public class CardPresenter extends Presenter {
                 builder.addHeader(entry.getKey(), entry.getValue());
             }
 
-            GlideUrl glideUrl = new GlideUrl(movie.getCardImageUrl(), builder.build());
+// Ensure URL is not null
+            String imageUrl = movie.getCardImageUrl();
+            if (imageUrl == null || imageUrl.isEmpty()) {
+                Log.e(TAG, "onBindViewHolder: movie.getCardImageUrl() is NULL or EMPTY!");
+                imageUrl = "https://your-default-image-url.com/default.jpg"; // Use a fallback
+            }
 
-            Glide.with(viewHolder.view.getContext())
-                    .load(glideUrl)
-                    .fitCenter()
-                    //.centerCrop()
-                    .error(mDefaultCardImage)
-                    .into(cardView.getMainImageView());
+            GlideUrl glideUrl = new GlideUrl(imageUrl, builder.build());
+            try {
+                Glide.with(viewHolder.view.getContext())
+                        .load(glideUrl)
+                        .fitCenter()
+                        .error(mDefaultCardImage)
+                        .into(cardView.getMainImageView());
+            }catch (Exception e){
+                Log.d(TAG, "onBindViewHolder: error: "+e.getMessage());
+            }
 
         }
     }
 
     @Override
     public void onUnbindViewHolder(Presenter.ViewHolder viewHolder) {
-        Log.d(TAG, "onUnbindViewHolder");
+//        Log.d(TAG, "onUnbindViewHolder");
         ImageCardView cardView = (ImageCardView) viewHolder.view;
         // Remove references to images so that the garbage collector can free up memory
         cardView.setBadgeImage(null);

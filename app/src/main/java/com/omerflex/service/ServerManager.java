@@ -30,18 +30,21 @@ public class ServerManager {
 
     private static final String TAG = "ServerManager";
 
-    private final String remoteServersConfigUrl = "https://raw.githubusercontent.com/alyabroudy1/omerFlex-php/main/servers.json";
+    //    private final String remoteServersConfigUrl = "https://raw.githubusercontent.com/alyabroudy1/omerFlex-php/main/servers.json";
+    private final String remoteServersConfigUrl = "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/src/main/java/com/omerflex/server/servers.json";
 
     Activity activity;
     Fragment fragment;
     MovieDbHelper dbHelper;
+    UpdateService updateService;
     //    private static ServerManager instance;
 //
 
-    public ServerManager(Activity activity, Fragment fragment) {
+    public ServerManager(Activity activity, Fragment fragment, UpdateService updateService) {
         this.activity = activity;
         this.fragment = fragment;
         this.dbHelper = MovieDbHelper.getInstance(activity);
+        this.updateService = updateService;
 //        this.servers = new ArrayList<>();
 //        if (servers == null){
 //            ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -81,9 +84,6 @@ public class ServerManager {
 //            return newInstance;
 //        }
 //    }
-
-
-
 
 
     /**
@@ -134,45 +134,67 @@ public class ServerManager {
 //        Log.d(TAG, "updateServerConfig2: " + serverConfig);
         try {
 //            CookieDTO cookieDTO = dbHelper.getCookieDto(serverConfigDTO.name);
+
+
+            if (githubServerConfigDTO.name.equals("app") && updateService != null) {
+                Log.d(TAG, "updateServerConfig: server config app update");
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateService.checkForUpdates(githubServerConfigDTO);
+
+                    }
+                });
+//                updateService.checkForUpdates(serverConfig, githubServerConfigDTO);
+                return;
+            }
+
+            // todo check if this the wanted behaviour to ignore server they are not in the default config
             ServerConfig serverConfig = dbHelper.getServerConfig(githubServerConfigDTO.name);
             if (serverConfig == null) {
                 return;
             }
 //            Log.d(TAG, "updateServerConfig3:cookieDTO: " + cookieDTO);
 
-            if (githubServerConfigDTO.url != null && !githubServerConfigDTO.url.equals("")) {
-                if (serverConfig.getCreatedAt() != null) {
-                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-                    try {
-                        Date githubDate = format.parse(githubServerConfigDTO.date);
-                        //if github date is newer then take it
-                        boolean isNewDate = githubDate.getTime() > serverConfig.getCreatedAt().getTime();
-                        Log.d(TAG,
-                                "updateServerConfig:" +
-                                        githubServerConfigDTO.name +
-                                        ", isNewDate:" + isNewDate +
-                                        ", g:" + githubDate +
-                                        ", db:" + serverConfig.getCreatedAt() +
-                                        ", gUrl: " + githubServerConfigDTO.url +
-                                        ", dbUrl: " + serverConfig.getReferer()
-                        );
-                        if (isNewDate) {
-//                            serverConfig.setCreatedAt(serverConfigDTO.date);
-                            serverConfig.setCreatedAt(githubDate);
-                            serverConfig.setName(githubServerConfigDTO.name);
-                            serverConfig.setUrl(githubServerConfigDTO.url);
-                            serverConfig.setReferer(githubServerConfigDTO.referer);
-                            serverConfig.setLabel(githubServerConfigDTO.label);
-                            serverConfig.setActive(githubServerConfigDTO.isActive);
-//                            dbHelper.saveServerConfigAsCookieDTO(serverConfig, githubDate);
-                            dbHelper.saveServerConfig(serverConfig);
-                        }
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                        Log.d(TAG, "initializeServerCookies: error:" + e.getMessage());
-                    }
-                }
+            if (githubServerConfigDTO.url == null || githubServerConfigDTO.url.equals("")) {
+                Log.d(TAG, "updateServerConfig: server config url empty: " + githubServerConfigDTO.name);
+                return;
             }
+
+            if (serverConfig.getCreatedAt() == null) {
+                return;
+            }
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            try {
+                Date githubDate = format.parse(githubServerConfigDTO.date);
+                //if github date is newer then take it
+                boolean isNewDate = githubDate.getTime() > serverConfig.getCreatedAt().getTime();
+                Log.d(TAG,
+                        "updateServerConfig:" +
+                                githubServerConfigDTO.name +
+                                ", isNewDate:" + isNewDate +
+                                ", g:" + githubDate +
+                                ", db:" + serverConfig.getCreatedAt() +
+                                ", gUrl: " + githubServerConfigDTO.url +
+                                ", dbUrl: " + serverConfig.getReferer()
+                );
+                if (isNewDate) {
+//                            serverConfig.setCreatedAt(serverConfigDTO.date);
+                    serverConfig.setCreatedAt(githubDate);
+                    serverConfig.setName(githubServerConfigDTO.name);
+                    serverConfig.setUrl(githubServerConfigDTO.url);
+                    serverConfig.setReferer(githubServerConfigDTO.referer);
+                    serverConfig.setLabel(githubServerConfigDTO.label);
+                    serverConfig.setActive(githubServerConfigDTO.isActive);
+//                            dbHelper.saveServerConfigAsCookieDTO(serverConfig, githubDate);
+                    dbHelper.saveServerConfig(serverConfig);
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+                Log.d(TAG, "initializeServerCookies: error:" + e.getMessage());
+            }
+
+
         } catch (Exception exception) {
             exception.printStackTrace();
             Log.d(TAG, "updateServerConfig:error: " + exception.getMessage());
@@ -224,7 +246,6 @@ public class ServerManager {
         }
         return null;
     }
-
 
 
 //    public AbstractServer determineServer(String serverName) {

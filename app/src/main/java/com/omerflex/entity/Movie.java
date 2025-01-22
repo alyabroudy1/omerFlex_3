@@ -20,6 +20,7 @@ import java.util.List;
  */
 @Entity(tableName = "movies")
 public class Movie implements Parcelable {
+    public static final String SERVER_APP = "app";
     public static final String SERVER_OMAR = "omar";
 //    static final long serialVersionUID = 727566175075960653L;
     public final static String SERVER_AKWAM = "akwam";

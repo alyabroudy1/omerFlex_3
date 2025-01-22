@@ -142,6 +142,15 @@ public class DefaultServersConfig {
         ServerConfigManager.addConfig(kooraConfig, dbHelper);
         ServerConfigManager.addServer(koora);
 
+        // ### app update ###
+//        ServerConfig appConfig = new ServerConfig();
+//        appConfig.setName(Movie.SERVER_APP);
+//        appConfig.setActive(true);
+//        appConfig.setUrl("https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/omerFlex.apk");
+//        appConfig.setReferer("https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/");
+//
+//        ServerConfigManager.addConfig(appConfig, dbHelper);
+
 //        //### cimaclub ###
 //        ServerConfig cimaclubConfig = new ServerConfig();
 //        cimaclubConfig.setName(Movie.SERVER_CIMA_CLUB);

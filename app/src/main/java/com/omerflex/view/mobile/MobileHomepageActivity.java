@@ -61,7 +61,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //        });
         activity = this;
         dbHelper = MovieDbHelper.getInstance(activity);
-        serverManager = new ServerManager(activity, null);
+        serverManager = new ServerManager(activity, null, null);
 
         // todo: serverManager.updateServers();
         searchView = findViewById(R.id.searchView);

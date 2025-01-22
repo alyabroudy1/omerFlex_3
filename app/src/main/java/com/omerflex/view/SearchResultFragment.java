@@ -109,7 +109,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
             return;
         }
         dbHelper = MovieDbHelper.getInstance(activity);
-        serverManager = new ServerManager(activity, fragment);
+        serverManager = new ServerManager(activity, fragment, null);
 
         rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
 //        webView = getActivity().findViewById(com.omerflex.R.id.webView_main);

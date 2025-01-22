@@ -135,7 +135,7 @@ public class Util {
 
                 String strId = empdata[0].trim();
                 String strName = empdata[1].trim();
-
+                Log.d(TAG, "getMapCookies: "+strId);
                 //add to map
                 cookiesHash.put(strId, strName);
             }
