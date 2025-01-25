@@ -398,15 +398,15 @@ public abstract class SearchViewControl {
 //                }
                 Log.d(TAG, "loadCategoriesInBackground: " + server.getServerId());
                 if (
-//                        server instanceof OldAkwamServer ||
-//                                server instanceof AkwamServer ||
-//                                server instanceof ArabSeedServer ||
-//                                server instanceof CimaNowServer ||
-//                                server instanceof FaselHdServer ||
-//                                server instanceof OmarServer ||
-//                                server instanceof IptvServer ||
-//                                server instanceof MyCimaServer //||
-                                server instanceof KooraServer
+////                        server instanceof OldAkwamServer ||
+////                                server instanceof AkwamServer ||
+////                                server instanceof ArabSeedServer ||
+////                                server instanceof CimaNowServer ||
+////                                server instanceof FaselHdServer ||
+////                                server instanceof OmarServer ||
+////                                server instanceof IptvServer ||
+////                                server instanceof MyCimaServer //||
+                        (server instanceof KooraServer && !query.isEmpty())
                 ) {
                     continue;
                 }
@@ -414,7 +414,7 @@ public abstract class SearchViewControl {
                 loadServerRow(server, finalQuery);
             }
 
-//            loadHomepageHistoryRows();
+            loadHomepageHistoryRows();
         });
         executor.shutdown();
     }

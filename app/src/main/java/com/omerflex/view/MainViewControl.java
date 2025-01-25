@@ -28,7 +28,7 @@ public abstract class MainViewControl extends SearchViewControl {
 
     protected <T> void loadServerRow(AbstractServer server, String finalQuery) {
         //initialize homepage
-        Log.d(TAG, "loadHomepageRows ");
+        Log.d(TAG, "loadHomepageRows homepage "+ server.getLabel());
 
 //            ExecutorService executor2 = Executors.newSingleThreadExecutor();
 //            executor2.submit(() -> {
