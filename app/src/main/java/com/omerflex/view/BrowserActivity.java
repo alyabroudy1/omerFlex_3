@@ -123,6 +123,8 @@ public class BrowserActivity extends AppCompatActivity {
     private boolean hideRedirectBar;
     ServerConfig config;
 
+    static String currentVideoUrl = "";
+
     //#############
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -895,7 +897,6 @@ public class BrowserActivity extends AppCompatActivity {
         boolean executedJS = false;
         boolean cookieFound = false;
         Map<String, String> headers;
-        private String currentVideoUrl = "";
         CookieManager cookieManager = CookieManager.getInstance();
 
         Browser_Home() {
@@ -1001,7 +1002,7 @@ public class BrowserActivity extends AppCompatActivity {
             mm.setVideoUrl(request.getUrl().toString() + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
 
             if (!openedForResult) {
-                Util.openExoPlayer(mm, activity, false);
+                startExoplayer(mm);
                 return null;
             }
 //                Log.d(TAG, "shouldInterceptRequest: video: " + mm.getVideoUrl());
@@ -1059,7 +1060,7 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-//            Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
+            Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 // in case the server url is old, update it n redirection
@@ -1109,7 +1110,7 @@ public class BrowserActivity extends AppCompatActivity {
                 movieList.add(mm);
                 mm.setSubList(movieList);
                 if (!openedForResult) {
-                    Util.openExoPlayer(mm, activity, false);
+                    startExoplayer(mm);
                     return true;
                 }
 
@@ -1217,7 +1218,7 @@ public class BrowserActivity extends AppCompatActivity {
             }
 
             if (shouldCleanWebPage(url)) {
-                HtmlPageService.cleanWebPage(view);
+                HtmlPageService.cleanWebPage(view, shouldCleanWebPageIframe());
             }
 
             if (shouldProcessVideo(url)) {
@@ -1225,6 +1226,10 @@ public class BrowserActivity extends AppCompatActivity {
             }
 
             super.onLoadResource(view, url);
+        }
+
+        private boolean shouldCleanWebPageIframe() {
+            return !movie.getStudio().equals(Movie.SERVER_KOORA_LIVE);
         }
 
         private void processVideoResource(WebView view, String url) {
@@ -1237,7 +1242,7 @@ public class BrowserActivity extends AppCompatActivity {
             mov.setState(Movie.VIDEO_STATE);
             Log.d(TAG, "onLoadResource: isVideo: " + newUrl);
             if (!openedForResult) {
-                Util.openExoPlayer(mov, activity, false);
+                startExoplayer(mov);
                 return;
             }
             setResult(Activity.RESULT_OK, Util.generateIntentResult(mov));
@@ -1269,9 +1274,9 @@ public class BrowserActivity extends AppCompatActivity {
 
         private boolean shouldCleanWebPage(String url) {
             Log.d(TAG, "shouldCleanWebPage: "+ url);
-            if (movie.getStudio().equals(Movie.SERVER_KOORA_LIVE)) {
-                return false;
-            }
+//            if (movie.getStudio().equals(Movie.SERVER_KOORA_LIVE)) {
+//                return false;
+//            }
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
                 return !movie.getVideoUrl().contains("vidmoly") &&
                         movie.getState() == Movie.RESOLUTION_STATE &&
@@ -1312,6 +1317,15 @@ public class BrowserActivity extends AppCompatActivity {
 ////            return false; //changePos(event);
 //        }
 
+    }
+
+    private void startExoplayer(Movie mov) {
+        Log.d(TAG, "processVideoResource: openExoPlayer !openedForResult: "+ currentVideoUrl);
+        if (mov.getVideoUrl().equals(currentVideoUrl)){
+            return;
+        }
+        currentVideoUrl = mov.getVideoUrl();
+        Util.openExoPlayer(mov, activity, false);
     }
 
     private void testCookie(WebView view, WebResourceRequest request) {

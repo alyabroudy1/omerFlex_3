@@ -16,6 +16,7 @@ public class LinkFilterService {
     public static boolean isSupportedMedia(WebResourceRequest request) {
         String mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(MimeTypeMap.getFileExtensionFromUrl(request.getUrl().toString()));
         String acceptEncoding = request.getRequestHeaders().get("Accept-Encoding");
+//        String accept = request.getRequestHeaders().get("Accept");
         boolean isAcceptEncoding = acceptEncoding != null && acceptEncoding.contains("identity;q=1");
         if (isAcceptEncoding) {
             Log.d(TAG, "isSupportedMedia: isAcceptEncoding: " + acceptEncoding);
@@ -24,10 +25,17 @@ public class LinkFilterService {
             }
             return true;
         }
+//        Log.d(TAG, "isSupportedMedia: accept: "+ accept);
+//        Log.d(TAG, "isSupportedMedia: acceptEncoding: "+ acceptEncoding);
         if (mimeType != null) {
-//                Log.d(TAG, "isSupportedMedia: mimeType: "+mimeType);
+                Log.d(TAG, "isSupportedMedia: mimeType: "+mimeType);
             if (mimeType.startsWith("video") || mimeType.startsWith("audio")) {
-                Log.d(TAG, "isSupportedMedia: mimeType: " + mimeType);
+                Log.d(TAG, "isSupportedMedia: mimeType: " + mimeType + ", accept: "+acceptEncoding);
+                if (request.getUrl().getPath().contains("index_")){
+//                    Log.d(TAG, "isSupportedMedia: path: "+request.getUrl().getPath());
+//                    Log.d(TAG, "isSupportedMedia: headers: "+request.getRequestHeaders());
+                    return false;
+                }
                 return true;
             }  // Check for video mimetypes
         }

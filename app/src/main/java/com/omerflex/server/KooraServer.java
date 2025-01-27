@@ -122,6 +122,211 @@ public class KooraServer extends AbstractServer {
         }
 
         // Find all divs that contain match-related info (dynamically)
+        Elements matches = doc.select("div:has(div:matches(\\d{1,2}:\\d{2} (م|ص)))");
+        // Select each match block (instead of relying on class names)
+//        Elements matchBlocks = doc.select("div:has(div:matchesOwn(\\d{1,2}:\\d{2} (AM|PM)))");
+        Log.d(TAG, "search: matches: "+matches.size());
+        int matchCounter = 0;
+        for (Element match : matches) {
+            // Ensure the div has at least 3 direct child divs (to confirm it's a match container)
+            Log.d(TAG, "match div size: " + match.select("> div").size());
+            if (match.select("> div").size() != 3) {
+                continue; // Skip if it has less than 3 divs
+            }
+
+            // Extract team names and links
+            Elements teamImages = match.select("div:has(img) img"); // Select all img tags inside divs
+
+            if (teamImages.size() < 2) {
+                continue;
+            }
+                // First image (left team)
+                Element team1Image = teamImages.get(0);
+            Element team2Image = teamImages.get(1);
+
+            if (team1Image == null || team2Image == null) {
+                continue;
+            }
+
+            String team1Title = team1Image.attr("alt"); // Get the alt attribute as team1 title
+            String team1Link = team1Image.attr("src");  // Get the src attribute as team1 link
+
+            // Second image (right team)
+                String team2Title = team2Image.attr("alt"); // Get the alt attribute as team2 title
+                String team2Link = team2Image.attr("src");  // Get the src attribute as team2 link
+
+                // Log or use the extracted data
+                Log.d(TAG, "Team 1 Title: " + team1Title);
+                Log.d(TAG, "Team 1 Link: " + team1Link);
+                Log.d(TAG, "Team 2 Title: " + team2Title);
+                Log.d(TAG, "Team 2 Link: " + team2Link);
+
+
+//            String team1 = (teamNames.size() > 0 && teamNames.get(0) != null) ? teamNames.get(0).text().trim() : "N/A";
+//            String team2 = (teamNames.size() > 1 && teamNames.get(1) != null) ? teamNames.get(1).text().trim() : "N/A";
+//
+            // Extract match time
+            Element timeElement = match.selectFirst("span:matchesOwn(\\d{1,2}:\\d{2} (م|ص))");
+            String matchTime = (timeElement != null) ? timeElement.text().trim() : "N/A";
+
+            System.out.println("=================================");
+            String userAgent = "Android 7";
+            String matchLink = url+ "/#"+matchCounter++ +"|user-agent="+userAgent;
+//            System.out.println("Team 1: " + team1);
+//            System.out.println("Team 2: " + team2);
+            System.out.println("Match Time: " + matchTime);
+//            System.out.println("Match Status: " + matchStatus);
+            System.out.println("Match Link: " + matchLink);
+
+//            // Extract match status (should be different from team names)
+//            Element statusElement = match.selectFirst("div:matchesOwn(لم تبدأ بعد|مباشر|منتهية|انتهت)");
+//            String matchStatus = (statusElement != null) ? statusElement.text().trim() : "N/A";
+
+            // Extract the match link
+//            String matchLink = "N/A";
+//            Element parentDiv = match.parent();
+//            if (parentDiv != null) {
+//                Element linkElement = parentDiv.selectFirst("a[href]");
+//                if (linkElement != null) {
+//                    matchLink = linkElement.attr("href").trim();
+//                }
+//            }
+
+            String title = team1Title + " - " + team2Title;
+            String cardImageUrl = team1Link == null ? team2Link:team1Link;
+            if (cardImageUrl == null){
+                cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
+            }
+
+            Movie m = new Movie();
+            m.setTitle(title);
+            m.setDescription(matchTime);
+            m.setStudio(Movie.SERVER_KOORA_LIVE);
+            m.setState(Movie.BROWSER_STATE);
+            m.setVideoUrl(matchLink);
+            m.setRate(matchTime);
+            m.setCardImageUrl(cardImageUrl);
+            m.setSearchContext(searchContext);
+            m.setMainMovie(m);
+            movieList.add(m);
+
+            // Print extracted match details
+//            System.out.println("=================================");
+//            System.out.println("Team 1: " + team1);
+//            System.out.println("Team 2: " + team2);
+//            System.out.println("Match Time: " + matchTime);
+//            System.out.println("Match Status: " + matchStatus);
+//            System.out.println("Match Link: " + matchLink);
+        }
+
+
+//        Elements containers = doc.select("div.match-container");
+//        Log.d(TAG, "search: containers: "+containers.size());
+//        for (Element container : containers) {
+//            Element link = container.selectFirst("a");
+//            String videoUrl = link != null ? link.attr("href") : "";
+//
+//            String rightTeam = container.selectFirst(".right-team .team-name").text();
+//            String leftTeam = container.selectFirst(".left-team .team-name").text();
+//            String title = leftTeam + " - " + rightTeam;
+//
+//            Element cardImageElement = container.selectFirst(".left-team .team-logo img");
+//            String cardImage = cardImageElement != null ? cardImageElement.attr("data-src") : "";
+//
+//            Element matchTimeElem = container.selectFirst("#match-time");
+//            String matchTime = matchTimeElem != null ? matchTimeElem.text() : "";
+//
+//            Element resultDescElem = container.selectFirst(".date.end");
+//            String resultDescription = resultDescElem != null ? resultDescElem.text() : "";
+//            String description = resultDescription + " at " + matchTime;
+//
+//            Movie m = new Movie();
+//            m.setTitle(title);
+//            m.setDescription(description);
+//            m.setStudio(Movie.SERVER_KOORA_LIVE);
+//            m.setState(Movie.BROWSER_STATE);
+//            m.setVideoUrl(videoUrl);
+//            m.setRate(description);
+//            m.setCardImageUrl(cardImage);
+//            m.setBackgroundImageUrl(cardImage);
+//            m.setBgImageUrl(cardImage);
+//            m.setSearchContext(searchContext);
+//            m.setMainMovie(m);
+//            movieList.add(m);
+//        }
+
+        activityCallback.onSuccess(movieList, getLabel());
+        return movieList;
+    }
+
+
+    //    @Override
+    public ArrayList<Movie> searchKoora(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
+        Log.i(TAG, "search: " + query);
+        String searchContext = query;
+        String queryName = query;
+        ArrayList<Movie> movieList = new ArrayList<>();
+        // if (!query.contains("faselhd")) {
+//        if (headers.containsKey("Referer")){
+//            if (headers.get("Referer").contains("?s=")){
+//                query = headers.get("Referer");
+//            }else {
+//                query = headers.get("Referer")+ "/?s=" + query;
+//            }
+//        }else {
+//            query = WEBSITE_URL + "/?s=" + query;
+//        }
+//        if (referer != null && !referer.isEmpty()){
+//            if (referer.endsWith("/")){
+//                query = referer + "?s=" + query;
+//            }else {
+//                query = referer + "/?s=" + query;
+//            }
+//        }else {
+//            query = WEBSITE_URL + "/?s=" + query;
+//        }
+        String url = query;
+        if (!query.contains("http")) {
+            url = this.getSearchUrl(query);
+        }
+        Log.i(getLabel(), "search: " + url);
+
+        Document doc = this.getRequestDoc(url);
+        if (doc == null) {
+            activityCallback.onInvalidLink("Invalid link");
+            return null;
+        }
+
+        Log.d(TAG, "result stop title: " + doc.title());
+        if (doc.title().contains("moment")) {
+//            setCookieRefreshed(false);
+            //**** default
+            // String title = "ابحث في موقع فاصل ..";
+            String title = searchContext;
+            //int imageResourceId = R.drawable.default_image;
+            // String cardImageUrl = "android.resource://" + activity.getPackageName() + "/" + imageResourceId;
+            String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
+            String backgroundImageUrl = "http://commondatastorage.googleapis.com/android-tv/Sample%20videos/April%20Fool's%202013/Introducing%20Google%20Nose/bg.jpg";
+            Movie m = new Movie();
+            m.setTitle(title);
+            m.setDescription("نتائج البحث في الاسفل...");
+            m.setStudio(Movie.SERVER_KOORA_LIVE);
+            m.setVideoUrl(url);
+            //  m.setVideoUrl("https://www.google.com/");
+            m.setState(Movie.COOKIE_STATE);
+            // m.setState(Movie.RESULT_STATE);
+            m.setCardImageUrl(cardImageUrl);
+            m.setBackgroundImageUrl(backgroundImageUrl);
+            m.setRate("");
+            m.setSearchContext(searchContext);
+            m.setCreatedAt(Calendar.getInstance().getTime().toString());
+            movieList.add(m);
+
+            activityCallback.onInvalidCookie(movieList, getLabel());
+            return movieList;
+        }
+
+        // Find all divs that contain match-related info (dynamically)
         Elements matches = doc.select("div:has(div:matches(\\d{1,2}:\\d{2} (AM|PM)))");
         // Select each match block (instead of relying on class names)
 //        Elements matchBlocks = doc.select("div:has(div:matchesOwn(\\d{1,2}:\\d{2} (AM|PM)))");
@@ -1262,7 +1467,7 @@ public class KooraServer extends AbstractServer {
                 //inject js code
                 // server.onLoadResource(activity, webView, url, movie);
                 //clean webpage from ads
-                HtmlPageService.cleanWebPage(view);
+                HtmlPageService.cleanWebPage(view, true);
 
                 if (!(url.contains("/?s=") || url.contains("/search"))) {
                     //scrolling to video
@@ -1400,19 +1605,164 @@ public class KooraServer extends AbstractServer {
         String script = "";
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
             if (movie.getState() == Movie.BROWSER_STATE) {
-                Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED RESOLUTION_STATE");
-                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                        "let firstIframe = document.querySelector(\"iframe\");\n" +
-                        "\n" +
-                        "// Check if the iframe exists\n" +
-                        "if (firstIframe) {\n" +
-                        "    // Scroll the page to the position of the first iframe\n" +
-                        "    firstIframe.scrollIntoView({\n" +
-                        "        behavior: 'smooth', // For smooth scrolling\n" +
-                        "        block: 'start', // Align the iframe to the top of the viewport\n" +
-                        "    });\n" +
-                        "}" +
-                        "});";
+
+                    String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
+                    int hashIndex = movie.getVideoUrl().indexOf('#');
+
+                    // Check if the hash symbol is found in the string
+                    if (hashIndex != -1 && hashIndex < movie.getVideoUrl().length() - 1) {
+                        // Return the substring after the hash symbol
+                        String  serverId = movie.getVideoUrl().substring(hashIndex + 1);
+
+                        // Find the index of the '|' symbol in the substring after the hash
+                        int pipeIndex = serverId.indexOf('|');
+
+                        // If '|' is found, return the substring up to the '|' symbol
+                        if (pipeIndex != -1) {
+                            serverId = serverId.substring(0, pipeIndex);
+                        }
+
+                        Log.d(TAG, "getWebScript: serverid: "+serverId);
+                        script = "document.addEventListener('DOMContentLoaded', () => {" +
+                                "// Using querySelector (Recommended)\n" +
+                                "let firstIframe = document.querySelector(\"iframe\");\n" +
+                                "if(firstIframe != null){" +
+                                "   makeFullScreen(firstIframe);" +
+                                "console.log(\"iframe found\");" +
+                                "return;" +
+                                "}"+
+                                "var divs = document.querySelectorAll('div');\n" +
+                                "var matches = [];\n" +
+                                "\n" +
+                                "// Convert NodeList to Array (for older browsers)\n" +
+                                "for (var i = 0; i < divs.length; i++) {\n" +
+                                "    var div = divs[i];\n" +
+                                "    var childDivs = div.querySelectorAll('div');\n" +
+                                "    var hasMatchingText = false;\n" +
+                                "\n" +
+                                "    // Check if any child div matches the regex\n" +
+                                "    for (var j = 0; j < childDivs.length; j++) {\n" +
+                                "        var text = childDivs[j].textContent.trim();\n" +
+                                "        var regex = /\\d{1,2}:\\d{2} (م|ص)/;\n" +
+                                "        if (regex.test(text)) {\n" +
+                                "            hasMatchingText = true;\n" +
+                                "            break;\n" +
+                                "        }\n" +
+                                "    }\n" +
+                                "\n " +
+                                "    // Check if the div has exactly 3 direct child divs\n" +
+                                "    var directChildDivs = [];\n" +
+                                "    for (var k = 0; k < div.children.length; k++) {\n" +
+                                "        if (div.children[k].tagName === 'DIV') {\n" +
+                                "            directChildDivs.push(div.children[k]);\n" +
+                                "        }\n" +
+                                "    }\n" +
+                                "\n" +
+                                "    if (directChildDivs.length === 3 && hasMatchingText) {\n" +
+                                "        matches.push(div);\n" +
+                                "    }\n" +
+                                "}\n" +
+                                "\n" +
+                                "if (matches["+serverId+"] != null) {\n" +
+                                " var closestAnchor = matches["+serverId+"].closest('a'); // Find the closest <a> element\n" +
+                                "    if (closestAnchor) {\n" +
+                                " console.log(\"Closest <a> element found:\", closestAnchor);\n" +
+                                "        console.log(\"Closest <a> href:\", closestAnchor.title);\n" +
+                                "" +
+//                                "closestAnchor.preventDefault();\n" +
+                                "             // Get the encrypted URL from the data-href attribute\n" +
+                                "        let encryptedUrl = closestAnchor.getAttribute(\"data-href\");\n" +
+                                "\n" +
+                                "        // Decrypt the URL\n" +
+                                "        let decryptedUrl = decryptUrl(encryptedUrl);\n" +
+                                "\n" +
+                                "        // Navigate to the decrypted URL\n" +
+                                "        console.log(\"Closest <a> location:\", decryptedUrl);\n" +
+                                "        window.location.href = decryptedUrl;" +
+                                "    waitForElement('iframe', function(secondElement) {\n" +
+                                "        console.log('xxxx: Second element appeared:', secondElement);\n" +
+                                "        makeFullScreen(secondElement);\n" +
+                                "    });\n" +
+                                "    } else {\n" +
+                                "        console.log(\"No <a> element found.\");\n" +
+                                "    }" +
+                                "    // Wait for the second element to appear after the click\n" +
+
+                                "}\n" +
+                                "\nconsole.log(matches["+serverId+"]);" +
+                                "\nconsole.log('hiii');" +
+                                "\nconsole.log(matches.length);" +
+                                "" +
+                                "function decryptUrl(t, e=3) {\n" +
+                                "    t = Uint8Array.from(atob(t), t => t.charCodeAt(0));\n" +
+                                "    const n = (new TextDecoder).decode(t);\n" +
+                                "    let o = \"\";\n" +
+                                "    for (let t = 0; t < n.length; t++) {\n" +
+                                "        var r = n.codePointAt(t);\n" +
+                                "        o += String.fromCodePoint(r - e)\n" +
+                                "    }\n" +
+                                "    return o\n" +
+                                "}" +
+                                "" +
+                                "function makeFullScreen(iframe) {\n" +
+                                "    if (iframe) {\n" +
+                                "        // Clone the iframe element\n" +
+                                "        var clonedIframe = iframe.cloneNode(true);\n" +
+                                "\n" +
+                                "        // Clear the iframe content\n" +
+                                "        iframe.innerHTML = '';\n" +
+                                "\n" +
+                                "        // Append the cloned iframe to the body\n" +
+                                "        document.body.querySelectorAll('*:not(script)').forEach(el => el.remove());" +
+                                "        document.body.appendChild(clonedIframe);\n" +
+
+                                "        // Modify the cloned iframe to make it fullscreen\n" +
+                                "        clonedIframe.style.position = \"fixed\";\n" +
+                                "        clonedIframe.style.top = \"0\";\n" +
+                                "        clonedIframe.style.left = \"0\";\n" +
+                                "        clonedIframe.style.width = \"100%\";\n" +
+                                "        clonedIframe.style.height = \"100%\";\n" +
+                                "        clonedIframe.style.zIndex = \"9999\";\n" +
+                                "        clonedIframe.style.border = \"none\"; // Remove any borders\n" +
+                                "        clonedIframe.setAttribute(\"allowfullscreen\", \"true\");\n" +
+                                "        clonedIframe.setAttribute(\"scrolling\", \"yes\");\n" +
+                                "\n" +
+                                "        // Simulate fullscreen (since Fullscreen API may not work)\n" +
+                                "        clonedIframe.style.backgroundColor = \"#000\"; // Optional: Set background color\n" +
+                                "        clonedIframe.click();" +
+                                "    } else {\n" +
+                                "        console.log(\"Iframe not found.\");\n" +
+                                "    }\n" +
+                                "}\n" +
+                                "\n" +
+                                "// Function to wait for an element to appear (using polling instead of MutationObserver)\n" +
+                                "function waitForElement(selector, callback) {\n" +
+                                "    var interval = setInterval(function() {\n" +
+                                "        var element = document.querySelector(selector);\n" +
+                                "        if (element) {\n" +
+                                "            clearInterval(interval); // Stop polling\n" +
+                                "            callback(element);\n" +
+                                "        }\n" +
+                                "    }, 100); // Check every 100ms\n" +
+                                "}" +
+
+                                " });";
+                    }
+
+
+//                Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED RESOLUTION_STATE");
+//                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
+//                        "let firstIframe = document.querySelector(\"iframe\");\n" +
+//                        "\n" +
+//                        "// Check if the iframe exists\n" +
+//                        "if (firstIframe) {\n" +
+//                        "    // Scroll the page to the position of the first iframe\n" +
+//                        "    firstIframe.scrollIntoView({\n" +
+//                        "        behavior: 'smooth', // For smooth scrolling\n" +
+//                        "        block: 'start', // Align the iframe to the top of the viewport\n" +
+//                        "    });\n" +
+//                        "}" +
+//                        "});";
             }
         }
 
@@ -1423,7 +1773,9 @@ public class KooraServer extends AbstractServer {
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
 //        return search(getConfig().getUrl() + "matches-today", activityCallback);
-        return search(getConfig().getUrl() + "/matches-today/", activityCallback);
+//        return search(getConfig().getUrl() + "/matches-today/", activityCallback);
+        return search(getConfig().getUrl() + "/home", activityCallback);
+//        return search(getConfig().getUrl() + "/yesterday", activityCallback);
 //        return search(getConfig().getUrl() + "/matches-yesterday/", activityCallback);
     }
 

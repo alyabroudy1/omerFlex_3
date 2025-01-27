@@ -1,5 +1,6 @@
 package com.omerflex.service;
 
+import android.util.Log;
 import android.webkit.WebView;
 
 public class HtmlPageService {
@@ -9,7 +10,7 @@ public class HtmlPageService {
      *
      * @param view
      */
-    public static void cleanWebPage(WebView view) {
+    public static void cleanWebPage(WebView view, boolean withIframe) {
         //delete all iframes  and their sub iframes
         String delIframes = "function deleteIframes() {\n" +
                 "  // Get all iframes on the page\n" +
@@ -68,11 +69,15 @@ public class HtmlPageService {
         //remove divs with display block
         view.evaluateJavascript(
                 "(function() {\n" +
-                        "    var elements = document.querySelectorAll('[style*=\"display: block\"], [style*=\"display: block !important\"]');\n" +
-                        "    \n" +
-                        "    elements.forEach(function(element) {\n" +
-                        "        element.parentNode.removeChild(element);\n" +
+                        "var elements = document.querySelectorAll('[style*=\"display: block\"], [style*=\"display: block !important\"]');\n" +
+                        "\n" +
+                        "if (elements && elements.length > 0) {\n" +
+                        "    elements.forEach(function (element) {\n" +
+                        "        if (element.parentNode) {\n" +
+                        "            element.parentNode.removeChild(element);\n" +
+                        "        }\n" +
                         "    });\n" +
+                        "}\n" +
                         "})();\n",
                 null
         );
@@ -106,34 +111,43 @@ public class HtmlPageService {
                 "})();";
 
         String jsCode = "(function() {\n" +
-                "    var iframes = [];\n" +
-                "    var allIframes = document.querySelectorAll('iframe');\n" +
+                "var iframes = [];\n" +
+                "var allIframes = document.querySelectorAll('iframe');\n" +
                 "\n" +
-                "    allIframes.forEach(function(iframe) {\n" +
+                "if (allIframes && allIframes.length > 0) {\n" +
+                "    allIframes.forEach(function (iframe) {\n" +
+                "        if (!iframe) return; // Ensure iframe is not null\n" +
+                "\n" +
                 "        iframe.click();\n" +
                 "\n" +
                 "        while (iframe.hasChildNodes()) {\n" +
-                "            iframe.removeChild(iframe.firstChild);\n" +
+                "            if (iframe.firstChild) {\n" +
+                "                iframe.removeChild(iframe.firstChild);\n" +
+                "            }\n" +
                 "        }\n" +
                 "\n" +
                 "        var src = iframe.getAttribute('src');\n" +
-                "        if (src !== 'about:blank' && src !== null) {\n" +
+                "        if (src && src !== 'about:blank') {\n" +
                 "            iframes.push({\n" +
                 "                src: src,\n" +
-                "                height: iframe.getAttribute('height'),\n" +
-                "                width: iframe.getAttribute('width')\n" +
+                "                height: iframe.getAttribute('height') || \"\",\n" +
+                "                width: iframe.getAttribute('width') || \"\"\n" +
                 "            });\n" +
                 "        } else {\n" +
-                "            if (iframe.parentNode !== null) {\n" +
+                "            if (iframe.parentNode) {\n" +
                 "                iframe.parentNode.removeChild(iframe);\n" +
                 "            } else {\n" +
                 "                iframe.remove();\n" +
                 "            }\n" +
                 "        }\n" +
                 "    });\n" +
+                "}\n" +
                 "\n" +
-                "    return iframes;\n" +
+                "return iframes;\n" +
                 "})();\n";
-        view.evaluateJavascript(jsCode, null);
+        if (withIframe){
+            Log.d("TAG", "cleanWebPage: with iframe");
+            view.evaluateJavascript(jsCode, null);
+        }
     }
 }

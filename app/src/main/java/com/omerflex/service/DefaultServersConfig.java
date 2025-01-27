@@ -133,8 +133,10 @@ public class DefaultServersConfig {
         ServerConfig kooraConfig = new ServerConfig();
         kooraConfig.setActive(true);
         kooraConfig.setName(Movie.SERVER_KOORA_LIVE);
-        kooraConfig.setUrl("https://kooora.live-koora.live");
-        kooraConfig.setReferer("https://kooora.live-koora.live/");
+        kooraConfig.setUrl("https://www.as-goal.cc");
+//        kooraConfig.setUrl("https://kooora.live-koora.live");
+//        kooraConfig.setReferer("https://kooora.live-koora.live/");
+        kooraConfig.setReferer("https://www.as-goal.cc/");
 //        ServerConfigManager.addConfig(kooraConfig, dbHelper);
 
         AbstractServer koora = new KooraServer();

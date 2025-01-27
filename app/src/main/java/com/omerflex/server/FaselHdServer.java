@@ -1257,7 +1257,7 @@ public class FaselHdServer extends AbstractServer {
                 //inject js code
                 // server.onLoadResource(activity, webView, url, movie);
                 //clean webpage from ads
-                HtmlPageService.cleanWebPage(view);
+                HtmlPageService.cleanWebPage(view, true);
 
                 if (!(url.contains("/?s=") || url.contains("/search"))) {
                     //scrolling to video
