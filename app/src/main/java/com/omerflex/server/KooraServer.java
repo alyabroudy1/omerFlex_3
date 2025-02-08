@@ -125,7 +125,7 @@ public class KooraServer extends AbstractServer {
         Elements matches = doc.select("div:has(div:matches(\\d{1,2}:\\d{2} (م|ص)))");
         // Select each match block (instead of relying on class names)
 //        Elements matchBlocks = doc.select("div:has(div:matchesOwn(\\d{1,2}:\\d{2} (AM|PM)))");
-        Log.d(TAG, "search: matches: "+matches.size());
+        Log.d(TAG, "search: matches: " + matches.size());
         int matchCounter = 0;
         for (Element match : matches) {
             // Ensure the div has at least 3 direct child divs (to confirm it's a match container)
@@ -140,8 +140,8 @@ public class KooraServer extends AbstractServer {
             if (teamImages.size() < 2) {
                 continue;
             }
-                // First image (left team)
-                Element team1Image = teamImages.get(0);
+            // First image (left team)
+            Element team1Image = teamImages.get(0);
             Element team2Image = teamImages.get(1);
 
             if (team1Image == null || team2Image == null) {
@@ -152,14 +152,14 @@ public class KooraServer extends AbstractServer {
             String team1Link = team1Image.attr("src");  // Get the src attribute as team1 link
 
             // Second image (right team)
-                String team2Title = team2Image.attr("alt"); // Get the alt attribute as team2 title
-                String team2Link = team2Image.attr("src");  // Get the src attribute as team2 link
+            String team2Title = team2Image.attr("alt"); // Get the alt attribute as team2 title
+            String team2Link = team2Image.attr("src");  // Get the src attribute as team2 link
 
-                // Log or use the extracted data
-                Log.d(TAG, "Team 1 Title: " + team1Title);
-                Log.d(TAG, "Team 1 Link: " + team1Link);
-                Log.d(TAG, "Team 2 Title: " + team2Title);
-                Log.d(TAG, "Team 2 Link: " + team2Link);
+            // Log or use the extracted data
+            Log.d(TAG, "Team 1 Title: " + team1Title);
+            Log.d(TAG, "Team 1 Link: " + team1Link);
+            Log.d(TAG, "Team 2 Title: " + team2Title);
+            Log.d(TAG, "Team 2 Link: " + team2Link);
 
 
 //            String team1 = (teamNames.size() > 0 && teamNames.get(0) != null) ? teamNames.get(0).text().trim() : "N/A";
@@ -171,7 +171,7 @@ public class KooraServer extends AbstractServer {
 
             System.out.println("=================================");
             String userAgent = "Android 7";
-            String matchLink = url+ "/#"+matchCounter++ +"|user-agent="+userAgent;
+            String matchLink = url + "/#" + matchCounter++ + "|user-agent=" + userAgent;
 //            System.out.println("Team 1: " + team1);
 //            System.out.println("Team 2: " + team2);
             System.out.println("Match Time: " + matchTime);
@@ -182,19 +182,22 @@ public class KooraServer extends AbstractServer {
 //            Element statusElement = match.selectFirst("div:matchesOwn(لم تبدأ بعد|مباشر|منتهية|انتهت)");
 //            String matchStatus = (statusElement != null) ? statusElement.text().trim() : "N/A";
 
-            // Extract the match link
-//            String matchLink = "N/A";
+//             Extract the match link
+            int state = Movie.BROWSER_STATE;
+
 //            Element parentDiv = match.parent();
 //            if (parentDiv != null) {
-//                Element linkElement = parentDiv.selectFirst("a[href]");
+//                Element linkElement = parentDiv.selectFirst("a[data-href]");
 //                if (linkElement != null) {
-//                    matchLink = linkElement.attr("href").trim();
+//                    String matchLink2 = linkElement.attr("data-href").trim();
+//                    matchLink = LinkFilterService.decryptUrl(matchLink2);
+//                    state = Movie.ITEM_STATE;
 //                }
 //            }
 
             String title = team1Title + " - " + team2Title;
-            String cardImageUrl = team1Link == null ? team2Link:team1Link;
-            if (cardImageUrl == null){
+            String cardImageUrl = team1Link == null ? team2Link : team1Link;
+            if (cardImageUrl == null) {
                 cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
             }
 
@@ -202,7 +205,7 @@ public class KooraServer extends AbstractServer {
             m.setTitle(title);
             m.setDescription(matchTime);
             m.setStudio(Movie.SERVER_KOORA_LIVE);
-            m.setState(Movie.BROWSER_STATE);
+            m.setState(state);
             m.setVideoUrl(matchLink);
             m.setRate(matchTime);
             m.setCardImageUrl(cardImageUrl);
@@ -216,7 +219,7 @@ public class KooraServer extends AbstractServer {
 //            System.out.println("Team 2: " + team2);
 //            System.out.println("Match Time: " + matchTime);
 //            System.out.println("Match Status: " + matchStatus);
-//            System.out.println("Match Link: " + matchLink);
+            System.out.println("Match Link: " + matchLink);
         }
 
 
@@ -359,6 +362,8 @@ public class KooraServer extends AbstractServer {
                 Element linkElement = parentDiv.selectFirst("a[href]");
                 if (linkElement != null) {
                     matchLink = linkElement.attr("href").trim();
+                    String userAgent = "Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36";
+                    matchLink = matchLink + "|User-Agent=" + userAgent;
                 }
             }
 
@@ -436,7 +441,7 @@ public class KooraServer extends AbstractServer {
             return null;
         }
         Movie nextPage = new Movie();
-            // Get the href attribute of the first matching element
+        // Get the href attribute of the first matching element
         String videoUrl = elements.first().attr("href");
         nextPage.setTitle("التالي");
         nextPage.setDescription("0");
@@ -557,7 +562,7 @@ public class KooraServer extends AbstractServer {
     }
 
     private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
-        Log.d(TAG, "fetchWatchLocally: "+movie);
+        Log.d(TAG, "fetchWatchLocally: " + movie);
         if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.RESOLUTION_STATE) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
@@ -899,39 +904,55 @@ public class KooraServer extends AbstractServer {
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
         }
 
-        Element descriptionElement = doc.selectFirst("div#postsacs > p");
-        String description = descriptionElement != null ? descriptionElement.text() : "";
-        movie.setDescription(description);
+        Elements buttons = doc.select("button");
+        Log.d(TAG, "fetchItem: buttons:" + buttons.size());
 
-        // Select all elements with class containing '-link'
-        Elements allUl = doc.select("ul");
-        Log.d(TAG, "fetchItem: uls: " + allUl.size());
-        for (Element ul : allUl) {
-            String classAttribute = ul.attr("class");
-            Log.d(TAG, "fetchItem: ul: " + classAttribute);
-            if (!classAttribute.contains("-menu")) {
-                continue;
-            }
-            Elements allLinks = ul.select("a");
-            Log.d(TAG, "fetchItem: links: " + allLinks.size());
-            for (Element link : allLinks) {
-                String linkClass = link.attr("class");
-                if (!linkClass.contains("-link")) {
-                    continue;
-                }
-                String videoLink = link.attr("href");
-                String title = link.text();
+        for (Element button : buttons) {
 
-                Movie a = Movie.clone(movie);
-                a.setTitle(title);
-                a.setVideoUrl(videoLink);
-                a.setState(Movie.RESOLUTION_STATE);
-                if (movie.getSubList() == null) {
-                    movie.setSubList(new ArrayList<>());
-                }
-                movie.addSubList(a);
-            }
+            String title = button.attr("data-title"); // Or button.text() if the title is in the button's text
+            String link = button.attr("data-url");
+            String link2 = button.attr("data-url2");
+
+            System.out.println("Title: " + title);
+            System.out.println("Link: " + link);
+            System.out.println("Link2: " + link2);
+            System.out.println("---");
+
         }
+
+//        Element descriptionElement = doc.selectFirst("div#postsacs > p");
+//        String description = descriptionElement != null ? descriptionElement.text() : "";
+//        movie.setDescription(description);
+//
+//        // Select all elements with class containing '-link'
+//        Elements allUl = doc.select("ul");
+//        Log.d(TAG, "fetchItem: uls: " + allUl.size());
+//        for (Element ul : allUl) {
+//            String classAttribute = ul.attr("class");
+//            Log.d(TAG, "fetchItem: ul: " + classAttribute);
+//            if (!classAttribute.contains("-menu")) {
+//                continue;
+//            }
+//            Elements allLinks = ul.select("a");
+//            Log.d(TAG, "fetchItem: links: " + allLinks.size());
+//            for (Element link : allLinks) {
+//                String linkClass = link.attr("class");
+//                if (!linkClass.contains("-link")) {
+//                    continue;
+//                }
+//                String videoLink = link.attr("href");
+//                String title = link.text();
+//
+//                Movie a = Movie.clone(movie);
+//                a.setTitle(title);
+//                a.setVideoUrl(videoLink);
+//                a.setState(Movie.RESOLUTION_STATE);
+//                if (movie.getSubList() == null) {
+//                    movie.setSubList(new ArrayList<>());
+//                }
+//                movie.addSubList(a);
+//            }
+//        }
 
         activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
@@ -1194,7 +1215,7 @@ public class KooraServer extends AbstractServer {
     }
 
     @Override
-    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request){
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request) {
         return false;
     }
 
@@ -1600,154 +1621,201 @@ public class KooraServer extends AbstractServer {
         return Movie.ITEM_STATE;
     }
 
+    public String getCustomUserAgent(int state) {
+        return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    }
+
     @Override
     public String getWebScript(int mode, Movie movie) {
         String script = "";
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
             if (movie.getState() == Movie.BROWSER_STATE) {
 
-                    String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
-                    int hashIndex = movie.getVideoUrl().indexOf('#');
+                String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
+                int hashIndex = movie.getVideoUrl().indexOf('#');
 
-                    // Check if the hash symbol is found in the string
-                    if (hashIndex != -1 && hashIndex < movie.getVideoUrl().length() - 1) {
-                        // Return the substring after the hash symbol
-                        String  serverId = movie.getVideoUrl().substring(hashIndex + 1);
+                // Check if the hash symbol is found in the string
+                if (hashIndex != -1 && hashIndex < movie.getVideoUrl().length() - 1) {
+                    // Return the substring after the hash symbol
+                    String serverId = movie.getVideoUrl().substring(hashIndex + 1);
 
-                        // Find the index of the '|' symbol in the substring after the hash
-                        int pipeIndex = serverId.indexOf('|');
+                    // Find the index of the '|' symbol in the substring after the hash
+                    int pipeIndex = serverId.indexOf('|');
 
-                        // If '|' is found, return the substring up to the '|' symbol
-                        if (pipeIndex != -1) {
-                            serverId = serverId.substring(0, pipeIndex);
-                        }
-
-                        Log.d(TAG, "getWebScript: serverid: "+serverId);
-                        script = "document.addEventListener('DOMContentLoaded', () => {" +
-                                "// Using querySelector (Recommended)\n" +
-                                "let firstIframe = document.querySelector(\"iframe\");\n" +
-                                "if(firstIframe != null){" +
-                                "   makeFullScreen(firstIframe);" +
-                                "console.log(\"iframe found\");" +
-                                "return;" +
-                                "}"+
-                                "var divs = document.querySelectorAll('div');\n" +
-                                "var matches = [];\n" +
-                                "\n" +
-                                "// Convert NodeList to Array (for older browsers)\n" +
-                                "for (var i = 0; i < divs.length; i++) {\n" +
-                                "    var div = divs[i];\n" +
-                                "    var childDivs = div.querySelectorAll('div');\n" +
-                                "    var hasMatchingText = false;\n" +
-                                "\n" +
-                                "    // Check if any child div matches the regex\n" +
-                                "    for (var j = 0; j < childDivs.length; j++) {\n" +
-                                "        var text = childDivs[j].textContent.trim();\n" +
-                                "        var regex = /\\d{1,2}:\\d{2} (م|ص)/;\n" +
-                                "        if (regex.test(text)) {\n" +
-                                "            hasMatchingText = true;\n" +
-                                "            break;\n" +
-                                "        }\n" +
-                                "    }\n" +
-                                "\n " +
-                                "    // Check if the div has exactly 3 direct child divs\n" +
-                                "    var directChildDivs = [];\n" +
-                                "    for (var k = 0; k < div.children.length; k++) {\n" +
-                                "        if (div.children[k].tagName === 'DIV') {\n" +
-                                "            directChildDivs.push(div.children[k]);\n" +
-                                "        }\n" +
-                                "    }\n" +
-                                "\n" +
-                                "    if (directChildDivs.length === 3 && hasMatchingText) {\n" +
-                                "        matches.push(div);\n" +
-                                "    }\n" +
-                                "}\n" +
-                                "\n" +
-                                "if (matches["+serverId+"] != null) {\n" +
-                                " var closestAnchor = matches["+serverId+"].closest('a'); // Find the closest <a> element\n" +
-                                "    if (closestAnchor) {\n" +
-                                " console.log(\"Closest <a> element found:\", closestAnchor);\n" +
-                                "        console.log(\"Closest <a> href:\", closestAnchor.title);\n" +
-                                "" +
-//                                "closestAnchor.preventDefault();\n" +
-                                "             // Get the encrypted URL from the data-href attribute\n" +
-                                "        let encryptedUrl = closestAnchor.getAttribute(\"data-href\");\n" +
-                                "\n" +
-                                "        // Decrypt the URL\n" +
-                                "        let decryptedUrl = decryptUrl(encryptedUrl);\n" +
-                                "\n" +
-                                "        // Navigate to the decrypted URL\n" +
-                                "        console.log(\"Closest <a> location:\", decryptedUrl);\n" +
-                                "        window.location.href = decryptedUrl;" +
-                                "    waitForElement('iframe', function(secondElement) {\n" +
-                                "        console.log('xxxx: Second element appeared:', secondElement);\n" +
-                                "        makeFullScreen(secondElement);\n" +
-                                "    });\n" +
-                                "    } else {\n" +
-                                "        console.log(\"No <a> element found.\");\n" +
-                                "    }" +
-                                "    // Wait for the second element to appear after the click\n" +
-
-                                "}\n" +
-                                "\nconsole.log(matches["+serverId+"]);" +
-                                "\nconsole.log('hiii');" +
-                                "\nconsole.log(matches.length);" +
-                                "" +
-                                "function decryptUrl(t, e=3) {\n" +
-                                "    t = Uint8Array.from(atob(t), t => t.charCodeAt(0));\n" +
-                                "    const n = (new TextDecoder).decode(t);\n" +
-                                "    let o = \"\";\n" +
-                                "    for (let t = 0; t < n.length; t++) {\n" +
-                                "        var r = n.codePointAt(t);\n" +
-                                "        o += String.fromCodePoint(r - e)\n" +
-                                "    }\n" +
-                                "    return o\n" +
-                                "}" +
-                                "" +
-                                "function makeFullScreen(iframe) {\n" +
-                                "    if (iframe) {\n" +
-                                "        // Clone the iframe element\n" +
-                                "        var clonedIframe = iframe.cloneNode(true);\n" +
-                                "\n" +
-                                "        // Clear the iframe content\n" +
-                                "        iframe.innerHTML = '';\n" +
-                                "\n" +
-                                "        // Append the cloned iframe to the body\n" +
-                                "        document.body.querySelectorAll('*:not(script)').forEach(el => el.remove());" +
-                                "        document.body.appendChild(clonedIframe);\n" +
-
-                                "        // Modify the cloned iframe to make it fullscreen\n" +
-                                "        clonedIframe.style.position = \"fixed\";\n" +
-                                "        clonedIframe.style.top = \"0\";\n" +
-                                "        clonedIframe.style.left = \"0\";\n" +
-                                "        clonedIframe.style.width = \"100%\";\n" +
-                                "        clonedIframe.style.height = \"100%\";\n" +
-                                "        clonedIframe.style.zIndex = \"9999\";\n" +
-                                "        clonedIframe.style.border = \"none\"; // Remove any borders\n" +
-                                "        clonedIframe.setAttribute(\"allowfullscreen\", \"true\");\n" +
-                                "        clonedIframe.setAttribute(\"scrolling\", \"yes\");\n" +
-                                "\n" +
-                                "        // Simulate fullscreen (since Fullscreen API may not work)\n" +
-                                "        clonedIframe.style.backgroundColor = \"#000\"; // Optional: Set background color\n" +
-                                "        clonedIframe.click();" +
-                                "    } else {\n" +
-                                "        console.log(\"Iframe not found.\");\n" +
-                                "    }\n" +
-                                "}\n" +
-                                "\n" +
-                                "// Function to wait for an element to appear (using polling instead of MutationObserver)\n" +
-                                "function waitForElement(selector, callback) {\n" +
-                                "    var interval = setInterval(function() {\n" +
-                                "        var element = document.querySelector(selector);\n" +
-                                "        if (element) {\n" +
-                                "            clearInterval(interval); // Stop polling\n" +
-                                "            callback(element);\n" +
-                                "        }\n" +
-                                "    }, 100); // Check every 100ms\n" +
-                                "}" +
-
-                                " });";
+                    // If '|' is found, return the substring up to the '|' symbol
+                    if (pipeIndex != -1) {
+                        serverId = serverId.substring(0, pipeIndex);
                     }
+
+                    Log.d(TAG, "getWebScript: serverid: " + serverId);
+                    script = "document.addEventListener('DOMContentLoaded', () => {" +
+                            "// Using querySelector (Recommended)\n" +
+                            "let firstIframe = document.querySelector(\"iframe\");\n" +
+                            "if(firstIframe != null){" +
+                            "firstIframe.scrollIntoView({ behavior: \"smooth\", block: \"center\" });" +
+
+                            "   makeFullScreen(firstIframe);" +
+                            "removeEmptyIframesInside(firstIframe);" +
+                            "" +
+                            "" +
+                            "" +
+                            "let iframes = document.querySelectorAll('iframe'); // Check initial iframes on the page\n" +
+                            "    iframes.forEach(iframe => {\n" +
+                            "        let src = iframe.getAttribute('src');\n" +
+                            "        if (src == null || src === \"\" || src === \"about:blank\") {\n" +
+                            "            iframe.remove();\n" +
+                            "            console.log(\"Initial iframe removed:\", iframe);\n" +
+                            "        }\n" +
+                            "    });" +
+
+
+                            "console.log(\"iframe found\");" +
+                            "return;" +
+                            "}" +
+                            "var divs = document.querySelectorAll('div');\n" +
+                            "var matches = [];\n" +
+                            "\n" +
+                            "// Convert NodeList to Array (for older browsers)\n" +
+                            "for (var i = 0; i < divs.length; i++) {\n" +
+                            "    var div = divs[i];\n" +
+                            "    var childDivs = div.querySelectorAll('div');\n" +
+                            "    var hasMatchingText = false;\n" +
+                            "\n" +
+                            "    // Check if any child div matches the regex\n" +
+                            "    for (var j = 0; j < childDivs.length; j++) {\n" +
+                            "        var text = childDivs[j].textContent.trim();\n" +
+                            "        var regex = /\\d{1,2}:\\d{2} (م|ص)/;\n" +
+                            "        if (regex.test(text)) {\n" +
+                            "            hasMatchingText = true;\n" +
+                            "            break;\n" +
+                            "        }\n" +
+                            "    }\n" +
+                            "\n " +
+                            "    // Check if the div has exactly 3 direct child divs\n" +
+                            "    var directChildDivs = [];\n" +
+                            "    for (var k = 0; k < div.children.length; k++) {\n" +
+                            "        if (div.children[k].tagName === 'DIV') {\n" +
+                            "            directChildDivs.push(div.children[k]);\n" +
+                            "        }\n" +
+                            "    }\n" +
+                            "\n" +
+                            "    if (directChildDivs.length === 3 && hasMatchingText) {\n" +
+                            "        matches.push(div);\n" +
+                            "    }\n" +
+                            "}\n" +
+                            "\n" +
+                            "if (matches[" + serverId + "] != null) {\n" +
+                            " var closestAnchor = matches[" + serverId + "].closest('a'); // Find the closest <a> element\n" +
+                            "    if (closestAnchor) {\n" +
+                            " console.log(\"Closest <a> element found:\", closestAnchor);\n" +
+                            "        console.log(\"Closest <a> href:\", closestAnchor.title);\n" +
+                            "" +
+//                                "closestAnchor.preventDefault();\n" +
+                            "             // Get the encrypted URL from the data-href attribute\n" +
+                            "        let encryptedUrl = closestAnchor.getAttribute(\"data-href\");\n" +
+                            "\n" +
+                            "        // Decrypt the URL\n" +
+                            "        let decryptedUrl = decryptUrl(encryptedUrl);\n" +
+                            "\n" +
+                            "        // Navigate to the decrypted URL\n" +
+                            "        console.log(\"Closest <a> location:\", decryptedUrl);\n" +
+                            "        window.location.href = decryptedUrl;" +
+                            "    } else {\n" +
+                            "        console.log(\"No <a> element found.\");\n" +
+                            "    }" +
+                            "    // Wait for the second element to appear after the click\n" +
+
+                            "}\n" +
+                            "\nconsole.log(matches[" + serverId + "]);" +
+                            "\nconsole.log('hiii');" +
+                            "\nconsole.log(matches.length);" +
+                            "" +
+                            "function decryptUrl(t, e=3) {\n" +
+                            "    t = Uint8Array.from(atob(t), t => t.charCodeAt(0));\n" +
+                            "    const n = (new TextDecoder).decode(t);\n" +
+                            "    let o = \"\";\n" +
+                            "    for (let t = 0; t < n.length; t++) {\n" +
+                            "        var r = n.codePointAt(t);\n" +
+                            "        o += String.fromCodePoint(r - e)\n" +
+                            "    }\n" +
+                            "    return o\n" +
+                            "}" +
+                            "" +
+                            "function removeEmptyIframesInside(iframe) {\n" +
+                            "  if (!iframe || iframe.tagName !== 'IFRAME') {\n" +
+                            "    return; // Handle cases where the input isn't an iframe\n" +
+                            "  }\n" +
+                            "    // Example ad removal (highly site-specific!)" +
+                            "    var ads = document.querySelectorAll('.ad-class, #ad-id, [data-ad-attribute]');" + // Replace with actual selectors
+                            "    for (var i = 0; i < ads.length; i++) {" +
+                            "        ads[i].remove();" +
+                            "    }" +
+
+                            // Another example: Removing elements based on their source URL (for image ads)
+                            "    var adImages = document.querySelectorAll('img[src*=\"ad-provider.com\"]');" + // Replace with ad provider's domain
+                            "    for (var i = 0; i < adImages.length; i++) {" +
+                            "        adImages[i].remove();" +
+                            "    }" +
+                            "\n" +
+                            "  iframe.addEventListener('load', function() { // Wait for the iframe to load\n" +
+                            "    const innerIframes = iframe.contentDocument.querySelectorAll('iframe');\n" +
+                            "\n" +
+                            "    innerIframes.forEach(innerIframe => {\n" +
+                            "      const src = innerIframe.getAttribute('src');\n" +
+                            "      if (src === null || src === \"\" || src === \"about:blank\") {\n" +
+                            "        innerIframe.remove();\n" +
+                            "        console.log(\"Removed iframe inside iframe:\", innerIframe);\n" +
+                            "      }\n" +
+                            "    });\n" +
+                            "\n" +
+                            "\n" +
+                            "    // Set up an observer *inside* the loaded iframe to watch for further changes within it.\n" +
+                            "    const innerObserver = new MutationObserver(mutations => {\n" +
+                            "        for (const mutation of mutations) {\n" +
+                            "            if (mutation.type === 'childList') {\n" +
+                            "                mutation.addedNodes.forEach(node => {\n" +
+                            "                    if (node.nodeName === 'IFRAME') {\n" +
+                            "                        const src = node.getAttribute('src');\n" +
+                            "                        if (src === null || src === \"\" || src === \"about:blank\") {\n" +
+                            "                            node.remove();\n" +
+                            "                            console.log(\"Dynamically added iframe inside iframe removed:\", node);\n" +
+                            "                        }\n" +
+                            "                    }\n" +
+                            "                });\n" +
+                            "            }\n" +
+                            "        }\n" +
+                            "    });\n" +
+                            "\n" +
+                            "    innerObserver.observe(iframe.contentDocument.documentElement, { childList: true, subtree: true }); // Observe the inner iframe's document\n" +
+                            "\n" +
+                            "  });\n" +
+                            "}" +
+
+                            "" +
+                            "function makeFullScreen(iframe) {\n" +
+                            "    if (!iframe) return; // Null-safe check\n" +
+                            "\n" +
+                            "    // Apply full-screen styles\n" +
+                            "    Object.assign(iframe.style, {\n" +
+                            "        position: \"fixed\",\n" +
+                            "        top: \"0\",\n" +
+                            "        left: \"0\",\n" +
+                            "        width: \"100vw\",\n" +
+                            "        height: \"100vh\",\n" +
+                            "        border: \"none\",\n" +
+                            "        margin: \"0\",\n" +
+                            "        padding: \"0\",\n" +
+                            "        zIndex: \"9999\", // Bring iframe to the front\n" +
+                            "    });\n" +
+                            "\n" +
+                            "    // Ensure the body does not interfere\n" +
+                            "    document.body.style.overflow = \"hidden\";\n" +
+                            "}\n" +
+                            "" +
+
+
+                            " });";
+                }
 
 
 //                Log.d(TAG, "getScript:Fasel WEB_VIEW_MODE_ON_PAGE_STARTED RESOLUTION_STATE");
@@ -1779,7 +1847,7 @@ public class KooraServer extends AbstractServer {
 //        return search(getConfig().getUrl() + "/matches-yesterday/", activityCallback);
     }
 
-    public boolean shouldUpdateDomainOnSearchResult(){
+    public boolean shouldUpdateDomainOnSearchResult() {
         return false;
     }
 }

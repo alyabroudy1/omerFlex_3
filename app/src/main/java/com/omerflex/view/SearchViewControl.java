@@ -405,7 +405,7 @@ public abstract class SearchViewControl {
 //                                server instanceof FaselHdServer ||
 //                                server instanceof OmarServer ||
 //                                server instanceof IptvServer ||
-//                                server instanceof MyCimaServer //||
+//                                server instanceof MyCimaServer ||
                         (server instanceof KooraServer && !query.isEmpty())
                 ) {
                     continue;

@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
@@ -303,6 +304,10 @@ public class BrowserActivity extends AppCompatActivity {
     private void configureWebview(WebView webView) {
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
+
+// Set User-Agent to a desktop browser (Chrome)
+        webSettings.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(false);
         webSettings.setDomStorageEnabled(true);
@@ -326,7 +331,7 @@ public class BrowserActivity extends AppCompatActivity {
         ) {
             webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         }
-
+/// ######
         // Enable hardware acceleration
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -334,6 +339,17 @@ public class BrowserActivity extends AppCompatActivity {
             webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         }
 
+        // Allow autoplay without user gesture (critical for Android TV)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
+        }
+
+// Enable hardware acceleration for smoother playback (optional)
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setFocusable(true);
+        webView.getSettings().setAllowContentAccess(true);
+        webView.requestFocus();
+/// ######
         webView.setWebViewClient(new Browser_Home());
 //        webView.setWebViewClient(new WebViewClient());
 
@@ -801,15 +817,17 @@ public class BrowserActivity extends AppCompatActivity {
         ChromeClient() {
         }
 
+        private static final String TAG = "ChromeClient";
+
         @Override
         public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-            // Log.d(TAG, "onCreateWindow: xxx");
+             Log.d(TAG, "onCreateWindow: xxx");
             return super.onCreateWindow(view, isDialog, isUserGesture, resultMsg);
         }
 
         @Override
         public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
-            //    Log.d(TAG, "onJsAlert: " + message);
+                Log.d(TAG, "onJsAlert: " + message);
             result.cancel();
             //super.onJsAlert(view, url, null, result);
             return true;
@@ -817,7 +835,7 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public boolean onJsBeforeUnload(WebView view, String url, String message, JsResult result) {
-            //    Log.d(TAG, "onJsBeforeUnload: " + url + ", m:" + message + ", re:" + result);
+                Log.d(TAG, "onJsBeforeUnload: " + url + ", m:" + message + ", re:" + result);
             result.cancel();
             return true;
         }
@@ -825,21 +843,21 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, JsPromptResult result) {
-            //  Log.d(TAG, "onJsPrompt: " + message);
+              Log.d(TAG, "onJsPrompt: " + message);
             result.cancel();
             return true;
         }
 
         @Override
         public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
-            //    Log.d(TAG, "onJsConfirm: " + message);
+                Log.d(TAG, "onJsConfirm: " + message);
             result.cancel();
             return true;
         }
 
 
         public Bitmap getDefaultVideoPoster() {
-            //    Log.d(TAG, "getDefaultVideoPoster: " + mCustomView);
+                Log.d(TAG, "getDefaultVideoPoster: " + mCustomView);
             if (mCustomView == null) {
                 return null;
             }
@@ -848,7 +866,7 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         public void onHideCustomView() {
-            //    Log.d(TAG, "onHideCustomView: ");
+                Log.d(TAG, "onHideCustomView: ");
             ((FrameLayout) getWindow().getDecorView()).removeView(this.mCustomView);
             this.mCustomView = null;
             getWindow().getDecorView().setSystemUiVisibility(this.mOriginalSystemUiVisibility);
@@ -860,7 +878,7 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         public void onShowCustomView(View paramView, CustomViewCallback paramCustomViewCallback) {
-            //    Log.d(TAG, "onShowCustomView: ");
+                Log.d(TAG, "onShowCustomView: ");
             if (this.mCustomView != null) {
                 onHideCustomView();
                 return;
@@ -926,7 +944,13 @@ public class BrowserActivity extends AppCompatActivity {
         @Nullable
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-            Log.d(TAG, "shouldInterceptRequest: " + request.getUrl());
+           Uri url = request.getUrl();
+            Log.d(TAG, "shouldInterceptRequest: " + url.getHost());
+            if (LinkFilterService.isAdDomain(url.getHost())){
+                Log.d(TAG, "Blocking resource: " + url.getHost());
+                return new WebResourceResponse("text/plain", "utf-8", null); // Return an empty response
+            }
+
             headers = request.getRequestHeaders();
 
             boolean isSupportedState = isSupportedStateInInterceptRequest();
@@ -1213,12 +1237,13 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public void onLoadResource(WebView view, String url) {
+//            Log.d(TAG, "onLoadResource: "+url);
             if (shouldEvaluateJavascript()) {
                 evaluateJavascript(view);
             }
 
             if (shouldCleanWebPage(url)) {
-                HtmlPageService.cleanWebPage(view, shouldCleanWebPageIframe());
+                HtmlPageService.cleanWebPage(view, true);
             }
 
             if (shouldProcessVideo(url)) {
