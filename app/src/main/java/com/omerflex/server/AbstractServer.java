@@ -10,10 +10,13 @@ import com.omerflex.entity.ServerConfig;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.view.VideoDetailsFragment;
 
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +32,7 @@ public abstract class AbstractServer implements ServerInterface {
             url = this.getSearchUrl(query);
         }
 
-        Document doc = this.getRequestDoc(url);
+        Document doc = this.getSearchRequestDoc(url);
         if (doc == null) {
             return null;
         }
@@ -107,10 +110,78 @@ public abstract class AbstractServer implements ServerInterface {
 
         return true;
     }
+
     /**
      * @param url request link
      * @return Document or null if an exception occurs
      */
+    protected Document getSearchRequestDoc(String url) {
+        Document doc = null;
+        ServerConfig config = getConfig();
+        Log.d(TAG, "getSearchRequestDoc: " + url);
+
+        try {
+            Connection.Response response = Jsoup.connect(url)
+                    .headers(config.getHeaders())
+                    .cookies(config.getMappedCookies())
+                    .followRedirects(false) // Don't automatically follow redirects
+                    .ignoreHttpErrors(true)
+                    .ignoreContentType(true)
+                    .timeout(10000)
+                    .execute();
+
+            int statusCode = response.statusCode();
+            Log.i(TAG, "Response status code: " + statusCode);
+
+            if (statusCode == HttpURLConnection.HTTP_OK) {
+                Log.i(TAG, "Website HTTP_OK " + url);
+                doc = response.parse();
+                return doc;
+            } else if (statusCode >= 300 && statusCode < 400) { // Redirect detected
+                String newUrl = response.header("Location");
+                if (newUrl != null) {
+                    URL redirectURL = new URL(new URL(url), newUrl); // Construct absolute URL from relative
+                    if (shouldUpdateDomainOnSearchResult()) {
+                        String scheme = redirectURL.getProtocol();
+                        String host = redirectURL.getHost();
+                        String schemeAndHost = scheme + "://" + host;
+                        updateDomain(schemeAndHost); // Update the DB with new host
+                    }
+
+                    // If you want to follow the redirect and get the document:
+                    Connection.Response redirectResponse = Jsoup.connect(redirectURL.toString())
+                            .headers(config.getHeaders())
+                            .cookies(config.getMappedCookies())
+                            .followRedirects(true) // Now follow redirects for the new URL
+                            .execute();
+                    doc = redirectResponse.parse();
+                    return doc;
+                } else {
+                    Log.e(TAG, "No Location header found in redirect response for " + url);
+                }
+            } else if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                Log.i(TAG, "Website not found: " + url);
+                return null;
+            } else {
+                doc = response.parse();
+                Log.e(TAG, "Unexpected status code: " + statusCode + " for " + url);
+                Log.d(TAG, "Unexpected status code: "+doc.title());
+                return doc;
+            }
+
+        } catch (IOException e) {
+            Log.e(TAG, "Error fetching URL " + url + ": " + e.getMessage());
+            return null;
+        }
+        return null;
+    }
+
+    private void updateDomain(String newUrl) {
+        Log.d(TAG, "updateDomain: "+ newUrl);
+        getConfig().setUrl(newUrl);
+        getConfig().setReferer(newUrl + "/");
+    }
+
     protected Document getRequestDoc(String url) {
         Document doc = null;
         ServerConfig config = getConfig();

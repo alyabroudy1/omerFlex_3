@@ -558,4 +558,8 @@ public class OmarServer extends AbstractServer {
     public String getServerId() {
         return Movie.SERVER_OMAR;
     }
+
+    public boolean shouldUpdateDomainOnSearchResult(){
+        return false;
+    }
 }

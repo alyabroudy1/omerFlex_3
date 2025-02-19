@@ -71,13 +71,16 @@ public abstract class MainViewControl extends SearchViewControl {
                             updateMovieListOfMovieAdapter(result, serverAdapter);
 //                                    loadMoviesRow(server, serverAdapter, result);
                             if (server.shouldUpdateDomainOnSearchResult()){
-                                Movie sampleMovie = result.get(0);
-                                if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
-                                    ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
-                                    if (null != config) {
-                                        updateDomain(sampleMovie.getVideoUrl(), config, dbHelper);
-                                    }
-                                }
+                                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+                                ServerConfigManager.updateConfig(config, dbHelper);
+                                Log.d(TAG, "onSuccess: updateDomain on search result");
+//                                Movie sampleMovie = result.get(0);
+//                                if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
+//                                    ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+//                                    if (null != config) {
+//                                        updateDomain(sampleMovie.getVideoUrl(), config, dbHelper);
+//                                    }
+//                                }
                             }
                         }
 

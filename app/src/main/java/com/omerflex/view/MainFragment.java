@@ -126,7 +126,7 @@ public class MainFragment extends BrowseSupportFragment {
         fragment = this;
         activity = getActivity();
         dbHelper = MovieDbHelper.getInstance(activity);
-        updateService = new UpdateService(activity);
+        updateService = new UpdateService(fragment);
         serverManager = new ServerManager(activity, fragment, updateService);
         serverManager.updateServers();
         rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
@@ -524,7 +524,6 @@ public class MainFragment extends BrowseSupportFragment {
         Log.d(TAG, "onActivityResult: " + requestCode + ", " + resultCode + ", " + data);
 
         mainViewControl.onActivityResult(requestCode, resultCode, data, clickedMovieAdapter, clickedMovieIndex);
-        super.onActivityResult(requestCode, resultCode, data);
         updateService.handleOnActivityResult(requestCode, resultCode, data);
 //
 //        if (resultCode != Activity.RESULT_OK || data == null) {

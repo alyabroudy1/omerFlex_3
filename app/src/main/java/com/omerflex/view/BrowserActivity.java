@@ -1026,36 +1026,15 @@ public class BrowserActivity extends AppCompatActivity {
             mm.setVideoUrl(request.getUrl().toString() + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
 
             if (!openedForResult) {
+                Log.d(TAG, "handleSupportedMedia: if (!openedForResult) 1029");
                 startExoplayer(mm);
                 return null;
             }
-//                Log.d(TAG, "shouldInterceptRequest: video: " + mm.getVideoUrl());
-//                Log.d(TAG, "shouldInterceptRequest: video: headers: " + request.getRequestHeaders());
-//
-//                //movie.setFetch(0); //tell next activity not to fetch movie on start
-//                returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
-//                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
-//                activity.startActivity(returnIntent);
-//                Intent intent = new Intent(activity, ExoplayerMediaPlayer.class);
-//                intent.putExtra(DetailsActivity.MOVIE, (Serializable) mov);
-//                Objects.requireNonNull(activity).startActivity(intent);
-//  hiiiier             String type = "video/*"; // It works for all video application
-//                Uri uri = Uri.parse(mm.getVideoUrl());
-//                Intent in1 = new Intent(Intent.ACTION_VIEW, uri);
-//                in1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-//                //  in1.setPackage("org.videolan.vlc");
-//                in1.setDataAndType(uri, type);
-//                // movie.getMainMovie().save(dbHelper);
-//
-//                activity.startActivity(in1);
             Log.d(TAG, "shouldInterceptRequest: video shouldInterceptRequest. " + mm);
-//                Intent returnIntent = new Intent();
-//                returnIntent.putExtra(DetailsActivity.MOVIE,  mm);
-//                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, mm.getMainMovie());
+
             setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
             activity.finish();
-//                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
-//                finish();
+
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -1134,6 +1113,7 @@ public class BrowserActivity extends AppCompatActivity {
                 movieList.add(mm);
                 mm.setSubList(movieList);
                 if (!openedForResult) {
+                    Log.d(TAG, "shouldOverrideUrlLoading:     if (!openedForResult) 1138");
                     startExoplayer(mm);
                     return true;
                 }
@@ -1267,6 +1247,7 @@ public class BrowserActivity extends AppCompatActivity {
             mov.setState(Movie.VIDEO_STATE);
             Log.d(TAG, "onLoadResource: isVideo: " + newUrl);
             if (!openedForResult) {
+                Log.d(TAG, "processVideoResource: 1272");
                 startExoplayer(mov);
                 return;
             }

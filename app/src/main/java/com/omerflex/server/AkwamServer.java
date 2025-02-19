@@ -997,4 +997,8 @@ public class AkwamServer extends AbstractServer {
         }
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_UPDATE_CONFIG_AND_RETURN_RESULT, resultMovie);
     }
+
+    public boolean shouldUpdateDomainOnSearchResult(){
+        return false;
+    }
 }

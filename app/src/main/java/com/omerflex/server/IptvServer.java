@@ -166,4 +166,8 @@ public class IptvServer extends AbstractServer {
     public List<Movie> fetchDriveFiles(String m3u8Url) throws IOException {
         return contentFetcher.fetchDriveFiles_2(m3u8Url);
     }
+
+    public boolean shouldUpdateDomainOnSearchResult(){
+        return false;
+    }
 }

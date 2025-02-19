@@ -1848,6 +1848,6 @@ public class KooraServer extends AbstractServer {
     }
 
     public boolean shouldUpdateDomainOnSearchResult() {
-        return false;
+        return true;
     }
 }

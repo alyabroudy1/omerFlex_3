@@ -19,9 +19,11 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.fragment.app.Fragment;
 
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
@@ -30,6 +32,8 @@ import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -40,15 +44,17 @@ public class UpdateService {
     private static final int REQUEST_CODE_PERMISSIONS = 100;
     private static final int REQUEST_CODE_INSTALL_PERMISSION = 100;
     private static final int REQUEST_CODE_STORAGE_PERMISSION = 101;
-
+    private boolean permissionRequested = false;
     private static String APK_URL = "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/omerFlex.apk";
 
     private long downloadId;
     private BroadcastReceiver downloadCompleteReceiver;
+    Fragment fragment;
     Activity activity;
 
-    public UpdateService(Activity activity){
-        this.activity = activity;
+    public UpdateService(Fragment fragment) {
+        this.fragment = fragment;
+        this.activity = fragment.getActivity();
     }
 
     public void checkForUpdates(ServerConfigDTO githubServerConfigDTO) {
@@ -56,13 +62,13 @@ public class UpdateService {
         try {
             int number = Integer.parseInt(version);
             // Use the number
-            Log.d(TAG, "checkForUpdates: "+ version + ", n: "+ number);
+            Log.d(TAG, "checkForUpdates: " + version + ", n: " + number);
             if (toBeUpdated(number)) {
                 showUpdateDialog(githubServerConfigDTO.url);
             }
         } catch (NumberFormatException e) {
             // Handle the case where the string is not a valid integer
-            Log.d(TAG, "checkForUpdates: fail reading int version number: "+ version);
+            Log.d(TAG, "checkForUpdates: fail reading int version number: " + version);
         }
 
     }
@@ -109,7 +115,7 @@ public class UpdateService {
 //        }
     }
 
-    public boolean toBeUpdated(int newVersionCode){
+    public boolean toBeUpdated(int newVersionCode) {
         // Get the package manager
         PackageManager pm = activity.getPackageManager();
 // Get the package info
@@ -124,9 +130,10 @@ public class UpdateService {
 // Get the current version name
         String currentVersionName = packageInfo.versionName;
 
-        Log.d(TAG, "toBeUpdated: version: "+ currentVersion + ", name: "+ currentVersionName);
-        Log.d(TAG, "toBeUpdated: new version: "+ newVersionCode);
+        Log.d(TAG, "toBeUpdated: version: " + currentVersion + ", name: " + currentVersionName);
+        Log.d(TAG, "toBeUpdated: new version: " + newVersionCode);
         return newVersionCode > currentVersion ;
+//        return true;
     }
 
     private void showUpdateDialog(String url) {
@@ -152,7 +159,7 @@ public class UpdateService {
         DownloadManager downloadManager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
         if (downloadManager != null) {
             downloadId = downloadManager.enqueue(request);
-            Log.d(TAG, "startDownload: downloadId: "+downloadId);
+            Log.d(TAG, "startDownload: downloadId: " + downloadId);
         } else {
             Toast.makeText(activity, "DownloadManager is not available.", Toast.LENGTH_SHORT).show();
             return;
@@ -163,7 +170,7 @@ public class UpdateService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                Log.d(TAG, "onReceive: "+id);
+                Log.d(TAG, "onReceive: " + id);
                 if (id == downloadId) {
                     installUpdate();
                 }
@@ -185,47 +192,76 @@ public class UpdateService {
     }
 
     private void installUpdate() {
-        // Get the downloaded APK file
-        Log.d(TAG, "installUpdate: ");
-        File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "app_update.apk");
-        if (!apkFile.exists()) {
-            Toast.makeText(activity, "APK file not found.", Toast.LENGTH_SHORT).show();
-            return; // Exit if the file doesn't exist
-        }
+        Uri apkUri = getDownloadedApkUri();
+        if (apkUri == null) return; // Exit if no files match the criteria
+        Log.d(TAG, "installUpdate: uri: " + apkUri.toString());
 
-        // Create a content URI using FileProvider
-        Uri apkUri = FileProvider.getUriForFile(activity, activity.getApplicationContext().getPackageName() + ".provider", apkFile);
-        Log.d(TAG, "installUpdate: uri: "+apkUri.toString());
         // Check if the app has permission to install packages
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!activity.getPackageManager().canRequestPackageInstalls()) {
                 // Request permission to install packages
                 Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                 intent.setData(Uri.parse("package:" + activity.getPackageName()));
-                activity.startActivityForResult(intent, REQUEST_CODE_INSTALL_PERMISSION);
+                // note: the fragment not the activity
+                fragment.startActivityForResult(intent, REQUEST_CODE_INSTALL_PERMISSION);
                 return;
             }
         }
 
+        // If permission is already granted, proceed with installation
+        proceedWithInstallation(apkUri);
+    }
+
+    @Nullable
+    private Uri getDownloadedApkUri() {
+        // Get the download directory
+        File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        // Filter files to only those with the name pattern
+        File[] apkFiles = downloadDir.listFiles((dir, name) -> name.startsWith("app_update") && name.endsWith(".apk"));
+
+        if (apkFiles == null || apkFiles.length == 0) {
+            Toast.makeText(activity, "APK file not found.", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+
+        // Find the most recent file
+        File latestApkFile = Arrays.stream(apkFiles)
+                .max(Comparator.comparingLong(File::lastModified))
+                .orElse(null);
+
+        if (latestApkFile == null) {
+            Toast.makeText(activity, "No valid APK file found.", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+
+        Log.d(TAG, "installUpdate: Latest APK file: " + latestApkFile.getName());
+
+        // Create a content URI using FileProvider for the latest APK file
+        Uri apkUri = FileProvider.getUriForFile(activity, activity.getApplicationContext().getPackageName() + ".provider", latestApkFile);
+        return apkUri;
+    }
+
+    private void proceedWithInstallation(Uri apkUri) {
         // Start the installation
         Intent installIntent = new Intent(Intent.ACTION_VIEW);
         installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
         installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         activity.startActivity(installIntent);
-//        dbHelper.saveServerConfig(ServerConfigManager.getConfig(Movie.SERVER_APP));
+//    dbHelper.saveServerConfig(ServerConfigManager.getConfig(Movie.SERVER_APP));
     }
 
     public void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d(TAG, "onActivityResult: "+requestCode);
+        Log.d(TAG, "onActivityResult: " + requestCode);
         if (requestCode != REQUEST_CODE_INSTALL_PERMISSION) {
             return;
         }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity.getPackageManager().canRequestPackageInstalls()) {
-                Log.d(TAG, "onActivityResult: installUpdate");
-                installUpdate(); // Retry installation after permission is granted
-            } else {
-                Toast.makeText(activity, "Install permission denied.", Toast.LENGTH_SHORT).show();
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity.getPackageManager().canRequestPackageInstalls()) {
+            Log.d(TAG, "onActivityResult: installUpdate");
+            Uri apkUri = getDownloadedApkUri();
+            proceedWithInstallation(apkUri);
+        } else {
+            Toast.makeText(activity, "Install permission denied.", Toast.LENGTH_SHORT).show();
+        }
 
     }
 
@@ -276,20 +312,20 @@ public class UpdateService {
         if (requestCode != REQUEST_CODE_PERMISSIONS) {
             return;
         }
-            boolean allPermissionsGranted = true;
-            for (int result : grantResults) {
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    allPermissionsGranted = false;
-                    break;
-                }
+        boolean allPermissionsGranted = true;
+        for (int result : grantResults) {
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                allPermissionsGranted = false;
+                break;
             }
+        }
 
-            if (allPermissionsGranted) {
-                Toast.makeText(activity, "All permissions granted!", Toast.LENGTH_SHORT).show();
-            } else {
-                // Show a dialog explaining why permissions are needed
-                showPermissionExplanationDialog();
-            }
+        if (allPermissionsGranted) {
+            Toast.makeText(activity, "All permissions granted!", Toast.LENGTH_SHORT).show();
+        } else {
+            // Show a dialog explaining why permissions are needed
+            showPermissionExplanationDialog();
+        }
 
     }
 
