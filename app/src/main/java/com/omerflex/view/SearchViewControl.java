@@ -15,23 +15,18 @@ import androidx.leanback.widget.ListRow;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.AkwamServer;
-import com.omerflex.server.ArabSeedServer;
-import com.omerflex.server.CimaNowServer;
-import com.omerflex.server.FaselHdServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.KooraServer;
-import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
+import com.omerflex.service.M3U8ContentFetcher;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.MovieDbHelper;
 import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,6 +38,7 @@ public abstract class SearchViewControl {
     protected final Activity activity;
     protected final Fragment fragment;
     protected MovieDbHelper dbHelper;
+    Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public SearchViewControl(Activity activity, Fragment fragment, MovieDbHelper dbHelper) {
         this.activity = activity;
@@ -65,6 +61,11 @@ public abstract class SearchViewControl {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
 //                AbstractServer server = ServerManager.determineServer(movie, null, activity, null);
+            if (movie == null) {
+                Log.d(TAG, "handleMovieItemClick: Unknown movie");
+//                Toast.makeText(activity, "Unknown Server", Toast.LENGTH_SHORT).show();
+                return;
+            }
             AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
             Log.d(TAG, "handleMovieItemClick: movie: " + movie);
             if (server == null) {
@@ -299,30 +300,37 @@ public abstract class SearchViewControl {
         try {
 //           showProgressDialog();
 //        todo
-            IptvServer iptvServer = (IptvServer) ServerConfigManager.getServer(Movie.SERVER_IPTV);
-            if (iptvServer == null) {
-                return;
-            }
+//            IptvServer iptvServer = (IptvServer) ServerConfigManager.getServer(Movie.SERVER_IPTV);
+//            if (iptvServer == null) {
+//                return;
+//            }
 //            CompletableFuture<Map<String, List<Movie>>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
+
+
+
+
+
             ExecutorService executor = Executors.newSingleThreadExecutor();
             executor.submit(() -> {
-                HashMap<String, ArrayList<Movie>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
-                Log.d(TAG, "generateIptvRows: " + futureGroupedMovies.size());
+//                HashMap<String, ArrayList<Movie>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
+//                Log.d(TAG, "generateIptvRows: " + futureGroupedMovies.size());
 
-                // Print grouped movies
-                for (String group : futureGroupedMovies.keySet()) {
-//                    Log.d(TAG, "generateIptvRows: group: "+group);
-//                    Log.d(TAG, "generateIptvRows: list: "+futureGroupedMovies.get(group));
-                    if (futureGroupedMovies.get(group) == null || futureGroupedMovies.get(group).isEmpty()) {
-                        continue;
-                    }
-                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-                        @Override
-                        public void run() {
-                            generateCategory(group, futureGroupedMovies.get(group), false);
-                        }
-                    });
-                }
+                M3U8ContentFetcher.fetchAndStoreM3U8Content(movie, dbHelper, result -> {
+                    // Update UI with the result
+//                updateChannelGroups(result);
+                    // Print grouped movies
+
+
+                    result.entrySet().stream()
+                            .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
+                            .forEach(
+                                    entry -> mainHandler.post(()
+                                            -> generateCategory(entry.getKey(), entry.getValue(), false)
+                                    )
+                            );
+
+                    Log.d(TAG, "movies: "+ result.size());
+                });
 
             });
             executor.shutdown();
@@ -409,7 +417,7 @@ public abstract class SearchViewControl {
 //                                server instanceof CimaNowServer ||
 //                                server instanceof FaselHdServer ||
 //                                server instanceof OmarServer ||
-//                                server instanceof IptvServer ||
+                                server instanceof IptvServer ||
 //                                server instanceof MyCimaServer ||
                         (server instanceof KooraServer && !query.isEmpty())
                 ) {

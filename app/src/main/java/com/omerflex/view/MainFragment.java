@@ -154,7 +154,6 @@ public class MainFragment extends BrowseSupportFragment {
 //        loadHomepageRaws();
 
 
-//        test();
 
         mainViewControl = new MainViewControl(activity, fragment, dbHelper) {
             @Override
@@ -226,6 +225,7 @@ public class MainFragment extends BrowseSupportFragment {
             }
         };
 
+//        test();
         mainViewControl.loadCategoriesInBackground("");
 
     }
@@ -767,7 +767,7 @@ public class MainFragment extends BrowseSupportFragment {
 //            fasel.setConfig(faselConfig);
 
 //            Intent searchResultIntent = new Intent(getActivity(), SearchResultActivity.class);
-//            searchResultIntent.putExtra("query", "ss");
+//            searchResultIntent.putExtra("query", "doc");
 //            startActivity(searchResultIntent);
 
 
@@ -802,21 +802,21 @@ public class MainFragment extends BrowseSupportFragment {
             //     loadServerRow("أفلام",new AkwamController(new ArrayObjectAdapter(new CardPresenter()), getActivity()), "https://akwam.co/movies" );
 
 
-    Movie mm = new Movie();
+//    Movie mm = new Movie();
 //    //String url = "https://ui.cima4u.bio/category/%D8%A7%D9%81%D9%84%D8%A7%D9%85-%D8%A7%D8%AC%D9%86%D8%A8%D9%8A/";
 //    //String url = "https://main4.ci4u.co/%d9%81%d9%8a%d9%84%d9%85-your-christmas-or-mine-2022-%d9%85%d8%aa%d8%b1%d8%ac%d9%85-%d8%a7%d9%88%d9%86-%d9%84%d8%a7%d9%8a%d9%86/?wat=1";
 //    String url = "https://cimatube.cc/embed1/29f1d50ae92194ed586eb34c47a41945";
 //    String url = "http://194.164.53.40/movie/fetch/476.ts";
-    String url = "https://airmax.boats:443/auth/klAOuM1eGh8S_Lad-zHd3tRQQNJwPy1xC9daIKIlJuJa8zkzWpcOan7LNqE9MedsBm09PjbO3z6TCiFHsThjg12o-u_0Ww3o-KVci707p08j-Koinxoj9Y2raOyRkw_gr2ryf7Ym05pUaypNUlIacLXMdHBxaKoqnFMeCkcp71RgpYPmy4ufp1dvhmwFGpXt_XE6SzUrixQBykbQsx7juDx9NqP_jZboMASNoLFq9cTm2dnpEidnkvrWbV8yPlWAiBfBYKGgc-JzAlbEo_XaFeoyQPAjMzYke7_R0YbPF216F3UGKoxOz62NakIOPllj71AJFID2EOM-b00cRvcxTPmRrJV927RnWnhRhxw-zc58ubdxI6xeqEY8kPduZg3skgZTkEMUdHIhvxFZ4S6LxbdPz8LRYtCUtkzCDAMoWPGU2ZMHlOMRrQGjBHmVBlpwQWfbMsu8Dva3Djgg8z0MicYYB2bxGAgyRhc_oRTF3meVkzTickaaKmduESCg_QmBNzUjmKCPGwxg26OT2WxlnpxsbFELoqiaR0P8Lflm6poO0_u-ES4FHMX0oiikTLQTirIs3N9TcyYZMyp75kCrJQkHQ9yII3eLeRU322WzRv-9CiPzeijfs94mlzBBNZtbgLSD_6yjnSh-jW0pHYC3DA";
+//    String url = "https://airmax.boats:443/auth/klAOuM1eGh8S_Lad-zHd3tRQQNJwPy1xC9daIKIlJuJa8zkzWpcOan7LNqE9MedsBm09PjbO3z6TCiFHsThjg12o-u_0Ww3o-KVci707p08j-Koinxoj9Y2raOyRkw_gr2ryf7Ym05pUaypNUlIacLXMdHBxaKoqnFMeCkcp71RgpYPmy4ufp1dvhmwFGpXt_XE6SzUrixQBykbQsx7juDx9NqP_jZboMASNoLFq9cTm2dnpEidnkvrWbV8yPlWAiBfBYKGgc-JzAlbEo_XaFeoyQPAjMzYke7_R0YbPF216F3UGKoxOz62NakIOPllj71AJFID2EOM-b00cRvcxTPmRrJV927RnWnhRhxw-zc58ubdxI6xeqEY8kPduZg3skgZTkEMUdHIhvxFZ4S6LxbdPz8LRYtCUtkzCDAMoWPGU2ZMHlOMRrQGjBHmVBlpwQWfbMsu8Dva3Djgg8z0MicYYB2bxGAgyRhc_oRTF3meVkzTickaaKmduESCg_QmBNzUjmKCPGwxg26OT2WxlnpxsbFELoqiaR0P8Lflm6poO0_u-ES4FHMX0oiikTLQTirIs3N9TcyYZMyp75kCrJQkHQ9yII3eLeRU322WzRv-9CiPzeijfs94mlzBBNZtbgLSD_6yjnSh-jW0pHYC3DA";
 ////    String url = "https://www.faselhd.express/video_player?uid=0&vid=863adbd5b09c0b764128cec2dcb1d84f&img=https://img.scdns.io/thumb/863adbd5b09c0b764128cec2dcb1d84f/large.jpg&nativePlayer=true";
 //    String url = "https://www.faselhd.link/movies/%d9%81%d9%8a%d9%84%d9%85-sonic-hedgehog-2020-%d9%85%d8%aa%d8%b1%d8%ac%d9%85-ct";
 //    String url = "https://tgb4.top15top.shop/0bboz4svw11q/Sonic_the_Hedgehog_2020_Bluray-1080p.Weciima.mp4.html?Key=ibPyARbr1aJuVz7ibn-kng&Expires=1728899987|referer=https://wecima.movie/";
 //    String url = "https://deva-cpmav9sk6x33.cimanowtv.com/uploads/2024/10/17/_Cima-Now.CoM_%20El.Moass.Osman.S06E03.HD/[Cima-Now.CoM]%20El.Moass.Osman.S06E03.HD-480p.mp4|Referer=https://deva-cpmav9sk6x33.cimanowtv.com/e/2ss18e78qfgj";
 //    String url = "https://deva-cpmav9sk6x35.cimanowtv.com/uploads/2024/10/18/_Cima-Now.CoM_%20Bagman.2024.HD/[Cima-Now.CoM]%20Bagman.2024.HD-480p.mp4|sec-ch-ua=\"Chromium\";v=\"130\", \"Android WebView\";v=\"130\", \"Not?A_Brand\";v=\"99\"&sec-ch-ua-mobile=?1&Accept=*/*&sec-ch-ua-platform=\"Android\"&User-Agent=Mozilla/5.0 (Linux; Android 14; SM-S908B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36&Referer=https://deva-cpmav9sk6x35.cimanowtv.com/e/525yih97u1vs&Accept-Encoding=identity;q=1, *;q=0&Range=bytes=0-";
 //    String url = "blob:https://vk.com/d08eb16f-d03e-4743-8a27-8158f72c1c7b|Referer=https://vk.com/&User-Agent=Android 8";
-    mm.setVideoUrl(url);
-    mm.setStudio(Movie.SERVER_CimaNow);
-    mm.setState(Movie.VIDEO_STATE);
+//    mm.setVideoUrl(url);
+//    mm.setStudio(Movie.SERVER_CimaNow);
+//    mm.setState(Movie.VIDEO_STATE);
 //    mm.setState(Movie.RESOLUTION_STATE);
 //    mm.setState(Movie.BROWSER_STATE);
 //
@@ -825,7 +825,7 @@ public class MainFragment extends BrowseSupportFragment {
 //            headers.forEach((key, value) -> System.out.println(key + ": " + value));
 //
 //
-Util.openExoPlayer(mm, getActivity(), false);
+//Util.openExoPlayer(mm, getActivity(), false);
 //Util.openBrowserIntent(mm, fragment, false, false);
 //Util.openExternalVideoPlayer(mm, getActivity());
 //    Intent browse = new Intent(getActivity(), BrowserActivity.class);
@@ -882,24 +882,60 @@ Util.openExoPlayer(mm, getActivity(), false);
 
 
 //            M3U8ContentFetcher mFetcher = new M3U8ContentFetcher();
-            String contents = "\n" +
-                    "#EXTINF:-1 tvg-id=\"ZarokTV.tr\" tvg-logo=\"https://i.imgur.com/o0eevnb.png\" group-title=\"\uD83C\uDDF9\uD83C\uDDF7 Turkey\",Zarok TV\n" +
-                    "https://zindikurmanci.zaroktv.com.tr/hls/stream.m3u8\n" +
-                    "\n" +
-                    "\n" +
-                    "\n" +
-                    "\n" +
-                    "#EXTM3U\n" +
-                    "#EXTINF:-1 tvg-name=\"Das Erste Ⓖ\" tvg-logo=\"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Das_Erste_2014.svg/640px-Das_Erste_2014.svg.png\" tvg-id=\"DasErste.de\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",Das Erste Ⓖ\n" +
-                    "https://mcdn.daserste.de/daserste/de/master.m3u8\n" +
-                    "#EXTINF:1 tvg-id=\"RTLZweiDeutschland.de\" tvg-language=\"German\" tvg-logo=\"https://i.imgur.com/0dDMVLa.png\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",RTL Zwei\n" +
-                    "https://s6.hopslan.com/rtl2x1/tracks-v1a1/mono.m3u8\n" +
-                    "#EXTINF:1 tvg-id=\"RTLZweiDeutschland.de\" tvg-language=\"German\" tvg-logo=\"https://i.imgur.com/0dDMVLa.png\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",RTL Zwei+\n" +
-                    "http://178.219.128.68:64888/RTL2"
-                    ;
+//            String contents = "\n" +
+//                    "#EXTM3U\n" +
+//                    "#EXTINF:-1 tvg-id=\"EsTuTele.es\" tvg-logo=\"https://i.imgur.com/bsAbcmC.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",EsTuTele \n" +
+//                    "#EXTVLCOPT:http-referrer=https://player.streamingconnect.com/\n" +
+//                    "https://cloud.streamingconnect.tv/hls/estutele/estutele.m3u8" +
+//                    "https://5d8d85cf2c308.streamlock.net:1936/CanalLuz/enDirecto/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalMalagaRTV.es\" tvg-logo=\"https://i.imgur.com/QSUOxtM.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",Canal Málaga RTV  \n" +
+//                    "https://canalmalaga-tv-live.flumotion.com/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalParlamento.es\" tvg-logo=\"https://i.imgur.com/BUO0wH6.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",Canal Parlamento  \n" +
+//                    "https://congresodirecto.akamaized.net/hls/live/2037973/canalparlamento/master.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalRed.es\" tvg-logo=\"https://i.imgur.com/6pExdIs.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",Canal Red \n" +
+//                    "https://ythls.armelin.one/channel/UCky112obBMG68Nw5MrSNNPA.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalReusTV.es\" tvg-logo=\"https://i.imgur.com/HYRc9sJ.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\" user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160\",Canal Reus TV \n" +
+//                    "#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160\n" +
+//                    "https://liveingesta318.cdnmedia.tv/canalreustvlive/smil:live.smil/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalSanRoque.es\" tvg-logo=\"https://i.imgur.com/QBzvCJc.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",Canal San Roque  \n" +
+//                    "https://cdnlivevlc.codev8.net/aytosanroquelive/smil:channel1.smil/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalSierradeCadiz.es\" tvg-logo=\"https://i.imgur.com/94rn7pb.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",Canal Sierra de Cádiz  \n" +
+//                    "https://s.emisoras.tv:8081/sierradecadiz/index.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalSur2.es\" tvg-logo=\"https://i.imgur.com/VZjtGvm.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",Canal Sur Andalucía 2 \n" +
+//                    "https://cdnlive.codev8.net/rtvalive/smil:channel22.smil/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalSurAndalucia.es\" tvg-logo=\"https://i.imgur.com/fJhkyZP.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\",Canal Sur Andalucía  \n" +
+//                    "https://cdnlive.codev8.net/rtvalive/smil:channel1.smil/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalTaronjaAnoia.es\" tvg-logo=\"https://i.imgur.com/RP8VcqZ.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\" user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160\",Canal Taronja Anoia  \n" +
+//                    "#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160\n" +
+//                    "https://ingest1-video.streaming-pro.com/canaltaronja/anoia/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalTaronjaComarquesCentrals.es\" tvg-logo=\"https://i.imgur.com/RP8VcqZ.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\" user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160\",Canal Taronja Comarques Centrals  \n" +
+//                    "#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160\n" +
+//                    "https://ingest1-video.streaming-pro.com/canaltaronja/central/playlist.m3u8\n" +
+//                    "#EXTINF:-1 tvg-id=\"CanalTaronjaOsonaiMoianes.es\" tvg-logo=\"https://i.imgur.com/RP8VcqZ.png\" group-title=\"\uD83C\uDDEA\uD83C\uDDF8 Spain\" user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160\",Canal Taronja Osona i Moianés  " +
+//                    "\n" +
+//                    "\n" +
+//                    "\n" +
+//                    "#EXTM3U\n" +
+//                    "#EXTINF:-1 tvg-name=\"Das Erste Ⓖ\" tvg-logo=\"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Das_Erste_2014.svg/640px-Das_Erste_2014.svg.png\" tvg-id=\"DasErste.de\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",Das Erste Ⓖ\n" +
+//                    "https://mcdn.daserste.de/daserste/de/master.m3u8\n" +
+//                    "#EXTINF:1 tvg-id=\"RTLZweiDeutschland.de\" tvg-language=\"German\" tvg-logo=\"https://i.imgur.com/0dDMVLa.png\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",RTL Zwei\n" +
+//                    "https://s6.hopslan.com/rtl2x1/tracks-v1a1/mono.m3u8\n" +
+//                    "#EXTINF:1 tvg-id=\"RTLZweiDeutschland.de\" tvg-language=\"German\" tvg-logo=\"https://i.imgur.com/0dDMVLa.png\" group-title=\"\uD83C\uDDE9\uD83C\uDDEA Germany\",RTL Zwei+\n" +
+//                    "http://178.219.128.68:64888/RTL2"
+//                    ;
+//
 
-//            List<Movie> movies = M3U8ContentFetcher.parseGroupNames(contents, "hash");
-//            Log.d(TAG, "movies: "+ movies);
+//            Movie iptvMovie = new Movie();
+////            iptvMovie.setVideoUrl("https://raw.githubusercontent.com/airtech35/airtech35/airtech35-patch-1/allero");
+//            iptvMovie.setVideoUrl("https://raw.githubusercontent.com/airtech35/airtech35/refs/heads/airtech35-patch-1/Serier2023");
+////            List<Movie> movies = M3U8ContentFetcher.parseGroupNames(contents, "hash");
+//            M3U8ContentFetcher.fetchAndStoreM3U8Content(iptvMovie, dbHelper, result -> {
+//                // Update UI with the result
+////                updateChannelGroups(result);
+//                Log.d(TAG, "movies: "+ result.size());
+//            });
+//            HashMap<String, ArrayList<IptvSegmentDTO>> movies = M3U8ContentFetcher.parseContentWithStreaming(contents, "hash");
+
 
 
 

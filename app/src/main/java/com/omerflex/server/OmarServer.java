@@ -36,24 +36,25 @@ public class OmarServer extends AbstractServer {
 
     public static final String TYPE_IPTV = "Iptv_channel";
     static String TAG = "Omar";
-    public static final  String TYPE_SERIES = "Series";
-    public static final  String TYPE_SEASON = "Season";
-    public static final  String TYPE_EPISODE = "Episode";
-    public static final  String TYPE_FILM = "Film";
+    public static final String TYPE_SERIES = "Series";
+    public static final String TYPE_SEASON = "Season";
+    public static final String TYPE_EPISODE = "Episode";
+    public static final String TYPE_FILM = "Film";
 
-    public static final  String LINK_STATE_FETCH = "Fetch";
-    public static final  String LINK_STATE_BROWSE = "Browse";
-    public static final  String LINK_STATE_VIDEO = "Video";
+    public static final String LINK_STATE_FETCH = "Fetch";
+    public static final String LINK_STATE_BROWSE = "Browse";
+    public static final String LINK_STATE_VIDEO = "Video";
 
-    public static final  String FETCH_URL = "/fetch/";
+    public static final String FETCH_URL = "/fetch/";
 
-    public OmarServer() {}
+    public OmarServer() {
+    }
 
     @Override
     public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activitySearchCallback) {
         Log.d(TAG, "search: " + query);
         String url = query;
-        if (!query.contains("http")){
+        if (!query.contains("http")) {
             url = getSearchUrl(query);
         }
         Log.d(TAG, "search: " + url);
@@ -68,13 +69,15 @@ public class OmarServer extends AbstractServer {
             if (response.isSuccessful()) {
                 try {
                     String body = response.body().string();
-                    Log.d(TAG, "search: isSuccessful:"+body);
+//                    Log.d(TAG, "search: isSuccessful:" + body);
 
                     Gson gson = new Gson();
 //                    SearchResponseDTO searchResponseDTO = gson.fromJson(body, SearchResponseDTO.class);
                     Type listType = new TypeToken<ArrayList<SearchResponseDTO>>() {
+//                    Type listType = new TypeToken<SearchResponseDTO>() {
                     }.getType();
                     ArrayList<SearchResponseDTO> searchResponseDTOList = gson.fromJson(body, listType);
+//                    SearchResponseDTO searchResponseDTO = gson.fromJson(body, listType);
 //                    Log.d(TAG, "search: searchResponseDTO: "+searchResponseDTOList.toString());
                     for (SearchResponseDTO searchResponse : searchResponseDTOList) {
 //                        if (movieDTO.sources == null || movieDTO.sources.size() == 0) {
@@ -84,6 +87,8 @@ public class OmarServer extends AbstractServer {
                         ArrayList<Movie> movies = generateMovieListFromSearchResponse(searchResponse);
                         activitySearchCallback.onSuccess(movies, searchResponse.category);
                     }
+//                    ArrayList<Movie> movies = generateMovieListFromSearchResponse(searchResponseDTO);
+//                    activitySearchCallback.onSuccess(movies, searchResponseDTO.category);
                 } catch (JsonSyntaxException e) {
 //                    e.printStackTrace();
                     Log.d(TAG, "search: error parsing json:" + e.getMessage());
@@ -95,7 +100,7 @@ public class OmarServer extends AbstractServer {
             Log.d(TAG, "search: error:" + e.getMessage());
             activitySearchCallback.onInvalidLink("search: error:" + e.getMessage());
         }
-        Log.d(TAG, "search: movieList: "+movieList.toString());
+//        Log.d(TAG, "search: movieList: " + movieList.toString());
         return movieList;
     }
 
@@ -132,7 +137,7 @@ public class OmarServer extends AbstractServer {
 
     @Override
     protected String getSearchUrl(String query) {
-        return getConfig().getUrl() + "/search/"+query;
+        return getConfig().getUrl() + "/search/" + query;
     }
 
     @NonNull
@@ -145,10 +150,10 @@ public class OmarServer extends AbstractServer {
         String image = movieDTO.cardImage;
         String bgImage = movieDTO.backgroundImage;
         LinkDTO linkDTO = movieDTO.link;
-        if (linkDTO != null){
+        if (linkDTO != null) {
             String serverAddress = linkDTO.authority;
 //        String serverAddress = movieDTO.serverUrl;
-            if (!image.startsWith("http")){
+            if (!image.startsWith("http")) {
                 image = serverAddress + image;
                 bgImage = serverAddress + bgImage;
             }
@@ -162,15 +167,15 @@ public class OmarServer extends AbstractServer {
             }
         }
 
-       String videoLink = getConfig().getUrl() + FETCH_URL +movieDTO.id;
+        String videoLink = getConfig().getUrl() + FETCH_URL + movieDTO.id;
         String type = movieDTO.type;
         int movieState = Movie.GROUP_OF_GROUP_STATE;
         if (type.equals(TYPE_SEASON)) {
             movieState = Movie.GROUP_STATE;
-        } else if (type.equals(TYPE_IPTV)){
+        } else if (type.equals(TYPE_IPTV)) {
             movieState = Movie.VIDEO_STATE;
             image = movieDTO.tvgLogo;
-            if (title == null){
+            if (title == null) {
                 title = movieDTO.tvgName;
             }
 
@@ -184,11 +189,9 @@ public class OmarServer extends AbstractServer {
 //                videoLink = credentialUrl + fileName + "|user-agent=airmaxtv";
 //            }
 //            Log.d(TAG, "generateMovieObject: "+credentialUrl + ", "+ movieDTO);
-        }else {
+        } else {
             movieState = Movie.ITEM_STATE;
         }
-
-
 
 
         movie.setTitle(title);
@@ -197,11 +200,11 @@ public class OmarServer extends AbstractServer {
 //        }else {
 //            movie.setVideoUrl(linkDTO.server.authority + linkDTO.url);
 //        }
-            movie.setVideoUrl(videoLink);
+        movie.setVideoUrl(videoLink);
 
 
         //state
-            movie.setState(movieState);
+        movie.setState(movieState);
 
         movie.setCardImageUrl(image);
         movie.setBackgroundImageUrl(bgImage);
@@ -210,15 +213,16 @@ public class OmarServer extends AbstractServer {
         movie.setRate(movieDTO.rate);
 
         movie.setId(movieDTO.id);
-        for (CategoryDTO categorydto: movieDTO.categories) {
+        for (CategoryDTO categorydto : movieDTO.categories) {
             movie.addCategory(categorydto.name);
         }
-        if (movie.getCategories().isEmpty()){
+        if (movie.getCategories().isEmpty()) {
             movie.addCategory(getLabel());
         }
         return movie;
     }
-    protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback){
+
+    protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback) {
 //        Log.d(TAG, "fetchItemAction: 55");
         switch (action) {
             case Movie.BROWSER_STATE:
@@ -271,7 +275,7 @@ public class OmarServer extends AbstractServer {
     }
 
     private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
-        if (movie.getState() == Movie.BROWSER_STATE){
+        if (movie.getState() == Movie.BROWSER_STATE) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
@@ -378,7 +382,7 @@ public class OmarServer extends AbstractServer {
 //    }
 
     @Override
-    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request){
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request) {
         return false;
     }
 
@@ -461,34 +465,34 @@ public class OmarServer extends AbstractServer {
         Log.d(TAG, "generateSubSourceList: 1");
         Movie sourceMovie = Movie.clone(mainMovie);
         try {
-                    sourceMovie.setId(linkDTO.id);
-                    sourceMovie.setTitle(linkDTO.title);
+            sourceMovie.setId(linkDTO.id);
+            sourceMovie.setTitle(linkDTO.title);
 
 
-                    String stateString = linkDTO.state;
-                    int linkState = Movie.VIDEO_STATE;
-                    if (stateString.equals(LINK_STATE_FETCH)) {
-                        linkState = Movie.RESOLUTION_STATE;
-                    } else {
-                        linkState = Movie.BROWSER_STATE;
-                    }
-                    sourceMovie.setState(linkState);
+            String stateString = linkDTO.state;
+            int linkState = Movie.VIDEO_STATE;
+            if (stateString.equals(LINK_STATE_FETCH)) {
+                linkState = Movie.RESOLUTION_STATE;
+            } else {
+                linkState = Movie.BROWSER_STATE;
+            }
+            sourceMovie.setState(linkState);
 
-                    if (linkDTO.url.startsWith("http")) {
-                        sourceMovie.setVideoUrl(linkDTO.url);
-                    } else {
-                        sourceMovie.setVideoUrl(linkDTO.server.authority + linkDTO.url);
-                    }
-                    sourceMovie.setMainMovie(mainMovie);
-                } catch (Exception e) {
-                    Log.d(TAG, "search: error parsing json:" + e.getMessage());
-                }
-        Log.d(TAG, "generateResolutionlinks: Link: "+ sourceMovie);
+            if (linkDTO.url.startsWith("http")) {
+                sourceMovie.setVideoUrl(linkDTO.url);
+            } else {
+                sourceMovie.setVideoUrl(linkDTO.server.authority + linkDTO.url);
+            }
+            sourceMovie.setMainMovie(mainMovie);
+        } catch (Exception e) {
+            Log.d(TAG, "search: error parsing json:" + e.getMessage());
+        }
+        Log.d(TAG, "generateResolutionlinks: Link: " + sourceMovie);
         return sourceMovie;
     }
 
     private MovieFetchProcess fetchItem(Movie movie, ActivityCallback<Movie> activityCallback) {
-        String url = getConfig().getUrl() + FETCH_URL+ movie.getId();
+        String url = getConfig().getUrl() + FETCH_URL + movie.getId();
         // String url = movie.getVideoUrl();
         Log.d(TAG, "fetchItem: " + url);
         OkHttpClient client = new OkHttpClient();
@@ -505,7 +509,7 @@ public class OmarServer extends AbstractServer {
                     }.getType();
                     ArrayList<LinkDTO> movies = gson.fromJson(body, listType);
 //                    Log.d(TAG, "fetchItem: movies: "+ movies);
-                    if (movie.getSubList() == null){
+                    if (movie.getSubList() == null) {
                         movie.setSubList(new ArrayList<>());
                     }
 
@@ -543,7 +547,7 @@ public class OmarServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getConfig().getUrl()+"/homepage", activityCallback);
+        return search(getConfig().getUrl() + "/homepage", activityCallback);
 //        return search(getConfig().getUrl()+"/search/ss", activityCallback);
 //        return search(getConfig().getUrl()+"/homepage");
 //        return search("sonic");
@@ -559,7 +563,7 @@ public class OmarServer extends AbstractServer {
         return Movie.SERVER_OMAR;
     }
 
-    public boolean shouldUpdateDomainOnSearchResult(){
+    public boolean shouldUpdateDomainOnSearchResult() {
         return false;
     }
 }

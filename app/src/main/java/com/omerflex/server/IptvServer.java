@@ -129,7 +129,13 @@ public class IptvServer extends AbstractServer {
 //        return futureMovieList.thenApplyAsync(IptvServer::groupMoviesByGroup);
 //    }
     public HashMap<String, ArrayList<Movie>> fetchAndGroupM3U8ContentAsync(Movie movie, MovieDbHelper dbHelper) {
-        return contentFetcher.fetchM3U8ContentAsync(movie, dbHelper);
+//        return M3U8ContentFetcher.fetchM3U8ContentAsync(movie, dbHelper);
+//        try {
+//            return M3U8ContentFetcher.fetchAndProcessContent(movie, dbHelper);
+            return  new HashMap<>();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
 
@@ -164,7 +170,7 @@ public class IptvServer extends AbstractServer {
     }
 
     public List<Movie> fetchDriveFiles(String m3u8Url) throws IOException {
-        return contentFetcher.fetchDriveFiles_2(m3u8Url);
+        return contentFetcher.fetchDriveFiles(m3u8Url);
     }
 
     public boolean shouldUpdateDomainOnSearchResult(){
