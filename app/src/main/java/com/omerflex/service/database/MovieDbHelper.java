@@ -3,7 +3,6 @@ package com.omerflex.service.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
@@ -21,10 +20,10 @@ import com.omerflex.server.OmarServer;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.contract.CookieContract.CookieTable;
-import com.omerflex.service.database.contract.ServerConfigContract.ConfigTable;
 import com.omerflex.service.database.contract.IptvContract.IptvTable;
 import com.omerflex.service.database.contract.MovieContract.MoviesTable;
 import com.omerflex.service.database.contract.MovieHistoryContract.MovieHistoryTable;
+import com.omerflex.service.database.contract.ServerConfigContract.ConfigTable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -131,21 +130,6 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         db.execSQL(SQL_CREATE_SERVER_CONFIGS_TABLE);
         db.execSQL(SQL_CREATE_MOVIE_HISTORY_TABLE);
 
-        // This only runs on first install
-        clearTableData(db, ConfigTable.TABLE_NAME);
-    }
-    private void clearTableData(SQLiteDatabase db, String TABLE_NAME) {
-        try {
-            db.beginTransaction();
-            db.execSQL("DELETE FROM " + TABLE_NAME);
-            // Reset auto-increment counter
-            db.execSQL("DELETE FROM sqlite_sequence WHERE name='" + TABLE_NAME + "'");
-            db.setTransactionSuccessful();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            db.endTransaction();
-        }
     }
 
     @Override
