@@ -3,6 +3,7 @@ package com.omerflex.service.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
@@ -123,11 +124,28 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 + MovieHistoryTable.COLUMN_PLAYED_TIME + " INTEGER"
                 + ")";
 
+
         db.execSQL(SQL_CREATE_MOVIES_TABLE);
         db.execSQL(SQL_CREATE_IPTV_TABLE);
 //        db.execSQL(SQL_CREATE_COOKIE_TABLE);
         db.execSQL(SQL_CREATE_SERVER_CONFIGS_TABLE);
         db.execSQL(SQL_CREATE_MOVIE_HISTORY_TABLE);
+
+        // This only runs on first install
+        clearTableData(db, ConfigTable.TABLE_NAME);
+    }
+    private void clearTableData(SQLiteDatabase db, String TABLE_NAME) {
+        try {
+            db.beginTransaction();
+            db.execSQL("DELETE FROM " + TABLE_NAME);
+            // Reset auto-increment counter
+            db.execSQL("DELETE FROM sqlite_sequence WHERE name='" + TABLE_NAME + "'");
+            db.setTransactionSuccessful();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            db.endTransaction();
+        }
     }
 
     @Override
@@ -147,6 +165,13 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         super.onConfigure(db);
         //enable category foreign key
         db.setForeignKeyConstraintsEnabled(true);
+    }
+
+    // In your SQLiteOpenHelper class or database manager
+    public void clearTable(String tableName) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("DELETE FROM " + tableName);
+        db.close();
     }
 
     public void saveMovieHistory(MovieHistory history) {

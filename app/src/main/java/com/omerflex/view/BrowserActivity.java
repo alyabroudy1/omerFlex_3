@@ -1065,17 +1065,18 @@ public class BrowserActivity extends AppCompatActivity {
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                // in case the server url is old, update it n redirection
-                if (server.shouldUpdateDomainOnSearchResult() &&
-                        request.isForMainFrame() &&
-                        request.isRedirect()
-                ) {
-                    String newHost = request.getUrl().getScheme() + "://" + request.getUrl().getHost();
-                    Log.d(TAG, "shouldOverrideUrlLoading: updae domin " + newHost);
-                    config.setUrl(newHost);
-                }
-            }
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                // in case the server url is old, update it n redirection
+//                if (    movie.getState() != Movie.RESOLUTION_STATE &&
+//                        server.shouldUpdateDomainOnSearchResult() &&
+//                        request.isForMainFrame() &&
+//                        request.isRedirect()
+//                ) {
+//                    String newHost = request.getUrl().getScheme() + "://" + request.getUrl().getHost();
+//                    Log.d(TAG, "shouldOverrideUrlLoading: updae domin " + newHost);
+//                    config.setUrl(newHost);
+//                }
+//            }
 
             String url = request.getUrl().toString();
             redirectUrl = url;
