@@ -89,6 +89,11 @@ public abstract class MainViewControl extends SearchViewControl {
                             Log.d(TAG, "onInvalidCookie: MainViewController LoadRows: " + result);
 //                                    loadMoviesRow(server, serverAdapter, result);
                             updateMovieListOfMovieAdapter(result, serverAdapter);
+                            if (server.shouldUpdateDomainOnSearchResult()){
+                                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+                                ServerConfigManager.updateConfig(config, dbHelper);
+                                Log.d(TAG, "onInvalidCookie: updateDomain on search result");
+                            }
                         }
 
                         @Override

@@ -44,7 +44,7 @@ public class CimaNowServer extends AbstractServer{
             url = this.getSearchUrl(query);
         }
         Log.d(TAG, "search: url: " + url);
-        Document doc = this.getRequestDoc(url);
+        Document doc = this.getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
             return null;
@@ -52,6 +52,7 @@ public class CimaNowServer extends AbstractServer{
         ArrayList<Movie> movieList = new ArrayList<>();
 
         if (doc.title().contains("moment")) {
+//        if (true) {
 //            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";
@@ -70,6 +71,7 @@ public class CimaNowServer extends AbstractServer{
             // m.setState(Movie.RESULT_STATE);
             m.setCardImageUrl(cardImageUrl);
             m.setBackgroundImageUrl(backgroundImageUrl);
+            m.setBgImageUrl(backgroundImageUrl);
             m.setRate("");
             m.setSearchContext(query);
             movieList.add(m);
@@ -77,6 +79,7 @@ public class CimaNowServer extends AbstractServer{
             activityCallback.onInvalidCookie(movieList, getLabel());
             return movieList;
         }
+
         movieList = generateSearchResultFromDoc(doc);
         activityCallback.onSuccess(movieList, getLabel());
         return movieList;
@@ -112,7 +115,10 @@ public class CimaNowServer extends AbstractServer{
                 String titleText = titleElement.text();
                 String[] parts = titleText.split("<em>");
                 if (parts.length > 0) {
-                    movie.setTitle(parts[0].trim());
+                    Element episodeElement = article.selectFirst("li[aria-label=episode]");
+                    String episode = (episodeElement != null) ? episodeElement.text().replace("الحلقة", "").trim() : "";
+
+                    movie.setTitle( "الحلقة " + episode + " " + parts[0].trim());
                 }
                 if (parts.length > 1) {
                     movie.setGroup(parts[1].replace("</em>", "").trim());
@@ -423,6 +429,7 @@ public class CimaNowServer extends AbstractServer{
             String cardImageUrl = img.attr("src");
             movie.setBgImageUrl(cardImageUrl);
             movie.setBackgroundImageUrl(cardImageUrl);
+            movie.setBgImageUrl(cardImageUrl);
             // Output the extracted image URL
             System.out.println("cardImageUrl = " + cardImageUrl);
         } else {
@@ -501,6 +508,99 @@ public class CimaNowServer extends AbstractServer{
 
         Log.d(TAG, "getWebScript: m:" + mode + ", f:" + movie.getFetch());
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
+            if (movie.getState() == Movie.COOKIE_STATE) {
+                Log.d(TAG, "getScript:WEB_VIEW_MODE_ON_PAGE_STARTED COOKIE_STATE");
+                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
+                        "let articles = document.querySelectorAll(\"article[aria-label='post']\");\n" +
+                        "if (articles.length === 0) {\n" +
+                        "    articles = document.querySelectorAll(\"a:has(li[aria-label='title'])\");\n" +
+                        "}\n" +
+                        "\n" +
+                        "let movieList = [];\n" +
+                        "\n" +
+                        "articles.forEach(article => {\n" +
+                        "    let movie = {};\n" +
+                        "\n" +
+                        "    // Extract the video URL from the anchor tag\n" +
+                        "    let anchor = article.querySelector(\"a\");\n" +
+                        "    let title = anchor ? anchor.getAttribute(\"href\") : null;\n" +
+                        "\n" +
+                        "    if (!title) {\n" +
+                        "        title = article.getAttribute(\"href\");\n" +
+                        "        if (!title) {\n" +
+                        "            return;\n" +
+                        "        }\n" +
+                        "    }\n" +
+                        "    movie.videoUrl = title;\n" +
+                        "\n" +
+                        "    \n" +
+                        "\n" +
+                        "    // Extract the movie title and category\n" +
+                        "    let titleElement = article.querySelector(\"li[aria-label='title']\");\n" +
+                        "    if (titleElement) {\n" +
+                        "        let titleText = titleElement.textContent;\n" +
+                        "        let parts = titleText.split(\"<em>\");\n" +
+                        "        if (parts.length > 0) {\n" +
+                        "let titleElement = article.querySelector(\"li[aria-label='title']\");\n" +
+                        "    let episodeElement = article.querySelector(\"li[aria-label='episode']\");\n" +
+                        "    let episode = episodeElement ? episodeElement.textContent.replace(\"الحلقة\", \"\").trim() : \"\";\n" +
+                        "\n" +
+                        "               movie.title = episode + ' الحلقة ' + parts[0].trim();\n" +
+                        "        }\n" +
+                        "        if (parts.length > 1) {\n" +
+                        "            movie.group = parts[1].replace(\"</em>\", \"\").trim();\n" +
+                        "        }\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    // Extract the card image URL from the img tag\n" +
+                        "    let imgElement = article.querySelector(\"img\");\n" +
+                        "    if (imgElement) {\n" +
+                        "        movie.cardImageUrl = imgElement.getAttribute(\"data-src\");\n" +
+                        "        movie.setBackgroundImageUrl = imgElement.getAttribute(\"data-src\");\n" +
+                        "        movie.setBgImageUrl = imgElement.getAttribute(\"data-src\");\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    movie.studio = '" + Movie.SERVER_CimaNow + "';\n" +
+                        "    movie.state = title.includes(\"/selary\") ? " + Movie.GROUP_STATE +" : " + Movie.ITEM_STATE +";\n" +
+                        "    movie.mainMovieTitle = movie.videoUrl;\n" +
+                        "\n" +
+                        "    movieList.push(movie);\n" +
+                        "});" +
+                        "" +
+                        "let nextPage = {};\n" +
+                        "let pagination = document.querySelector(\"ul[aria-label='pagination']\");\n" +
+                        "\n" +
+                        "if (pagination) {\n" +
+                        "    // Find the active <li> element\n" +
+                        "    let activePage = pagination.querySelector(\"li.active\");\n" +
+                        "\n" +
+                        "    if (activePage) {\n" +
+                        "        // Get the next <li> after the active one\n" +
+                        "        let nextPageElem = activePage.nextElementSibling;\n" +
+                        "\n" +
+                        "        // Check if the next <li> contains an <a> tag and has a valid href attribute\n" +
+                        "        if (nextPageElem && nextPageElem.querySelector(\"a\")) {\n" +
+                        "            let nextPageUrl = nextPageElem.querySelector(\"a\").getAttribute(\"href\");\n" +
+                        "\n" +
+                        "            nextPage.title= \"التالي\";\n" +
+                        "                nextPage.description = \"0\";\n" +
+                        "                nextPage.studio= 'imaNow';\n" +
+                        "                nextPage.videoUrl= nextPageUrl;\n" +
+                        "                nextPage.cardImageUrl= \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\";\n" +
+                        "                nextPage.backgroundImageUrl= \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\";\n" +
+                        "                nextPage.state= 5;\n" +
+                        "                nextPage.mainMovieTitle= nextPageUrl;\n" +
+                        "            console.log(\"Next page URL:\", nextPageUrl);\n" +
+                        "        } else {\n" +
+                        "            console.log(\"No next page found.\");\n" +
+                        "        }\n" +
+                        "    }\n" +
+                        "} " +
+                        "movieList.push(nextPage);" +
+
+                        "MyJavaScriptInterface.myMethod(JSON.stringify(movieList));" +
+                        "});";
+            }
 ////            if (movie.getState() == Movie.GROUP_OF_GROUP_STATE){
 //                Log.d(TAG, "getScript:mycima REQUEST_CODE_FETCH_HTML");
 //                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
@@ -615,8 +715,8 @@ public class CimaNowServer extends AbstractServer{
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-//        return search(getConfig().getUrl() + "/الاحدث/", activityCallback);
-        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
+        return search(getConfig().getUrl() + "/الاحدث/", activityCallback);
+//        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
 //        return search(getConfig().getUrl() + "/category/المسلسلات", activityCallback);
 //        return search("sonic", activityCallback);
     }

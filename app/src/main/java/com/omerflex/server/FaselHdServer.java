@@ -86,7 +86,7 @@ public class FaselHdServer extends AbstractServer {
         }
         Log.i(getLabel(), "search: " + url);
 
-        Document doc = this.getRequestDoc(url);
+        Document doc = this.getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
             return null;

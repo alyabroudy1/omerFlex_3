@@ -15,8 +15,14 @@ import androidx.leanback.widget.ListRow;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.AkwamServer;
+import com.omerflex.server.ArabSeedServer;
+import com.omerflex.server.CimaNowServer;
+import com.omerflex.server.FaselHdServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.KooraServer;
+import com.omerflex.server.MyCimaServer;
+import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
@@ -417,8 +423,9 @@ public abstract class SearchViewControl {
 //                                server instanceof CimaNowServer ||
 //                                server instanceof FaselHdServer ||
 //                                server instanceof OmarServer ||
-                                server instanceof IptvServer ||
+//                                server instanceof IptvServer ||
 //                                server instanceof MyCimaServer ||
+//                                server instanceof KooraServer
                         (server instanceof KooraServer && !query.isEmpty())
                 ) {
                     continue;

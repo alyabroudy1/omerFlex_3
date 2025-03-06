@@ -1,5 +1,6 @@
 package com.omerflex.server;
 
+import android.net.Uri;
 import android.util.Log;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -16,6 +17,7 @@ import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -111,11 +113,94 @@ public abstract class AbstractServer implements ServerInterface {
         return true;
     }
 
+    protected Document getSearchRequestDoc(String url) {
+        final int MAX_REDIRECTS = 5;
+        ServerConfig config = getConfig();
+        Document doc = null;
+        int redirectCount = 0;
+        String currentUrl = url;
+        boolean isDomainUpdated = false;
+        String initialHost = Uri.parse(url).getHost();
+
+        try {
+            while (redirectCount < MAX_REDIRECTS) {
+                Log.d(TAG, "Processing URL: " + currentUrl + ", follow: "+ isDomainUpdated);
+
+                Connection.Response response = Jsoup.connect(currentUrl)
+                        .headers(config.getHeaders())
+                        .cookies(config.getMappedCookies())
+                        .followRedirects(isDomainUpdated)
+                        .ignoreHttpErrors(true)
+                        .ignoreContentType(true)
+                        .timeout(10000)
+                        .execute();
+
+                int statusCode = response.statusCode();
+                String docTitle = "no title";
+                Log.i(TAG, "HTTP Status: " + statusCode + " for " + currentUrl);
+
+                if (statusCode == HttpURLConnection.HTTP_OK) {
+                    doc = response.parse();
+                    return doc;
+                } else if (isRedirect(statusCode)) {
+                    String newLocation = response.header("Location");
+                    if (newLocation == null || newLocation.isEmpty()) {
+                        Log.w(TAG, "Redirect without Location header: " + currentUrl);
+                        doc = response.parse();
+                        return doc;
+                    }
+                    currentUrl = resolveRedirectUrl(currentUrl, newLocation);
+                    Log.d(TAG, "Redirecting to: " + currentUrl);
+                    isDomainUpdated = checkForDomainUpdate(currentUrl, initialHost);
+                    redirectCount++;
+                } else {
+                    Log.e(TAG, "Unexpected status " + response.statusCode() + " for " + url);
+                    return statusCode == HttpURLConnection.HTTP_NOT_FOUND ? null : response.parse();
+                }
+            }
+            Log.w(TAG, "Too many redirects (" + MAX_REDIRECTS + ") for: " + url);
+        } catch (IOException e) {
+            Log.e(TAG, "Network error for " + currentUrl + ": " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error processing " + currentUrl + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    private boolean isRedirect(int statusCode) {
+        return statusCode >= HttpURLConnection.HTTP_MOVED_PERM
+                && statusCode < HttpURLConnection.HTTP_BAD_REQUEST;
+    }
+
+    private String resolveRedirectUrl(String baseUrl, String location) throws MalformedURLException {
+        if (location.startsWith("http")) {
+            return location;
+        }
+        URL base = new URL(baseUrl);
+        return new URL(base, location).toString();
+    }
+
+    private boolean checkForDomainUpdate(String finalUrl, String initialHost) {
+        Log.d(TAG, "checkForDomainUpdate: "+ shouldUpdateDomainOnSearchResult() + ", "+ finalUrl);
+        if (!shouldUpdateDomainOnSearchResult()) return true;
+
+        Uri finalUri = Uri.parse(finalUrl);
+        String finalHost = finalUri.getHost();
+
+        if (!initialHost.equals(finalHost)) {
+            String schemeAndHost = finalUri.getScheme() + "://" + finalHost;
+            Log.i(TAG, "Updating domain from " + initialHost + " to " + finalHost);
+            updateDomain(schemeAndHost);
+            return true;
+        }
+        return false;
+    }
+
     /**
      * @param url request link
      * @return Document or null if an exception occurs
      */
-    protected Document getSearchRequestDoc(String url) {
+    protected Document getSearchRequestDoc_2(String url) {
         Document doc = null;
         ServerConfig config = getConfig();
         Log.d(TAG, "getSearchRequestDoc: " + url);
@@ -139,8 +224,50 @@ public abstract class AbstractServer implements ServerInterface {
                 return doc;
             } else if (statusCode >= 300 && statusCode < 400) { // Redirect detected
                 String newUrl = response.header("Location");
-                if (newUrl != null) {
+
+                if (newUrl == null) {
+                    Connection.Response redirectResponse = Jsoup.connect(url)
+                            .headers(config.getHeaders())
+                            .cookies(config.getMappedCookies())
+                            .followRedirects(false) // Now follow redirects for the new URL
+                            .execute();
+
+                    Log.d(TAG, "getSearchRequestDoc: redirectResponse: " + redirectResponse.statusCode());
+                    Log.d(TAG, "getSearchRequestDoc: redirectResponse.headers: " + redirectResponse.headers());
+                    doc = redirectResponse.parse();
+                    return doc;
+                }
+
+                if (url.equals(newUrl)){
+                    Log.d(TAG, "getSearchRequestDoc: redirectURL same1: " + url + ", new: " + newUrl);
+                    // If you want to follow the redirect and get the document:
+                    Connection.Response redirectResponse = Jsoup.connect(newUrl)
+                            .headers(config.getHeaders())
+                            .cookies(config.getMappedCookies())
+                            .followRedirects(false) // Now follow redirects for the new URL
+                            .execute();
+                    newUrl = redirectResponse.header("Location");
+                    if (url.equals(newUrl)){
+                        Log.d(TAG, "getSearchRequestDoc: redirectURL same2: " + url + ", new: " + newUrl);
+                    }else {
+                        URL redirectURL = new URL(new URL(url), newUrl); // Construct absolute URL from relative
+                        Log.d(TAG, "getSearchRequestDoc: redirectURL: " + redirectURL.toString() + ", new: " + newUrl);
+                        Log.d(TAG, "getSearchRequestDoc: headers: " + response.headers());
+                        if (shouldUpdateDomainOnSearchResult()) {
+                            String scheme = redirectURL.getProtocol();
+                            String host = redirectURL.getHost();
+                            String schemeAndHost = scheme + "://" + host;
+                            updateDomain(schemeAndHost); // Update the DB with new host
+                        }
+
+                        doc = redirectResponse.parse();
+                        return doc;
+                    }
+                }else {
+                    Log.d(TAG, "getSearchRequestDoc: not same old: "+url + " new: "+newUrl);
                     URL redirectURL = new URL(new URL(url), newUrl); // Construct absolute URL from relative
+                    Log.d(TAG, "getSearchRequestDoc: redirectURL: " + redirectURL.toString() + ", new: " + newUrl);
+                    Log.d(TAG, "getSearchRequestDoc: headers: " + response.headers());
                     if (shouldUpdateDomainOnSearchResult()) {
                         String scheme = redirectURL.getProtocol();
                         String host = redirectURL.getHost();
@@ -148,17 +275,10 @@ public abstract class AbstractServer implements ServerInterface {
                         updateDomain(schemeAndHost); // Update the DB with new host
                     }
 
-                    // If you want to follow the redirect and get the document:
-                    Connection.Response redirectResponse = Jsoup.connect(redirectURL.toString())
-                            .headers(config.getHeaders())
-                            .cookies(config.getMappedCookies())
-                            .followRedirects(true) // Now follow redirects for the new URL
-                            .execute();
-                    doc = redirectResponse.parse();
+                    doc = response.parse();
                     return doc;
-                } else {
-                    Log.e(TAG, "No Location header found in redirect response for " + url);
                 }
+
             } else if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
                 Log.i(TAG, "Website not found: " + url);
                 return null;
@@ -220,11 +340,13 @@ public abstract class AbstractServer implements ServerInterface {
                     .timeout(0)
                     .get();
 
-//            String docTitle = doc.title();
+            String docTitle = doc.title();
 //            Log.d(TAG, "getRequestDoc: " + docTitle);
 //            if (docTitle.contains("Just a moment")) {
 //                return fetchDocUsingWebView(url);
 //            }
+            Log.d(TAG, "getRequestDoc: " + docTitle);
+            Log.d(TAG, "getRequestDoc: " + docTitle);
 
         } catch (IOException e) {
             //builder.append("Error : ").append(e.getMessage()).append("\n");

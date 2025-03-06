@@ -1064,11 +1064,16 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
+            if (request.getUrl().getScheme() == null || !request.getUrl().getScheme().contains("http")) {
+                return true;
+            }
 
 //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 //                // in case the server url is old, update it n redirection
-//                if (    movie.getState() != Movie.RESOLUTION_STATE &&
-//                        server.shouldUpdateDomainOnSearchResult() &&
+//                if (
+//                        movie.getStudio().equals(Movie.SERVER_FASELHD) &&
+//                        movie.getState() < Movie.RESOLUTION_STATE &&
+////                    server.shouldUpdateDomainOnSearchResult() &&
 //                        request.isForMainFrame() &&
 //                        request.isRedirect()
 //                ) {
@@ -1081,9 +1086,7 @@ public class BrowserActivity extends AppCompatActivity {
             String url = request.getUrl().toString();
             redirectUrl = url;
 
-            if (request.getUrl().getScheme() == null || !request.getUrl().getScheme().contains("http")) {
-                return true;
-            }
+
 
             String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
 

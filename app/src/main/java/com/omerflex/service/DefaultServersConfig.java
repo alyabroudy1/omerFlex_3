@@ -73,8 +73,8 @@ public class DefaultServersConfig {
         ServerConfig faselConfig = new ServerConfig();
         faselConfig.setActive(true);
         faselConfig.setName(Movie.SERVER_FASELHD);
-        faselConfig.setUrl("https://faselhd.center");
-        faselConfig.setReferer("https://faselhd.center/");
+        faselConfig.setUrl("https://www.faselhds.center");
+        faselConfig.setReferer("https://www.faselhds.center/");
 //        ServerConfigManager.addConfig(faselConfig, dbHelper);
 
         AbstractServer faselhd = new FaselHdServer();
@@ -98,8 +98,8 @@ public class DefaultServersConfig {
         ServerConfig oldAkwamConfig = new ServerConfig();
         oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
         oldAkwamConfig.setActive(true);
-        oldAkwamConfig.setUrl("https://ak.sv/old");
-        oldAkwamConfig.setReferer("https://ak.sv/old/");
+        oldAkwamConfig.setUrl("https://www.ak.sv/old");
+        oldAkwamConfig.setReferer("https://www.ak.sv/old/");
 
         AbstractServer oldAkwamServer = new OldAkwamServer();
         ServerConfigManager.addConfig(oldAkwamConfig, dbHelper);
