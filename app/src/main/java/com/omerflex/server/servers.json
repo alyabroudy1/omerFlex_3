@@ -39,8 +39,8 @@
     {
       "name": "faselhd",
       "displayName": "faselhd",
-      "url": "https://faselhds.care",
-      "webName": "https://www.faselhd.express",
+      "url": "https://www.faselhds.care",
+      "webName": "https://www.faselhd.center",
       "isActive": true,
       "description": "description",
       "date": "2024-09-07T12:33:00"
@@ -96,7 +96,7 @@
       "url": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/omerFlex.apk",
       "webName": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/",
       "isActive": true,
-      "description": "2",
+      "description": "3",
       "date": "2025-03-05T12:30:00"
     }
   ]
