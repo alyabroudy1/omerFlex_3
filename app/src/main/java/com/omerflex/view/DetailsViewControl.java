@@ -39,7 +39,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
         if (condTrailer) {
             Log.d(TAG, "onActionClicked: Trailer: " + movie.getTitle());
 
-            Util.openBrowserIntent(movie, activity, true, false);
+            Util.openBrowserIntent(movie, activity, true, false, false);
             return;
         }
         if (!condWatch1) {
@@ -124,10 +124,10 @@ public abstract class DetailsViewControl extends SearchViewControl {
 //                            hideProgressDialog(false);
                             result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
                             if (fragment != null){
-                                Util.openBrowserIntent(result, fragment, false, true);
+                                Util.openBrowserIntent(result, fragment, false, true, true);
                                 return;
                             }
-                            Util.openBrowserIntent(result, activity, false, true);
+                            Util.openBrowserIntent(result, activity, false, true, true);
                         }
 
                         @Override
@@ -219,10 +219,10 @@ public abstract class DetailsViewControl extends SearchViewControl {
                 Log.d(TAG, "onInvalidCookie: " + result);
                 result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
                 if (fragment != null) {
-                    Util.openBrowserIntent(result, fragment, true, true);
+                    Util.openBrowserIntent(result, fragment, true, true, true);
                     return;
                 }
-                Util.openBrowserIntent(result, activity, false, true);
+                Util.openBrowserIntent(result, activity, false, true, true);
             }
 
             @Override

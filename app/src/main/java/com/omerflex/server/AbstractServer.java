@@ -346,7 +346,6 @@ public abstract class AbstractServer implements ServerInterface {
 //                return fetchDocUsingWebView(url);
 //            }
             Log.d(TAG, "getRequestDoc: " + docTitle);
-            Log.d(TAG, "getRequestDoc: " + docTitle);
 
         } catch (IOException e) {
             //builder.append("Error : ").append(e.getMessage()).append("\n");
