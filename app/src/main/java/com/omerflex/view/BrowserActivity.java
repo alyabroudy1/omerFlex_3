@@ -83,6 +83,7 @@ public class BrowserActivity extends AppCompatActivity {
     Movie movie;
     static boolean saved;
     public boolean openedForResult = false;
+    public boolean isCookieFetch = false;
     ArrayObjectAdapter listRowAdapter;
 
     // Initialize Class
@@ -223,6 +224,8 @@ public class BrowserActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         cursorLayout = new CursorLayout(this);
         openedForResult = getIntent().getBooleanExtra("openedForResult", false);
+        isCookieFetch = getIntent().getBooleanExtra("isCookieFetch", false);
+        Log.d(TAG, "initializeThings: isCookieFetch: "+ isCookieFetch);
         gson = new Gson();
         activity = this;
 
@@ -1287,6 +1290,9 @@ public class BrowserActivity extends AppCompatActivity {
 //            if (movie.getStudio().equals(Movie.SERVER_KOORA_LIVE)) {
 //                return false;
 //            }
+            if (isCookieFetch){
+                return false;
+            }
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
                 return !movie.getVideoUrl().contains("vidmoly") &&
                         movie.getState() == Movie.RESOLUTION_STATE &&

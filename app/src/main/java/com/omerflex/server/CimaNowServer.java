@@ -8,10 +8,12 @@ import com.omerflex.entity.ServerConfig;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class CimaNowServer extends AbstractServer{
@@ -396,23 +398,14 @@ public class CimaNowServer extends AbstractServer{
     private MovieFetchProcess fetchItem(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
 
-        String url = movie.getVideoUrl() + "watching/";
-//            Document doc = Jsoup.connect(url).header(
-//                    "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8").header(
-//                    "User-Agent", " Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36").header(
-//                    "accept-encoding", "gzip, deflate").header(
-//                    "accept-language", "en,en-US;q=0.9").header(
-//                    "x-requested-with", "pc1"
-//            ).timeout(0).get();
-        //Elements links = doc.select("a[href]");
-
-        Document doc = getRequestDoc(url);
-        if (doc == null) {
+        // get watch link referer
+        Document doc1 = getRequestDoc(movie.getVideoUrl());
+        if (doc1 == null) {
             activityCallback.onInvalidLink(movie);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
         }
-
-        if (doc.title().contains("Just a moment")) {
+        Log.d(TAG, "fetchItem: title: "+ doc1.title()+", "+doc1.title().contains("Just a moment"));
+        if (doc1.title().contains("Just a moment")) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
@@ -420,42 +413,118 @@ public class CimaNowServer extends AbstractServer{
         }
 
 
-        // Find the img element inside the figure
-        Elements imgElements = doc.select("figure img");
+        // Find all <a> elements
+        Elements links = doc1.select("a[href]");
 
-        // Extract the src attribute
-        if (!imgElements.isEmpty()) {
-            Element img = imgElements.first();
-            String cardImageUrl = img.attr("src");
-            movie.setBgImageUrl(cardImageUrl);
-            movie.setBackgroundImageUrl(cardImageUrl);
-            movie.setBgImageUrl(cardImageUrl);
-            // Output the extracted image URL
-            System.out.println("cardImageUrl = " + cardImageUrl);
-        } else {
-            System.out.println("No img element found.");
+        String referer = null;
+        for (Element link : links) {
+            // Flexible filtering based on text or child elements
+            if (link.text().contains("شاهد") || !link.select("i.fa-play").isEmpty()) {
+                String href =link.attr("href");
+                System.out.println("Extracted Href: " + href);
+                referer =Util.extractDomain(href, true, true);
+                System.out.println("Extracted referer: " + referer);
+                break; // Stop after finding the first match
+            }
         }
 
-        // Select the <li> element with the attribute aria-label="story"
-        Element storyElement = doc.select("li[aria-label=story] p").first();
+        String url = movie.getVideoUrl() + "watching/";
+        try {
 
-        if (storyElement != null) {
-            // Extract the text inside the <p> tag
-            String des = storyElement.text();
-            System.out.println("Description: " + des);
-            movie.setDescription(des);
-        } else {
-            System.out.println("No story element found.");
-        }
+            Document doc = Jsoup.connect(url)
+//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+                    .headers(getConfig().getHeaders())
+                    .header("Referer", referer)
+                    .cookies(getConfig().getMappedCookies())
+//                    .userAgent("Android 7")
+//                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+                    .followRedirects(true)
+                    .ignoreHttpErrors(true)
+                    .ignoreContentType(true)
+//                    .timeout(16000)
+                    .timeout(0)
+                    .get();
+        //Elements links = doc.select("a[href]");
 
 
-        // Select all <li> elements that have a data-index attribute
-        Elements movieElements = doc.select("li[data-index]");
+            if (doc == null) {
+                activityCallback.onInvalidLink(movie);
+                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
+            }
+            Log.d(TAG, "fetchItem: title: "+ doc.title()+", "+doc.title().contains("Just a moment"));
+            if (doc.title().contains("Just a moment")) {
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+                activityCallback.onInvalidCookie(movie, getLabel());
+            }
 
-        if (movieElements.isEmpty()){
+
+            // Find the img element inside the figure
+            Elements imgElements = doc.select("figure img");
+
+            // Extract the src attribute
+            if (!imgElements.isEmpty()) {
+                Element img = imgElements.first();
+                String cardImageUrl = img.attr("src");
+                movie.setBgImageUrl(cardImageUrl);
+                movie.setBackgroundImageUrl(cardImageUrl);
+                movie.setBgImageUrl(cardImageUrl);
+                // Output the extracted image URL
+                System.out.println("cardImageUrl = " + cardImageUrl);
+            } else {
+                System.out.println("No img element found.");
+            }
+
+            // Select the <li> element with the attribute aria-label="story"
+            Element storyElement = doc.select("li[aria-label=story] p").first();
+
+            if (storyElement != null) {
+                // Extract the text inside the <p> tag
+                String des = storyElement.text();
+                System.out.println("Description: " + des);
+                movie.setDescription(des);
+            } else {
+                System.out.println("No story element found.");
+            }
+
+
+            // Select all <li> elements that have a data-index attribute
+            Elements movieElements = doc.select("li[data-index]");
+
+            for (Element movieElement : movieElements) {
+//            if (movieElement.hasClass("active")){
+//                //ignore active item as its fetched before
+//                continue;
+//            }
+                String dataIndex = movieElement.attr("data-index");
+                String title = movieElement.text();  // Get the text content of the <li>
+
+                // Create a new Movie object and add it to the list
+                Movie serverItem = Movie.clone(movie);
+                serverItem.setTitle(title);
+                serverItem.setVideoUrl(url + "#"+dataIndex  + "|Referer="+getConfig().getReferer());
+                serverItem.setState(Movie.RESOLUTION_STATE);
+                movie.addSubList(serverItem);
+                Log.d(TAG, "fetchItem: serverItem:"+serverItem.getVideoUrl());
+            }
+
+            activityCallback.onSuccess(movie, getLabel());
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
+        } catch (
+    IOException e) {
+        //builder.append("Error : ").append(e.getMessage()).append("\n");
+        Log.i(TAG, "error: " + e.getMessage() + ", url: "+ url);
+//            String errorMessage = "error: " + getServerId() + ": " + e.getMessage();
+
             activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
-        }
+    }
+
+//        Document doc = getRequestDoc(url);
+
+
 // Loop through the elements and extract the movie information
 //        Element embedElement = doc.selectFirst("iframe");
 //
@@ -472,25 +541,7 @@ public class CimaNowServer extends AbstractServer{
 //            }
 //        }
 
-        for (Element movieElement : movieElements) {
-//            if (movieElement.hasClass("active")){
-//                //ignore active item as its fetched before
-//                continue;
-//            }
-            String dataIndex = movieElement.attr("data-index");
-            String title = movieElement.text();  // Get the text content of the <li>
 
-            // Create a new Movie object and add it to the list
-            Movie serverItem = Movie.clone(movie);
-            serverItem.setTitle(title);
-            serverItem.setVideoUrl(url + "#"+dataIndex  + "|Referer="+getConfig().getReferer());
-            serverItem.setState(Movie.RESOLUTION_STATE);
-            movie.addSubList(serverItem);
-            Log.d(TAG, "fetchItem: serverItem:"+serverItem.getVideoUrl());
-        }
-
-        activityCallback.onSuccess(movie, getLabel());
-        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
 
