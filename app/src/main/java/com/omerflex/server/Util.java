@@ -265,7 +265,6 @@ public class Util {
         }
         return intent;
     }
-
     @NonNull
     public static String generateMaxPlayerHeaders(String url, Map<String, String> headers) {
         String headerString = "";

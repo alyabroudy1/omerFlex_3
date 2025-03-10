@@ -38,6 +38,7 @@ import java.util.concurrent.Executors;
 public class MobileMovieDetailActivity extends AppCompatActivity {
     public static final String TAG = "MobileDetailActivity";
     public static final String EXTRA_MOVIE_TITLE = "extra_movie_title";
+
     public static final String EXTRA_MOVIE_IMAGE_URL = "extra_movie_image_url";
     public static final String EXTRA_MOVIE_CATEGORY = "extra_movie_category";
     public static final String EXTRA_MOVIE_RATING = "extra_movie_rating";

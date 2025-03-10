@@ -866,6 +866,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             clickedMovieIndex = clickedMovieAdapter.indexOf(movie);
             generateMovieHistory(mSelectedMovie, movie);
 //            handleItemClick(itemViewHolder, item, rowViewHolder, row);
+
             detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,clickedMovieAdapter, defaultHeadersCounter);
 //            detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,(ListRow) row, defaultHeadersCounter);
         }

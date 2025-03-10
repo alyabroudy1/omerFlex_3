@@ -293,6 +293,7 @@ public abstract class AbstractServer implements ServerInterface {
             Log.e(TAG, "Error fetching URL " + url + ": " + e.getMessage());
             return null;
         }
+
         return null;
     }
 

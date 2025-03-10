@@ -171,6 +171,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
 //                    hideProgressDialog(true);
         });
 
+
         executor.shutdown();
     }
 
