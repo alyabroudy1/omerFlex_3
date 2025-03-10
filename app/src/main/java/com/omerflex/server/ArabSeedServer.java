@@ -10,7 +10,6 @@ import com.omerflex.entity.ServerConfig;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -19,9 +18,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * from SearchActivity or MainActivity -> item -> resolutions
@@ -543,128 +540,43 @@ public class ArabSeedServer extends AbstractServer {
         Log.d(TAG, "fetchItem: watchElems:" + watchElems.size());
         for (Element watchElem : watchElems) {
             Elements linkElems = watchElem.getElementsByTag("a");
-            Log.d(TAG, "fetchItem: watchElems-link: " + linkElems.size());
-            String domain = Util.extractDomain(movie.getVideoUrl(), true, true);
-            Log.d(TAG, "fetchItem: domain: "+ domain);
-            movie.setDescription(dec);
-            if (!linkElems.isEmpty()) {
-                for (Element linkElem : linkElems) {
-                    link = linkElem.attr("href");
-                    if (link != null) {
-                        Movie resolution = Movie.clone(movie);
-                        resolution.setVideoUrl(link);
-                        Log.d(TAG, "fetchItem: link:" + link);
-                        resolution.setState(Movie.BROWSER_STATE);
+            for (Element linkElem : linkElems) {
+                link = linkElem.attr("href");
+                String domain = Util.extractDomain(movie.getVideoUrl(), true, true);
+                movie.setDescription(dec);
+                if (link != null) {
+                    Movie resolution = Movie.clone(movie);
+                    resolution.setVideoUrl(link);
+                    Log.d(TAG, "fetchItem: link:" + link);
+                    resolution.setState(Movie.BROWSER_STATE);
 
-                        return fetchServers(null, resolution, domain, activityCallback);
-                    }
-                    break;
+                    return fetchServers(resolution, domain, activityCallback);
                 }
                 break;
             }
-            //new style
-            try {
-            // Find the form dynamically (by checking if it contains a hidden input and a button)
-            Element targetForm = null;
-            Elements forms = watchElem.select("form");
-            for (Element form : forms) {
-                if (form.selectFirst("input[type='hidden']") != null && form.selectFirst("button") != null) {
-                    targetForm = form;
-                    break;
-                }
-            }
-
-            if (targetForm == null) {
-                System.out.println("error: Watch form not found.");
-                break;
-            }
-
-// Extract the POST URL from the form's action attribute
-                String postUrl = targetForm.attr("action");
-                if (postUrl.isEmpty()) {
-                    System.out.println("Post URL not found in form's action attribute.");
-                    break;
-                }
-
-                Log.d(TAG, "fetchItem: postUrl:"+ postUrl);
-
-
-                // Find the hidden input
-            Element hiddenInput = targetForm.selectFirst("input[type='hidden']");
-            if (hiddenInput == null) {
-                System.out.println("Error Hidden input not found.");
-                break;
-            }
-
-            // Extract the hidden input name dynamically
-            String hiddenInputName = hiddenInput.attr("name");
-            if (hiddenInputName.isEmpty()) {
-                System.out.println("Error Hidden input name not found.");
-                break;
-            }
-                Log.d(TAG, "fetchItem: hiddenInputName:"+ hiddenInputName);
-
-            // Extract the hidden input value
-            String hiddenInputValue = hiddenInput.val();
-
-                Log.d(TAG, "fetchItem: hiddenInputValue:"+ hiddenInputValue);
-
-            // Prepare the POST data
-            Map<String, String> postData = new HashMap<>();
-            postData.put(hiddenInputName, hiddenInputValue);
-
-            // Make the POST request
-            Connection connection = Jsoup.connect(postUrl)
-                    .method(Connection.Method.POST)
-                    .data(postData)
-                    .followRedirects(true);
-
-                // Add headers
-                connection.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                connection.header("Content-Type", "application/x-www-form-urlencoded");
-                connection.header("Accept-Language", "en-US,en;q=0.9");
-                connection.header("Referer", domain);
-
-                Connection.Response response = connection.execute();
-
-                if (response.statusCode() == 200) {
-
-                    // Print the response status code and body
-                    System.out.println("Status Code: " + response.statusCode());
-//                    Log.d(TAG, "Response Body: " + response.body());
-
-                    return fetchServers(response.parse(), movie, domain, activityCallback);
-                }
-
-        } catch (IOException e) {
-                System.out.println("Error fetching watch button: " + e.getMessage());
-        }
-
-
+            break;
         }
         activityCallback.onInvalidLink(movie);
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
     }
 
-    private MovieFetchProcess fetchServers(Document doc, Movie movie, String referer, ActivityCallback<Movie> activityCallback) {
+    private MovieFetchProcess fetchServers(Movie movie, String referer, ActivityCallback<Movie> activityCallback) {
         Log.d(TAG, "fetchServers run-1: " + movie.getVideoUrl());
-
+        Document doc = null;
 //        Document doc = getRequestDoc(movie.getVideoUrl());
         try {
-            if (doc == null){
-                doc = Jsoup.connect(movie.getVideoUrl())
-                        .header("referer", referer)
-                        .userAgent("Android 8")
-                        .followRedirects(true)
-                        .ignoreHttpErrors(true)
-                        .timeout(0)
-                        .ignoreContentType(true)
-                        .get();
-            }
+            doc = Jsoup.connect(movie.getVideoUrl())
+                    .header("referer", referer)
+                    .userAgent("Android 8")
+                    .followRedirects(true)
+                    .ignoreHttpErrors(true)
+                    .timeout(0)
+                    .ignoreContentType(true)
+                    .get();
 
             Elements serverElems = doc.getElementsByClass("containerServers");
-            Log.d(TAG, "fetchServers:serverElems: "+serverElems.size());
-            if (serverElems.isEmpty()) {
+
+            if (serverElems.size() == 0) {
                 Movie clonedMovie = Movie.clone(movie);
                 clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
 //                String userAgent = "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36";
@@ -966,6 +878,7 @@ public class ArabSeedServer extends AbstractServer {
                         "}\n" +
                         "}" +
                         "});";
+
 
 //                String serverId = "#";
 //                String clickServer = "";

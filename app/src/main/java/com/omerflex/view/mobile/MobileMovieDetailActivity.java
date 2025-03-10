@@ -38,7 +38,6 @@ import java.util.concurrent.Executors;
 public class MobileMovieDetailActivity extends AppCompatActivity {
     public static final String TAG = "MobileDetailActivity";
     public static final String EXTRA_MOVIE_TITLE = "extra_movie_title";
-
     public static final String EXTRA_MOVIE_IMAGE_URL = "extra_movie_image_url";
     public static final String EXTRA_MOVIE_CATEGORY = "extra_movie_category";
     public static final String EXTRA_MOVIE_RATING = "extra_movie_rating";
@@ -169,7 +168,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
 
     private void fetchCookie(Movie result) {
         result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
-        Util.openBrowserIntent(result, activity, true, true, true);
+        Util.openBrowserIntent(result, activity, true, true);
     }
 
     private void evaluateWatchButton() {
@@ -458,7 +457,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                         @Override
                         public void onInvalidCookie(Movie result, String title) {
                             movie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
-                            Util.openBrowserIntent(movie, activity, false, true, true);
+                            Util.openBrowserIntent(movie, activity, false, true);
                         }
 
                         @Override

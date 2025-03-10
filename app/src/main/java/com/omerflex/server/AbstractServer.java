@@ -293,7 +293,6 @@ public abstract class AbstractServer implements ServerInterface {
             Log.e(TAG, "Error fetching URL " + url + ": " + e.getMessage());
             return null;
         }
-
         return null;
     }
 
@@ -346,6 +345,7 @@ public abstract class AbstractServer implements ServerInterface {
 //            if (docTitle.contains("Just a moment")) {
 //                return fetchDocUsingWebView(url);
 //            }
+            Log.d(TAG, "getRequestDoc: " + docTitle);
             Log.d(TAG, "getRequestDoc: " + docTitle);
 
         } catch (IOException e) {

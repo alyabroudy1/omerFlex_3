@@ -232,9 +232,8 @@ public class Util {
         Objects.requireNonNull(fragment).startActivity(exoIntent);
     }
 
-    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult, boolean isCookieFetch) {
+    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult) {
         Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class), withSubList);
-        exoIntent.putExtra("isCookieFetch", isCookieFetch);
         if (openForResult) {
             exoIntent.putExtra("openedForResult", true);
             Objects.requireNonNull(activity).startActivityForResult(exoIntent, movie.getFetch());
@@ -244,9 +243,8 @@ public class Util {
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 
-    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult, boolean isCookieFetch) {
+    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult) {
         Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), BrowserActivity.class), withSubList);
-        exoIntent.putExtra("isCookieFetch", isCookieFetch);
         if (openForResult) {
             exoIntent.putExtra("openedForResult", true);
             fragment.startActivityForResult(exoIntent, movie.getFetch());
@@ -265,6 +263,7 @@ public class Util {
         }
         return intent;
     }
+
     @NonNull
     public static String generateMaxPlayerHeaders(String url, Map<String, String> headers) {
         String headerString = "";
