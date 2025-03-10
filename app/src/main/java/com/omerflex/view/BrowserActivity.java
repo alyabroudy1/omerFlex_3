@@ -1291,6 +1291,7 @@ public class BrowserActivity extends AppCompatActivity {
 //                return false;
 //            }
             if (isCookieFetch){
+
                 return false;
             }
             if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {

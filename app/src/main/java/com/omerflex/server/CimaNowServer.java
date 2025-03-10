@@ -500,7 +500,6 @@ public class CimaNowServer extends AbstractServer{
 //            }
                 String dataIndex = movieElement.attr("data-index");
                 String title = movieElement.text();  // Get the text content of the <li>
-
                 // Create a new Movie object and add it to the list
                 Movie serverItem = Movie.clone(movie);
                 serverItem.setTitle(title);
