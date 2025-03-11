@@ -39,7 +39,7 @@ import java.util.Map;
 public class MovieDbHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "MoviesHistory.db";
     static String TAG = "MovieDbHelper";
-    private static final int DATABASE_VERSION = 4; // should be increased if changes applied to database structure or reinstall the app
+    private static final int DATABASE_VERSION = 5; // should be increased if changes applied to database structure or reinstall the app
 
     //to make this class singleton which means to be created only one time in the app
     private static MovieDbHelper instance;
@@ -63,6 +63,59 @@ public class MovieDbHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         this.db = db;
 
+
+
+        final String SQL_CREATE_COOKIE_TABLE = "CREATE TABLE " + CookieTable.TABLE_NAME + "("
+                + CookieTable.COLUMN_ID + " TEXT PRIMARY KEY, "
+                + CookieTable.COLUMN_REFERRER + " TEXT, "
+                + CookieTable.COLUMN_CREATED_AT + " INTEGER, "
+                + CookieTable.COLUMN_HEADER + " TEXT, "
+                + CookieTable.COLUMN_COOKIE + " TEXT"
+                + ")";
+
+
+
+
+
+
+        createServerConfigTable(db);
+        createMoviesTable(db);
+        createMovieHistoryTable(db);
+        createIptvTable(db);
+
+
+//        db.execSQL(SQL_CREATE_COOKIE_TABLE);
+
+
+
+    }
+
+    private void createIptvTable(SQLiteDatabase db) {
+        final String SQL_CREATE_IPTV_TABLE = "CREATE TABLE " + IptvTable.TABLE_NAME + "("
+                + IptvTable.COLUMN_ID + " TEXT, "
+                + IptvTable.COLUMN_URL + " TEXT, "
+                + IptvTable.COLUMN_HASH + " TEXT PRIMARY KEY"
+                + ")";
+        db.execSQL(SQL_CREATE_IPTV_TABLE);
+    }
+
+    private void createServerConfigTable(SQLiteDatabase db) {
+        final String SQL_CREATE_SERVER_CONFIGS_TABLE = "CREATE TABLE " + ConfigTable.TABLE_NAME + "("
+                + ConfigTable.COLUMN_ID + " TEXT PRIMARY KEY, "
+                + ConfigTable.COLUMN_NAME + " TEXT, "
+                + ConfigTable.COLUMN_LABEL + " TEXT, "
+                + ConfigTable.COLUMN_IS_ACTIVE + " INTEGER, "
+                + ConfigTable.COLUMN_URL + " TEXT, "
+                + ConfigTable.COLUMN_REFERER + " TEXT, "
+                + ConfigTable.COLUMN_CREATED_AT + " INTEGER, "
+                + ConfigTable.COLUMN_HEADER + " TEXT, "
+                + ConfigTable.COLUMN_COOKIE + " TEXT"
+                + ")";
+
+        db.execSQL(SQL_CREATE_SERVER_CONFIGS_TABLE);
+    }
+
+    private void createMoviesTable(SQLiteDatabase db) {
         final String SQL_CREATE_MOVIES_TABLE = "CREATE TABLE " +
                 MoviesTable.TABLE_NAME + " ( " +
                 MoviesTable._ID + " INTEGER, " +
@@ -87,33 +140,10 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 //  "FOREIGN KEY (" + MoviesTable.COLUMN_CATEGORY_ID + " ) REFERENCES "+
                 //   CategoriesTable.TABLE_NAME + "(" + CategoriesTable._ID + ")" + "ON DELETE CASCADE" +
                 ")";
+        db.execSQL(SQL_CREATE_MOVIES_TABLE);
+    }
 
-        final String SQL_CREATE_COOKIE_TABLE = "CREATE TABLE " + CookieTable.TABLE_NAME + "("
-                + CookieTable.COLUMN_ID + " TEXT PRIMARY KEY, "
-                + CookieTable.COLUMN_REFERRER + " TEXT, "
-                + CookieTable.COLUMN_CREATED_AT + " INTEGER, "
-                + CookieTable.COLUMN_HEADER + " TEXT, "
-                + CookieTable.COLUMN_COOKIE + " TEXT"
-                + ")";
-
-        final String SQL_CREATE_SERVER_CONFIGS_TABLE = "CREATE TABLE " + ConfigTable.TABLE_NAME + "("
-                + ConfigTable.COLUMN_ID + " TEXT PRIMARY KEY, "
-                + ConfigTable.COLUMN_NAME + " TEXT, "
-                + ConfigTable.COLUMN_LABEL + " TEXT, "
-                + ConfigTable.COLUMN_IS_ACTIVE + " INTEGER, "
-                + ConfigTable.COLUMN_URL + " TEXT, "
-                + ConfigTable.COLUMN_REFERER + " TEXT, "
-                + ConfigTable.COLUMN_CREATED_AT + " INTEGER, "
-                + ConfigTable.COLUMN_HEADER + " TEXT, "
-                + ConfigTable.COLUMN_COOKIE + " TEXT"
-                + ")";
-
-        final String SQL_CREATE_IPTV_TABLE = "CREATE TABLE " + IptvTable.TABLE_NAME + "("
-                + IptvTable.COLUMN_ID + " TEXT, "
-                + IptvTable.COLUMN_URL + " TEXT, "
-                + IptvTable.COLUMN_HASH + " TEXT PRIMARY KEY"
-                + ")";
-
+    private void createMovieHistoryTable(SQLiteDatabase db) {
         final String SQL_CREATE_MOVIE_HISTORY_TABLE = "CREATE TABLE " + MovieHistoryTable.TABLE_NAME + "("
                 + MovieHistoryTable.COLUMN_ID + " INTEGER, "
                 + MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " TEXT PRIMARY KEY, "
@@ -122,25 +152,20 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 + MovieHistoryTable.COLUMN_PLAYED_AT + " INTEGER,"
                 + MovieHistoryTable.COLUMN_PLAYED_TIME + " INTEGER"
                 + ")";
-
-
-        db.execSQL(SQL_CREATE_MOVIES_TABLE);
-        db.execSQL(SQL_CREATE_IPTV_TABLE);
-//        db.execSQL(SQL_CREATE_COOKIE_TABLE);
-        db.execSQL(SQL_CREATE_SERVER_CONFIGS_TABLE);
         db.execSQL(SQL_CREATE_MOVIE_HISTORY_TABLE);
-
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        Log.d(TAG, "onUpgrade: old:"+oldVersion+ ", new: "+ newVersion);
         if (newVersion > oldVersion) {
-            db.execSQL("DROP TABLE IF EXISTS " + MoviesTable.TABLE_NAME);
-            db.execSQL("DROP TABLE IF EXISTS " + CookieTable.TABLE_NAME);
+//            db.execSQL("DROP TABLE IF EXISTS " + MoviesTable.TABLE_NAME);
+//            db.execSQL("DROP TABLE IF EXISTS " + CookieTable.TABLE_NAME);
             db.execSQL("DROP TABLE IF EXISTS " + ConfigTable.TABLE_NAME);
-            db.execSQL("DROP TABLE IF EXISTS " + IptvTable.TABLE_NAME);
-            db.execSQL("DROP TABLE IF EXISTS " + MovieHistoryTable.TABLE_NAME);
-            onCreate(db);
+//            db.execSQL("DROP TABLE IF EXISTS " + IptvTable.TABLE_NAME);
+//            db.execSQL("DROP TABLE IF EXISTS " + MovieHistoryTable.TABLE_NAME);
+//            onCreate(db);
+            createServerConfigTable(db);
         }
     }
 

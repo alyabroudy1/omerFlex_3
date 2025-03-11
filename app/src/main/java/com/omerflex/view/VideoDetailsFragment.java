@@ -191,6 +191,9 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 //            mSelectedMovie.setSubList(movieSublist);
 //        }
 
+//        https://www.laroza.now/play.php?vid=4109d062a
+//        https://www.laroza.now/video.php?vid=4109d062a
+
         mProgressDialog = new ProgressDialog(getContext());
         mProgressDialog.setTitle("جاري التحميل...");
         mProgressDialog.setMessage("الرجاء الانتظار...");
@@ -297,7 +300,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
         //todo: 1. at start init and fetch current movie and update the current movie accordingly
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        // showProgressDialog(false);
+         showProgressDialog(false);
         executor.submit(() -> {
             mSelectedMovie = (Movie) server.fetch(
                     mSelectedMovie,
@@ -316,31 +319,31 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
                             //todo test
 //                            removeInvalidLinks(mSelectedMovie.getSubList());
-
+                                hideProgressDialog(true, null);
 
                             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
                             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(listRowAdapter), mAdapter.size());
                             setSelectedPosition(getAdapter().size() - 1, true);
 //                            Log.d(TAG, "setupRowsAndServer: mSelectedMovie sublist after first fetch:" + mSelectedMovie.getSubList().toString());
-
-                            hideProgressDialog(true);
                         }
 
                         @Override
                         public void onInvalidCookie(Movie result, String title) {
                             Log.d(TAG, "onInvalidCookie: 338: "+ result);
                             result.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+                            hideProgressDialog(true, null);
                             Util.openBrowserIntent(result, fragment, false, true, true);
                         }
 
                         @Override
                         public void onInvalidLink(Movie result) {
-
+                            hideProgressDialog(true, "حدث خطأ...");
                         }
 
                         @Override
                         public void onInvalidLink(String message) {
                             Log.d(TAG, "onInvalidLink: " + message);
+                            hideProgressDialog(true, "حدث خطأ...");
                         }
                     }
             ).movie;
@@ -754,7 +757,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                                                 //dbHelper.addMainMovieToHistory(res.getMainMovieTitle(), null);
                                                 updateItemFromActivityResult(result);
 
-                                                hideProgressDialog(false);
+                                                hideProgressDialog(false, null);
                                             }
                                         });
 
@@ -764,19 +767,19 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                                 @Override
                                 public void onInvalidCookie(Movie result, String title) {
                                     Log.d(TAG, "onInvalidCookie: 752"+ result);
-                                    hideProgressDialog(false);
+                                    hideProgressDialog(false, null);
                                     result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
                                     Util.openBrowserIntent(result, fragment, false, true, true);
                                 }
 
                                 @Override
                                 public void onInvalidLink(Movie result) {
-
+                                    hideProgressDialog(true, "حدث خطأ...");
                                 }
 
                                 @Override
                                 public void onInvalidLink(String message) {
-
+                                    hideProgressDialog(true, "حدث خطأ...");
                                 }
                             }
                     ).movie;
@@ -1376,7 +1379,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     }
 
     // Hide the ProgressDialog
-    private void hideProgressDialog(boolean uiThread) {
+    private void hideProgressDialog(boolean uiThread, String message) {
         if (uiThread) {
             getActivity().runOnUiThread(new Runnable() {
                 @Override
@@ -1384,11 +1387,17 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                     if (mProgressDialog != null && mProgressDialog.isShowing()) {
                         mProgressDialog.dismiss();
                     }
+                    if (message != null){
+                        Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
+                    }
                 }
             });
         } else {
             if (mProgressDialog != null && mProgressDialog.isShowing()) {
                 mProgressDialog.dismiss();
+            }
+            if (message != null){
+                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
             }
         }
 

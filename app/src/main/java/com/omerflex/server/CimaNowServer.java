@@ -135,6 +135,7 @@ public class CimaNowServer extends AbstractServer{
             }
 
             movie.setStudio(Movie.SERVER_CimaNow);
+            movie.setDescription(title);
             movie.setState(detectMovieState(movie));
             movie.setMainMovie(movie);
             movie.setMainMovieTitle(movie.getVideoUrl());
@@ -504,7 +505,8 @@ public class CimaNowServer extends AbstractServer{
                 // Create a new Movie object and add it to the list
                 Movie serverItem = Movie.clone(movie);
                 serverItem.setTitle(title);
-                serverItem.setVideoUrl(url + "#"+dataIndex  + "|Referer="+getConfig().getReferer());
+//                serverItem.setVideoUrl(url + "#"+dataIndex  + "|Referer="+getConfig().getReferer());
+                serverItem.setVideoUrl(url + "#"+dataIndex  + "|Referer="+referer);
                 serverItem.setState(Movie.RESOLUTION_STATE);
                 movie.addSubList(serverItem);
                 Log.d(TAG, "fetchItem: serverItem:"+serverItem.getVideoUrl());

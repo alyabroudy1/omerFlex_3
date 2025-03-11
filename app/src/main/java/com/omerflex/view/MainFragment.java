@@ -1408,6 +1408,4 @@ public class MainFragment extends BrowseSupportFragment {
         public void onUnbindViewHolder(ViewHolder viewHolder) {
         }
     }
-
-
 }

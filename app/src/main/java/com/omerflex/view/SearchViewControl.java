@@ -21,6 +21,7 @@ import com.omerflex.server.CimaNowServer;
 import com.omerflex.server.FaselHdServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.KooraServer;
+import com.omerflex.server.LarozaServer;
 import com.omerflex.server.MyCimaServer;
 import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
@@ -421,6 +422,7 @@ public abstract class SearchViewControl {
 //                                server instanceof AkwamServer ||
 //                                server instanceof ArabSeedServer ||
 //                                server instanceof CimaNowServer ||
+////                                server instanceof LarozaServer ||
 //                                server instanceof FaselHdServer ||
 //                                server instanceof OmarServer ||
 //                                server instanceof IptvServer ||

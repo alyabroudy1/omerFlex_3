@@ -9,6 +9,7 @@ import com.omerflex.server.CimaNowServer;
 import com.omerflex.server.FaselHdServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.KooraServer;
+import com.omerflex.server.LarozaServer;
 import com.omerflex.server.MyCimaServer;
 import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
@@ -81,6 +82,17 @@ public class DefaultServersConfig {
 //        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
         ServerConfigManager.addConfig(faselConfig, dbHelper);
         ServerConfigManager.addServer(faselhd);
+
+        //         ### laroza ###
+        ServerConfig larozaConfig = new ServerConfig();
+        larozaConfig.setName(Movie.SERVER_LAROZA);
+        larozaConfig.setActive(true);
+        larozaConfig.setUrl("https://www.laroza.now");
+        larozaConfig.setReferer("https://www.laroza.now/");
+
+        AbstractServer larozaServer = new LarozaServer();
+        ServerConfigManager.addConfig(larozaConfig, dbHelper);
+        ServerConfigManager.addServer(larozaServer);
 
 //         ### akwam ###
         ServerConfig akwamConfig = new ServerConfig();
