@@ -958,8 +958,8 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                Log.d(TAG, "onReceivedSslError: eeee:"+error.toString());
-            super.onReceivedSslError(view, handler, error);
-//            handler.proceed(); // Bypass SSL errors (use cautiously!)
+//            super.onReceivedSslError(view, handler, error);
+            handler.proceed(); // Bypass SSL errors (use cautiously!)
         }
 
         @Nullable
@@ -1040,7 +1040,8 @@ public class BrowserActivity extends AppCompatActivity {
 
             if (movie.getStudio().equals(Movie.SERVER_CimaNow)) {
                 if (Util.extractDomain(request.getUrl().toString(), false, false).contains("cima")) {
-                    return super.shouldInterceptRequest(view, request);
+                    Log.d(TAG, "handleSupportedMedia: contains cima");
+//                    return super.shouldInterceptRequest(view, request);
                 }
             }
 //            String videoUrl = request.getUrl().toString().replace("&amp;amp;", "&");

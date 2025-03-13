@@ -26,7 +26,7 @@ public class LinkFilterService {
     ));
 
     private static final Pattern MEDIA_PATTERN = Pattern.compile(
-            "(video|audio|stream|vod|hls|dash|\\.m3u8|\\.mpd|\\.ts|seg-|chunk-|/quality/|/bitrate/)",
+            "(\\.m3u8|\\.mpd|\\.ts|seg-|chunk-|/quality/|/bitrate/)",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -209,8 +209,8 @@ public class LinkFilterService {
         final Map<String, String> headers = request.getRequestHeaders();
 
         // 1. Check for byte range requests
+
         if (isMediaByHeaders(headers, url)) {
-//            Log.d(TAG, "isSupportedMedia: true isMediaByHeaders, "+ url);
 //            if (url.endsWith(".mp4")){return false;}
             return true;
         }
