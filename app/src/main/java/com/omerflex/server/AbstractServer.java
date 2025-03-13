@@ -401,12 +401,13 @@ public abstract class AbstractServer implements ServerInterface {
 
     public String getCustomUserAgent(int state){
         String defaultUserAgent = "Android 7";
-        switch (state){
-            case Movie.COOKIE_STATE:
-                return defaultUserAgent;
-            default:
-                return null;
-        }
+//        switch (state){
+//            case Movie.COOKIE_STATE:
+//                return defaultUserAgent;
+//            default:
+//                return null;
+//        }
+        return defaultUserAgent;
     }
 
     public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie){

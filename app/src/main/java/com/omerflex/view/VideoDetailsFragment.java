@@ -311,6 +311,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
                             Log.d(TAG, "setupRowsAndServer: mSelectedMovie after first fetch:" + mSelectedMovie);
                             if (result == null || result.getSubList() == null || result.getSubList().isEmpty()) {
                                 Log.d(TAG, "setupRowsAndServer: onSuccess after first fetch: empty movie");
+                                hideProgressDialog(true, "حدث خطأ...");
                                 return;
                             }
 //                            if (mSelectedMovie.getSubList() != null) {

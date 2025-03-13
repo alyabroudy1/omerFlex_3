@@ -399,15 +399,18 @@ if (!videoUrl.startsWith("http")){
             activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
         }
-
+        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
         // Extract and print server details
         for (Element server : servers) {
             String title = server.select("strong").text();
-            String dataIndex = server.attr("data-embed-id");
+            String dataIndex = server.attr("data-embed-url");
+//            String dataIndex = server.attr("data-embed-id");
             Movie resolution = Movie.clone(movie);
             resolution.setState(Movie.RESOLUTION_STATE);
             resolution.setTitle(title);
-            resolution.setVideoUrl(url + "#"+dataIndex);
+
+            resolution.setVideoUrl(dataIndex + "|Referer="+referer);
+//            resolution.setVideoUrl(url + "#"+dataIndex);
 
             movie.addSubList(resolution);
         }
@@ -553,21 +556,41 @@ if (!videoUrl.startsWith("http")){
                         serverId = serverId.substring(0, pipeIndex);
                     }
 
-                    script = "document.addEventListener('DOMContentLoaded', () => {\n" +
-                            "    let elements = document.querySelectorAll('li[data-embed-id]');\n" +
-                            "    elements.forEach(function (element) {\n" +
-                            "        if (element.getAttribute('data-embed-id') == "+serverId+") {\n" +
-                            "            // Simulate a click on the matched element\n" +
-                            "            element.click();\n" +
-                            "// Wait for the second element to appear after the click\n" +
-                            "        waitForElement('iframe', function(secondElement) {\n" +
-                            "            console.log('xxxx: Second element appeared:', secondElement);\n" +
-                            "secondElement.scrollIntoView({ behavior: 'smooth', block: 'center' });" +
-                            "makeFullScreen(secondElement);" +
-                            "        });" +
+                    script =
+//                            "document.addEventListener('DOMContentLoaded', () => {\n" +
+                            "" +
+                            "let elements = document.querySelectorAll('li[data-embed-id]');\n" +
+                            "elements.forEach(function (element) {\n" +
+                            "    if (element.getAttribute('data-embed-id') == " + serverId+ ") {\n" +
+                            "        // Simulate a click on the matched element\n" +
+                            "        element.click();\n" +
+                            "console.log('Valid iframe found with src:', element.getAttribute('data-embed-url'));" +
+                            "\n" +
+//                            "        // Wait for the second element to appear after the click\n" +
+                            "        waitForElement('iframe', function (secondElement) {\n" +
+                            "    console.log('xxxx: Second element appeared:', secondElement);\n" +
+                            "\n" +
+                            "    // Get the iframe src attribute\n" +
+                            "    let iframeSrc = secondElement.getAttribute('src');\n" +
+                            "\n" +
+                            "    // Check if src is valid (not null, not 'about:blank')\n" +
+                            "    if (iframeSrc && iframeSrc.trim() !== '' && iframeSrc !== 'about:blank') {\n" +
+                            "        console.log('Valid iframe found with src:', iframeSrc);\n" +
+                            "\n" +
+                            "        // Scroll to the iframe\n" +
+                            "        secondElement.scrollIntoView({ behavior: 'smooth', block: 'center' });\n" +
+                            "\n" +
+                            "        // Optional: Click the iframe if needed\n" +
+                            "        secondElement.click();\n" +
+                            "    } else {\n" +
+                            "        console.log('Skipping iframe with invalid src:', iframeSrc);\n" +
+                            "    }\n" +
+                            "});" +
 
-                            "        }\n" +
-                            "    });" +
+                            "return;" +
+
+                            "    }\n" +
+                            "});" +
 
                             "function makeFullScreen(iframe) {" +
                             "if (iframe) {\n" +
@@ -624,8 +647,23 @@ if (!videoUrl.startsWith("http")){
                             "        });\n" +
                             "    }" +
                             "" +
-                            "" +
-                            " });";
+                            ""
+//                            " });"
+                    ;
+
+                    script = "document.addEventListener('DOMContentLoaded', () => {\n" +
+                            "    setTimeout(() => {\n" +
+                            "        let elements = document.querySelectorAll('li[data-embed-id]');\n" +
+                            "        elements.forEach(function (element) {\n" +
+                            "            if (element.getAttribute('data-embed-id') == serverId) {\n" +
+                            "                console.log('Matching element found:', element.getAttribute('data-embed-url'));\n" +
+                            "\n" +
+                            "                // Trigger click\n" +
+                            "                element.click();\n" +
+                            "            }\n" +
+                            "        });\n" +
+                            "    }, 1000); // Wait for 1 second before executing\n" +
+                            "});\n";
                 }
 
             }
@@ -638,8 +676,8 @@ if (!videoUrl.startsWith("http")){
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-//        return search(getSearchUrl("البطل"), activityCallback);
-        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
+        return search(getSearchUrl("البطل"), activityCallback);
+//        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
 //        return search(getConfig().getUrl() + "/moslslat1.php", activityCallback);
 //        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
 //        return search(getConfig().getUrl() + "/category/المسلسلات", activityCallback);

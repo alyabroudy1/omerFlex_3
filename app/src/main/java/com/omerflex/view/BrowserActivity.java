@@ -212,7 +212,7 @@ public class BrowserActivity extends AppCompatActivity {
             redirectUrl = movie.getVideoUrl();
             LinkHeadersDTO linkHeadersDTO = prepareLoadingLink(movie);
 
-            Log.d(TAG, "onCreate: linkHeadersDTO: " + linkHeadersDTO);
+            Log.d(TAG, "onCreate: linkHeadersDTO: " + linkHeadersDTO.url);
             webView.loadUrl(linkHeadersDTO.url, linkHeadersDTO.headers);
         }
     }
@@ -225,7 +225,7 @@ public class BrowserActivity extends AppCompatActivity {
         cursorLayout = new CursorLayout(this);
         openedForResult = getIntent().getBooleanExtra("openedForResult", false);
         isCookieFetch = getIntent().getBooleanExtra("isCookieFetch", false);
-        Log.d(TAG, "initializeThings: isCookieFetch: "+ isCookieFetch);
+//         Log.d(TAG, "initializeThings: isCookieFetch: "+ isCookieFetch);
         gson = new Gson();
         activity = this;
 
@@ -250,7 +250,7 @@ public class BrowserActivity extends AppCompatActivity {
 
         movie = Util.recieveSelectedMovie(getIntent());
 
-        Log.d(TAG, "onCreate: BrowserActivity: " + movie.getStudio());
+//        Log.d(TAG, "onCreate: BrowserActivity: " + movie.getStudio());
 
         server = ServerConfigManager.getServer(movie.getStudio());
         if (server == null) {
@@ -271,7 +271,7 @@ public class BrowserActivity extends AppCompatActivity {
     private LinkHeadersDTO prepareLoadingLink(Movie movie) {
         LinkHeadersDTO linkHeaders = new LinkHeadersDTO();
         String url = movie.getVideoUrl();
-        Log.d(TAG, "onCreate: url: " + url);
+        // Log.d(TAG, "onCreate: url: " + url);
         if (url.contains("||")) {
             linkHeaders.headers = Util.parseParamsToMap(movie.getVideoUrl());
             linkHeaders.url = url.substring(0, url.indexOf("||"));
@@ -287,14 +287,14 @@ public class BrowserActivity extends AppCompatActivity {
 
             if (parts.length == 2) {
                 linkHeaders.headers = com.omerflex.server.Util.extractHeaders(parts[1]);
-                Log.d("TAG", "buildMediaSource: h:" + parts[1]);
+                // Log.d("TAG", "buildMediaSource: h:" + parts[1]);
             }
             linkHeaders.url = cleanUrl;
 
-            Log.d(TAG, "browser: map:" + linkHeaders.toString() + ", url:" + cleanUrl);
+            // Log.d(TAG, "browser: map:" + linkHeaders.toString() + ", url:" + cleanUrl);
             return linkHeaders;
         }
-        Log.d(TAG, "onCreate: url:" + url);
+        // Log.d(TAG, "onCreate: url:" + url);
         linkHeaders.url = url;
         return linkHeaders;
     }
@@ -324,6 +324,16 @@ public class BrowserActivity extends AppCompatActivity {
         //String customUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36";
         String customUserAgent = server.getCustomUserAgent(movie.getState());
         // String customUserAgent = "Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36 Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0";
+
+//        CookieManager cookieManager = CookieManager.getInstance();
+//        cookieManager.setAcceptCookie(true);
+//        cookieManager.setAcceptThirdPartyCookies(webView, true);
+//
+//        webView.clearCache(true);
+//        webView.clearFormData();
+//        webView.clearHistory();
+//        webSettings.setUserAgentString("Android 7");
+
         if (customUserAgent != null) {
             webSettings.setUserAgentString(customUserAgent);
         }
@@ -334,6 +344,10 @@ public class BrowserActivity extends AppCompatActivity {
         ) {
             webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         }
+//
+//        if (isCookieFetch){
+//            webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+//        }
 /// ######
         // Enable hardware acceleration
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -767,7 +781,10 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         private void processOnCookieState(String elementJson, ArrayList<Movie> movies, ServerConfig config) {
-            Log.d(TAG, "processOnCookieState");
+            Log.d(TAG, "processOnCookieState " + movies.size());
+            if (movies.isEmpty()){
+                return;
+            }
             movie.setSubList(movies);
 //            Intent intent = new Intent();
 //            intent.putParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST, (ArrayList<Movie>) movies);
@@ -803,7 +820,7 @@ public class BrowserActivity extends AppCompatActivity {
             movie.setSubList(
                     movies
             );
-            Log.d(TAG, "handleJSResultMovieUpdate: mainMovie: "+ movie.getMainMovie());
+            // Log.d(TAG, "handleJSResultMovieUpdate: mainMovie: "+ movie.getMainMovie());
             setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
             finish();
         }
@@ -928,27 +945,28 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-//            Log.d(TAG, "onReceivedError: eeee: "+error.toString());
+            Log.d(TAG, "onReceivedError: eeee: "+error.toString());
             super.onReceivedError(view, request, error);
         }
 
         @Override
         public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
-//              Log.d(TAG, "onReceivedHttpError: eeee:"+errorResponse.getEncoding()+", "+errorResponse.getStatusCode()+", "+errorResponse.getResponseHeaders().toString()+ "; "+ request.getUrl());
+              Log.d(TAG, "onReceivedHttpError: eeee:"+errorResponse.getEncoding()+", "+errorResponse.getStatusCode()+", "+errorResponse.getResponseHeaders().toString()+ "; "+ request.getUrl());
             super.onReceivedHttpError(view, request, errorResponse);
         }
 
         @Override
         public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-//               Log.d(TAG, "onReceivedSslError: eeee:"+error.toString());
+               Log.d(TAG, "onReceivedSslError: eeee:"+error.toString());
             super.onReceivedSslError(view, handler, error);
+//            handler.proceed(); // Bypass SSL errors (use cautiously!)
         }
 
         @Nullable
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
            Uri url = request.getUrl();
-            Log.d(TAG, "shouldInterceptRequest: " + url.getHost());
+//             Log.d(TAG, "shouldInterceptRequest: " + url.getHost());
             if (LinkFilterService.isAdDomain(url.getHost())){
                 Log.d(TAG, "Blocking resource: " + url.getHost());
                 return new WebResourceResponse("text/plain", "utf-8", null); // Return an empty response
@@ -956,10 +974,9 @@ public class BrowserActivity extends AppCompatActivity {
 
             headers = request.getRequestHeaders();
 
-            boolean isSupportedState = isSupportedStateInInterceptRequest();
-
-            if (isSupportedState && LinkFilterService.isSupportedMedia(request)) {
-                return handleSupportedMedia(view, request, headers);
+            if (isSupportedStateInInterceptRequest() && LinkFilterService.isSupportedMedia(request, movie.getVideoUrl())) {
+//            if (isSupportedStateInInterceptRequest() && LinkFilterService.isSupportedMedia(request)) {
+                    return handleSupportedMedia(view, request, headers);
             }
 
             //            testCookie(view, request);
@@ -1010,6 +1027,7 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         private WebResourceResponse handleSupportedMedia(WebView view, WebResourceRequest request, Map<String, String> headers) {
+            Log.d(TAG, "handleSupportedMedia: "+ request.getUrl().toString());
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -1025,15 +1043,16 @@ public class BrowserActivity extends AppCompatActivity {
                     return super.shouldInterceptRequest(view, request);
                 }
             }
-
-            mm.setVideoUrl(request.getUrl().toString() + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
-
+//            String videoUrl = request.getUrl().toString().replace("&amp;amp;", "&");
+            String videoUrl = request.getUrl().toString();
+            mm.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
+            Log.d(TAG, "handleSupportedMedia: videoUrl: "+ mm.getVideoUrl());
             if (!openedForResult) {
                 Log.d(TAG, "handleSupportedMedia: if (!openedForResult) 1029");
                 startExoplayer(mm);
                 return null;
             }
-            Log.d(TAG, "shouldInterceptRequest: video shouldInterceptRequest. " + mm);
+            // Log.d(TAG, "shouldInterceptRequest: video shouldInterceptRequest. " + mm);
 
             setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
             activity.finish();
@@ -1066,7 +1085,7 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
+            // Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
             if (request.getUrl().getScheme() == null || !request.getUrl().getScheme().contains("http")) {
                 return true;
             }
@@ -1101,39 +1120,40 @@ public class BrowserActivity extends AppCompatActivity {
                 if (url.startsWith("##")) {
                     url = url.replace("##", "");
                 }
-                Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
+                // Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
                 view.loadUrl(url);
                 return true;
             }
 
+            // hieer check is video? maybe for old akwam ?
+//            showRedirectBar(newUrl);
+//            if (
+////                    (
+////                            movie.getStudio().equals(Movie.SERVER_AKWAM) ||
+////                                    movie.getStudio().equals(Movie.SERVER_OLD_AKWAM)) &&
+//                    LinkFilterService.isVideo(request.getUrl().toString(), movie)) {
+//                Movie mm = Movie.clone(movie);
+//                mm.setState(Movie.VIDEO_STATE);
+//                mm.setVideoUrl(request.getUrl().toString());
+//
+//                List<Movie> movieList = new ArrayList<>();
+//                movieList.add(mm);
+//                mm.setSubList(movieList);
+//                if (!openedForResult) {
+//                    // Log.d(TAG, "shouldOverrideUrlLoading:     if (!openedForResult) 1138");
+//                    startExoplayer(mm);
+//                    return true;
+//                }
+//
+//                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
+//                // Log.d(TAG, "shouldOverrideUrlLoading:3 true: " + url);
+//                activity.finish();
+//
+//                return true;
+//            }
+
             showRedirectBar(newUrl);
-            if (
-//                    (
-//                            movie.getStudio().equals(Movie.SERVER_AKWAM) ||
-//                                    movie.getStudio().equals(Movie.SERVER_OLD_AKWAM)) &&
-                    LinkFilterService.isVideo(request.getUrl().toString(), movie)) {
-                Movie mm = Movie.clone(movie);
-                mm.setState(Movie.VIDEO_STATE);
-                mm.setVideoUrl(request.getUrl().toString());
-
-                List<Movie> movieList = new ArrayList<>();
-                movieList.add(mm);
-                mm.setSubList(movieList);
-                if (!openedForResult) {
-                    Log.d(TAG, "shouldOverrideUrlLoading:     if (!openedForResult) 1138");
-                    startExoplayer(mm);
-                    return true;
-                }
-
-                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
-                Log.d(TAG, "shouldOverrideUrlLoading:3 true: " + url);
-                activity.finish();
-
-                return true;
-            }
-
-            showRedirectBar(newUrl);
-            Log.d(TAG, "shouldOverrideUrlLoading:6 true: " + url);
+            // Log.d(TAG, "shouldOverrideUrlLoading:6 true: " + url);
             return true;
         }
 
@@ -1233,9 +1253,9 @@ public class BrowserActivity extends AppCompatActivity {
                 HtmlPageService.cleanWebPage(view, true);
             }
 
-            if (shouldProcessVideo(url)) {
-                processVideoResource(view, url);
-            }
+//            if (shouldProcessVideo(url)) {
+//                processVideoResource(view, url);
+//            }
 
             super.onLoadResource(view, url);
         }
@@ -1286,7 +1306,7 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         private boolean shouldCleanWebPage(String url) {
-            Log.d(TAG, "shouldCleanWebPage: "+ url);
+            // Log.d(TAG, "shouldCleanWebPage: "+ url);
 //            if (movie.getStudio().equals(Movie.SERVER_KOORA_LIVE)) {
 //                return false;
 //            }
@@ -1363,8 +1383,8 @@ public class BrowserActivity extends AppCompatActivity {
                 String title = doc.title();
 //                Log.d(TAG, "testCookie shouldInterceptRequest: cookie test title:" + title);
                 if (!title.contains("moment")) {
-                    Log.d(TAG, "testCookie shouldInterceptRequest: success headers:" + request.getRequestHeaders().toString());
-                    Log.d(TAG, "testCookie shouldInterceptRequest: success cookies:" + cookieTest);
+                    // Log.d(TAG, "testCookie shouldInterceptRequest: success headers:" + request.getRequestHeaders().toString());
+                    // Log.d(TAG, "testCookie shouldInterceptRequest: success cookies:" + cookieTest);
                 }
             } catch (IOException e) {
 //            throw new RuntimeException(e);
@@ -1386,7 +1406,7 @@ public class BrowserActivity extends AppCompatActivity {
             Matcher matcher = pattern.matcher(referer);
             result = matcher.find();
         }
-        Log.d(TAG, "isValidReferer: " + result + ", " + referer);
+        // Log.d(TAG, "isValidReferer: " + result + ", " + referer);
         return result;
     }
 

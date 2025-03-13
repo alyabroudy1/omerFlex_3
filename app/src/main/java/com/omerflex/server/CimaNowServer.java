@@ -350,6 +350,7 @@ public class CimaNowServer extends AbstractServer{
     public MovieFetchProcess fetchResolutions(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.d(TAG, "fetchResolutions: ");
         Movie clonedMovie = Movie.clone(movie);
+
         clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
         // to do nothing and wait till result returned to activity only the first fetch
 //        return startWebForResultActivity(clonedMovie);
@@ -371,6 +372,7 @@ public class CimaNowServer extends AbstractServer{
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
+            movie.setVideoUrl("https://www.cima4u.day");
             activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
         }
@@ -418,13 +420,18 @@ public class CimaNowServer extends AbstractServer{
         Elements links = doc1.select("a[href]");
 
         String referer = null;
+        String movieReferer = Util.extractDomain(movie.getVideoUrl(), true, true);
         for (Element link : links) {
             // Flexible filtering based on text or child elements
             if (link.text().contains("شاهد") || !link.select("i.fa-play").isEmpty()) {
                 String href =link.attr("href");
-                System.out.println("Extracted Href: " + href);
                 referer =Util.extractDomain(href, true, true);
-                System.out.println("Extracted referer: " + referer);
+                Log.d(TAG, "fetchItem: referer : "+ referer + ", MovieReferer: " + movieReferer);
+                if(referer.equals(movieReferer)){
+                    continue;
+                }
+                Log.d(TAG, "fetchItem: referer : "+ referer);
+
                 break; // Stop after finding the first match
             }
         }
@@ -453,7 +460,7 @@ public class CimaNowServer extends AbstractServer{
                 activityCallback.onInvalidLink(movie);
                 return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
             }
-            Log.d(TAG, "fetchItem: title: "+ doc.title()+", "+doc.title().contains("Just a moment"));
+            Log.d(TAG, "fetchItem: title2: "+ doc.title()+", "+doc.title().contains("Just a moment"));
             if (doc.title().contains("Just a moment")) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
@@ -487,13 +494,14 @@ public class CimaNowServer extends AbstractServer{
                 System.out.println("Description: " + des);
                 movie.setDescription(des);
             } else {
-                System.out.println("No story element found.");
+//                System.out.println("No story element found.");
+//                System.out.println("No story element found.");
+                Log.d(TAG, "fetchItem: No story element found.");
             }
 
 
             // Select all <li> elements that have a data-index attribute
             Elements movieElements = doc.select("li[data-index]");
-
             for (Element movieElement : movieElements) {
 //            if (movieElement.hasClass("active")){
 //                //ignore active item as its fetched before
@@ -644,14 +652,15 @@ public class CimaNowServer extends AbstractServer{
                         "                nextPage.state= 5;\n" +
                         "                nextPage.mainMovieTitle= nextPageUrl;\n" +
                         "            console.log(\"Next page URL:\", nextPageUrl);\n" +
+                        "           movieList.push(nextPage);" +
                         "        } else {\n" +
                         "            console.log(\"No next page found.\");\n" +
                         "        }\n" +
                         "    }\n" +
                         "} " +
-                        "movieList.push(nextPage);" +
-
-                        "MyJavaScriptInterface.myMethod(JSON.stringify(movieList));" +
+                        "if (movieList.length > 0) {\n" +
+                        "    MyJavaScriptInterface.myMethod(JSON.stringify(movieList));\n" +
+                        "}" +
                         "});";
             }
 ////            if (movie.getState() == Movie.GROUP_OF_GROUP_STATE){
@@ -686,76 +695,76 @@ public class CimaNowServer extends AbstractServer{
 
                     script = "document.addEventListener('DOMContentLoaded', () => {\n" +
                             "    let elements = document.querySelectorAll('li[data-index]');\n" +
-                            "    elements.forEach(function (element) {\n" +
-                            "        if (element.getAttribute('data-index') == "+serverId+") {\n" +
+                            "\n" +
+                            "    elements.forEach((element) => {\n" +
+                            "        if (parseInt(element.getAttribute('data-index')) === " + serverId + ") {\n" +
                             "            // Simulate a click on the matched element\n" +
                             "            element.click();\n" +
-                            "// Wait for the second element to appear after the click\n" +
-                            "        waitForElement('iframe', function(secondElement) {\n" +
-                            "            console.log('xxxx: Second element appeared:', secondElement);\n" +
-                            "makeFullScreen(secondElement);" +
-                            "        });" +
-
+                            "\n" +
+                            "            // Wait for the iframe to appear after clicking\n" +
+                            "            waitForElement('iframe', (iframe) => {\n" +
+                            "                console.log('Iframe appeared:', iframe);\n" +
+                            "                makeFullScreen(iframe);\n" +
+                            "            });\n" +
                             "        }\n" +
-                            "    });" +
-
-                            "function makeFullScreen(iframe) {" +
-                            "if (iframe) {\n" +
-                            "  // Clone the iframe element\n" +
-                            "        var clonedIframe = iframe.cloneNode(true);\n" +
-                            "        \n" +
-                            "        // Clear the entire body content\n" +
-//                            "        document.body.innerHTML = '';\n" +
-                            "        iframe.innerHTML = '';\n" +
+                            "    });\n" +
+                            "\n" +
+                            "    // Function to make an iframe fullscreen\n" +
+                            "    function makeFullScreen(iframe) {\n" +
+                            "        if (!iframe) {\n" +
+                            "            console.log('Iframe not found.');\n" +
+                            "            return;\n" +
+                            "        }\n" +
+                            "\n" +
+                            "        // Clone the iframe to avoid issues\n" +
+                            "        const clonedIframe = iframe.cloneNode(true);\n" +
                             "\n" +
                             "        // Append the cloned iframe to the body\n" +
+                            "        document.body.innerHTML = ''; // Clear existing content\n" +
                             "        document.body.appendChild(clonedIframe);\n" +
-                            " // Modify the cloned iframe to make it fullscreen\n" +
-                            "        clonedIframe.style.position = \"fixed\";\n" +
-                            "        clonedIframe.style.top = \"0\";\n" +
-                            "        clonedIframe.style.left = \"0\";\n" +
-                            "        clonedIframe.style.width = \"100%\";\n" +
-                            "        clonedIframe.style.height = \"100%\";\n" +
-                            "        clonedIframe.style.zIndex = \"9999\";\n" +
-                            "        clonedIframe.style.border = \"none\"; // Remove any borders\n" +
-                            "        clonedIframe.setAttribute(\"allowfullscreen\", \"true\");\n" +
-                            "        clonedIframe.setAttribute(\"scrolling\", \"yes\");\n" +
                             "\n" +
-                            "        // Optional: if you want to apply fullscreen mode programmatically (only works if triggered by a user gesture)\n" +
-                            "        if (iframe.requestFullscreen) {\n" +
-                            "            iframe.requestFullscreen();\n" +
-                            "        } else if (iframe.webkitRequestFullscreen) { // Safari\n" +
-                            "            iframe.webkitRequestFullscreen();\n" +
-                            "        } else if (iframe.mozRequestFullScreen) { // Firefox\n" +
-                            "            iframe.mozRequestFullScreen();\n" +
-                            "        } else if (iframe.msRequestFullscreen) { // IE/Edge\n" +
-                            "            iframe.msRequestFullscreen();\n" +
-                            "        }\n" +
-                            "    } else {\n" +
-                            "        console.log(\"Iframe not found.\");\n" +
-                            "    }" +
-                            "\n}" +
-                            "// Function to wait for an element to appear\n" +
-                            "    function waitForElement(selector, callback) {\n" +
-                            "        const observer = new MutationObserver(function(mutations) {\n" +
-                            "            mutations.forEach(function(mutation) {\n" +
-                            "                const element = document.querySelector(selector);\n" +
-                            "                if (element) {\n" +
-                            "                    callback(element);\n" +
-                            "                    observer.disconnect(); // Stop observing after the element appears\n" +
-                            "                }\n" +
-                            "            });\n" +
+                            "        // Set iframe to fullscreen\n" +
+                            "        Object.assign(clonedIframe.style, {\n" +
+                            "            position: 'fixed',\n" +
+                            "            top: '0',\n" +
+                            "            left: '0',\n" +
+                            "            width: '100%',\n" +
+                            "            height: '100%',\n" +
+                            "            zIndex: '9999',\n" +
+                            "            border: 'none'\n" +
                             "        });\n" +
                             "\n" +
-                            "        // Observe changes in the DOM\n" +
+                            "        clonedIframe.setAttribute('allowfullscreen', 'true');\n" +
+                            "        clonedIframe.setAttribute('scrolling', 'yes');\n" +
+                            "\n" +
+                            "        // Try fullscreen mode programmatically\n" +
+                            "        if (clonedIframe.requestFullscreen) {\n" +
+                            "            clonedIframe.requestFullscreen();\n" +
+                            "        } else if (clonedIframe.webkitRequestFullscreen) {\n" +
+                            "            clonedIframe.webkitRequestFullscreen();\n" +
+                            "        } else if (clonedIframe.mozRequestFullScreen) {\n" +
+                            "            clonedIframe.mozRequestFullScreen();\n" +
+                            "        } else if (clonedIframe.msRequestFullscreen) {\n" +
+                            "            clonedIframe.msRequestFullscreen();\n" +
+                            "        }\n" +
+                            "    }\n" +
+                            "\n" +
+                            "    // Function to wait for an element to appear in the DOM\n" +
+                            "    function waitForElement(selector, callback) {\n" +
+                            "        const observer = new MutationObserver(() => {\n" +
+                            "            const element = document.querySelector(selector);\n" +
+                            "            if (element) {\n" +
+                            "                callback(element);\n" +
+                            "                observer.disconnect(); // Stop observing\n" +
+                            "            }\n" +
+                            "        });\n" +
+                            "\n" +
                             "        observer.observe(document.body, {\n" +
                             "            childList: true,\n" +
                             "            subtree: true\n" +
                             "        });\n" +
-                            "    }" +
-                            "" +
-                            "" +
-                            " });";
+                            "    }\n" +
+                            "});\n";
                 }
 
             }

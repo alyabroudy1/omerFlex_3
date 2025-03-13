@@ -27,6 +27,7 @@ import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.analytics.AnalyticsListener;
+import androidx.media3.exoplayer.dash.DashMediaSource;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.exoplayer.smoothstreaming.SsMediaSource;
 import androidx.media3.exoplayer.source.MediaSource;
@@ -595,11 +596,12 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         if (movie.getVideoUrl().contains("m3u")) {
             return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
         }
+        Log.d(TAG, "createMediaSource: type "+ type);
         switch (type) {
             case C.CONTENT_TYPE_SS:
                 return new SsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
-//            case C.CONTENT_TYPE_DASH:
-//                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+            case C.CONTENT_TYPE_DASH:
+                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             case C.CONTENT_TYPE_HLS:
                 return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             default:
