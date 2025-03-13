@@ -559,7 +559,8 @@ public abstract class SearchViewControl {
 //                return;
 //            }
             Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
-            Util.openExternalVideoPlayer(resultMovie, activity);
+//            Util.openExternalVideoPlayer(resultMovie, activity);
+            Util.openExoPlayer(resultMovie, activity, true);
             // todo: handle dbHelper
 //            updateRelatedMovieItem(clickedHorizontalMovieAdapter, clickedMovieIndex, resultMovie);
             updateClickedMovieItem(clickedAdapter, clickedMovieIndex, resultMovie);

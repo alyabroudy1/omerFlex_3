@@ -194,15 +194,15 @@ public class LinkFilterService {
         return domain != null && blockedDomains.contains(domain);
     }
 
-    public static boolean isSupportedMedia(WebResourceRequest request, String movieUrl) {
-//        Log.d(TAG, "isSupportedMedia: url: " + request.getUrl().toString());
+    public static boolean isSupportedMedia(WebResourceRequest request, String movieUrl)  {
+        Log.d(TAG, "isSupportedMedia: url: " + request.getUrl().toString());
         // Check if the URL contains any of the substrings
-        for (String pattern : PATTERNS_MOVIE_URL) {
-            if (movieUrl.contains(pattern)) {
-//                Log.d(TAG, "isSupportedMedia: false PATTERNS_MOVIE_URL, "+ movieUrl);
-                return false;
-            }
-        }
+//        for (String pattern : PATTERNS_MOVIE_URL) {
+//            if (movieUrl.contains(pattern)) {
+////                Log.d(TAG, "isSupportedMedia: false PATTERNS_MOVIE_URL, "+ movieUrl);
+//                return false;
+//            }
+//        }
 
         final Uri uri = request.getUrl();
         final String url = uri.toString().toLowerCase();
@@ -222,7 +222,7 @@ public class LinkFilterService {
         }
         // 3. Check URL patterns
         if (isMediaByUrlPattern(url)){
-//            Log.d(TAG, "isSupportedMedia: true isMediaByUrlPattern, "+ url);
+            Log.d(TAG, "isSupportedMedia: true isMediaByUrlPattern, "+ url);
             return true;
         }
 
@@ -294,12 +294,17 @@ public class LinkFilterService {
 
     public static boolean isMediaByMimeType(String url) {
         String extension = MimeTypeMap.getFileExtensionFromUrl(url).toLowerCase();
-//        Log.d(TAG, "isMediaByMimeType: "+ extension);
+//        if (!extension.isEmpty()){
+        Log.d(TAG, "isMediaByMimeType:extension: "+ extension);
+//        }
         return MEDIA_EXTENSIONS.contains(extension);
     }
 
     public static boolean isMediaByHeaders(Map<String, String> headers, String url) {
         final String acceptEncoding = headers.get("Accept-Encoding");
+        if (acceptEncoding != null){
+            Log.d(TAG, "isMediaByHeaders: acceptEncoding: "+ acceptEncoding);
+        }
         if (acceptEncoding != null && acceptEncoding.contains("identity;q=1")) {
             return !LinkFilterService.isBlackListedUrl(url);
         }
@@ -307,7 +312,9 @@ public class LinkFilterService {
         if (range != null && range.startsWith("bytes=")){
             return true;
         }
-
+        if (range != null){
+            Log.d(TAG, "isMediaByHeaders: range: "+ range);
+        }
         // 2. Check Content-Type header
         String contentType = headers.get("Content-Type");
         if (contentType != null && isMediaByContentType(contentType)) return true;
