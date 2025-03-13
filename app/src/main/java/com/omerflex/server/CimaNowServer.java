@@ -372,7 +372,7 @@ public class CimaNowServer extends AbstractServer{
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
 //            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
-            movie.setVideoUrl("https://www.cima4u.day");
+//            movie.setVideoUrl("https://www.cima4u.day");
             activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
         }
