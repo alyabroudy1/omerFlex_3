@@ -676,8 +676,8 @@ if (!videoUrl.startsWith("http")){
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getSearchUrl("البطل"), activityCallback);
-//        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
+//        return search(getSearchUrl("البطل"), activityCallback);
+        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
 //        return search(getConfig().getUrl() + "/moslslat1.php", activityCallback);
 //        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
 //        return search(getConfig().getUrl() + "/category/المسلسلات", activityCallback);

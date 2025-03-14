@@ -1127,31 +1127,31 @@ public class BrowserActivity extends AppCompatActivity {
             }
 
             // hieer check is video? maybe for old akwam ?
-            showRedirectBar(newUrl);
-            if (
-//                    (
-//                            movie.getStudio().equals(Movie.SERVER_AKWAM) ||
-//                                    movie.getStudio().equals(Movie.SERVER_OLD_AKWAM)) &&
-                    LinkFilterService.isVideo(request.getUrl().toString(), movie)) {
-                Movie mm = Movie.clone(movie);
-                mm.setState(Movie.VIDEO_STATE);
-                mm.setVideoUrl(request.getUrl().toString());
-
-                List<Movie> movieList = new ArrayList<>();
-                movieList.add(mm);
-                mm.setSubList(movieList);
-                if (!openedForResult) {
-                    // Log.d(TAG, "shouldOverrideUrlLoading:     if (!openedForResult) 1138");
-                    startExoplayer(mm);
-                    return true;
-                }
-
-                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
-                // Log.d(TAG, "shouldOverrideUrlLoading:3 true: " + url);
-                activity.finish();
-
-                return true;
-            }
+//            showRedirectBar(newUrl);
+//            if (
+////                    (
+////                            movie.getStudio().equals(Movie.SERVER_AKWAM) ||
+////                                    movie.getStudio().equals(Movie.SERVER_OLD_AKWAM)) &&
+//                    LinkFilterService.isVideo(request.getUrl().toString(), movie)) {
+//                Movie mm = Movie.clone(movie);
+//                mm.setState(Movie.VIDEO_STATE);
+//                mm.setVideoUrl(request.getUrl().toString());
+//
+//                List<Movie> movieList = new ArrayList<>();
+//                movieList.add(mm);
+//                mm.setSubList(movieList);
+//                if (!openedForResult) {
+//                    // Log.d(TAG, "shouldOverrideUrlLoading:     if (!openedForResult) 1138");
+//                    startExoplayer(mm);
+//                    return true;
+//                }
+//
+//                setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
+//                // Log.d(TAG, "shouldOverrideUrlLoading:3 true: " + url);
+//                activity.finish();
+//
+//                return true;
+//            }
 
             showRedirectBar(newUrl);
             // Log.d(TAG, "shouldOverrideUrlLoading:6 true: " + url);

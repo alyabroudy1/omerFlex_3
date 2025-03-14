@@ -44,6 +44,7 @@ public class MyCimaServer extends AbstractServer {
         ArrayList<Movie> movieList = new ArrayList<>();
 
         if (doc.title().contains("moment")) {
+//        if (true) {
 //            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";
@@ -180,7 +181,6 @@ public class MyCimaServer extends AbstractServer {
                 nextPage.setMainMovieTitle(videoUrl);
             }
         }
-
         return nextPage;
     }
 
@@ -535,6 +535,50 @@ public class MyCimaServer extends AbstractServer {
     public String getWebScript(int mode, Movie movie) {
         String script = null;
 
+        // let postList = [];
+        //    document.querySelectorAll('.GridItem').forEach(item => {
+        //        let post = {};
+        //
+        //        // Extract title
+        //        let titleElement = item.querySelector('a[title]');
+        //        post.title = titleElement ? titleElement.getAttribute('title').replace('مشاهدة ', '') : '';
+        //
+        //        // Extract video URL
+        //        post.videoUrl = titleElement ? titleElement.getAttribute('href') : '';
+        //
+        //        // Extract card image safely
+        //        let imageElement = item.querySelector('.BG--GridItem');
+        //        if (imageElement) {
+        //            let style = imageElement.getAttribute('style') || '';
+        //            let match = style.match(/url\((.*?)\)/);
+        //            post.cardImage = match ? match[1] : '';
+        //        } else {
+        //            post.cardImage = ''; // Default value if no image found
+        //        }
+        //
+        //        // Add post to the list only if all properties exist
+        //        if (post.title && post.videoUrl && post.cardImage) {
+        //            postList.push(post);
+        //        }
+        //    });
+        //
+        //    // Extract next page if available
+        //    let nextPageElement = document.querySelector('.next');
+        //    if (nextPageElement) {
+        //          let nextPage = {};
+        //        let videoUrl = nextPageElement.getAttribute('href');
+        //        if (videoUrl) {
+        // nextPage.title = "التالي";
+        //            nextPage.description = "0";
+        //            nextPage.studio = Movie.SERVER_MyCima;
+        //            nextPage.videoUrl = videoUrl;
+        //            nextPage.cardImageUrl = "https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png";
+        //            nextPage.backgroundImageUrl = "https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png";
+        //            nextPage.state = "https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png";
+        //            postList.push(nextPage);
+        //        }
+        //    }
+
         Log.d(TAG, "getWebScript: m:" + mode + ", f:" + movie.getFetch());
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
 ////            if (movie.getState() == Movie.GROUP_OF_GROUP_STATE){
@@ -549,8 +593,105 @@ public class MyCimaServer extends AbstractServer {
 //                        "});";
 ////            }
 //
-
-            if (
+            if (movie.getState() == Movie.COOKIE_STATE) {
+                Log.d(TAG, "getScript:WEB_VIEW_MODE_ON_PAGE_STARTED COOKIE_STATE");
+                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
+                        "let postList = [];\n" +
+                    "    document.querySelectorAll('.GridItem').forEach(item => {\n" +
+                    "        let post = {};\n" +
+                    "\n" +
+                    "        // Extract title\n" +
+                    "        let titleElement = item.querySelector('a[title]');\n" +
+                    "        post.title = titleElement ? titleElement.getAttribute('title').replace('مشاهدة ', '') : '';\n" +
+                    "\n" +
+                    "        // Extract video URL\n" +
+                    "        post.videoUrl = titleElement ? titleElement.getAttribute('href') : '';\n" +
+                    "\n" +
+                    "        // Extract card image safely\n" +
+                    "        post.cardImageUrl = extractImageUrl(item);\n" +
+                        "    post.backgroundImageUrl = post.cardImageUrl; " +
+                    "\n" +
+                    "        // Add post to the list only if all properties exist\n" +
+                    "        if (post.videoUrl) {\n" +
+                        "           post.studio = \""+Movie.SERVER_MyCima+"\";" +
+                        "           post.state = detectMovieState(post);" +
+                        "console.log(post.cardImageUrl);" +
+                    "            postList.push(post);\n" +
+                    "        }\n" +
+                    "    });\n" +
+                    "\n" +
+                    "    // Extract next page if available\n" +
+                    "    let nextPageElement = document.querySelector('.next');\n" +
+                    "    if (nextPageElement) {\n" +
+                    "          let nextPage = {};\n" +
+                    "        let videoUrl = nextPageElement.getAttribute('href');\n" +
+                    "        if (videoUrl) {\n" +
+                    " nextPage.title = \"التالي\";\n" +
+                    "            nextPage.description = \"0\";\n" +
+                    "            nextPage.studio = \""+Movie.SERVER_MyCima+"\";\n" +
+                    "            nextPage.videoUrl = videoUrl;\n" +
+                    "            nextPage.cardImageUrl = \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\";\n" +
+                    "            nextPage.backgroundImageUrl = \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\";\n" +
+                    "            nextPage.state = "+Movie.NEXT_PAGE_STATE+ ";" +
+                    "            postList.push(nextPage);\n" +
+                    "        }\n" +
+                    "    }" +
+                        "if (postList && postList.length > 0) {" +
+                        "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
+                        "}" +
+                        "" +
+                        "function extractImageUrl(item) {\n" +
+                        "    let defaultImage = \"https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png\";\n" +
+                        "    let image = defaultImage;\n" +
+                        "\n" +
+                        "    // Try to get the image from \"style\" attribute\n" +
+                        "    let imageElem = item.querySelector(\"[style]\");\n" +
+                        "    if (imageElem) {\n" +
+                        "        image = imageElem.getAttribute(\"style\") || \"\";\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    // Check if the extracted style contains a valid URL\n" +
+                        "    if (!image.includes(\"http\")) {\n" +
+                        "        let image2Elem = item.querySelector(\"[data-lazy-style]\");\n" +
+                        "        if (image2Elem) {\n" +
+                        "            image = image2Elem.getAttribute(\"data-lazy-style\") || \"\";\n" +
+                        "        }\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    // If still empty, check \"data-owl-img\" attribute\n" +
+                        "    if (!image) {\n" +
+                        "        let image3Elem = item.querySelector(\".BG--GridItem\");\n" +
+                        "        if (image3Elem) {\n" +
+                        "            image = image3Elem.getAttribute(\"data-owl-img\") || \"\";\n" +
+                        "        }\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    // Extract the URL inside `url(...)`\n" +
+                        "    let match = image.match(/url\\([\"']?(.*?)[\"']?\\)/);\n" +
+                        "    if (match) {\n" +
+                        "        image = match[1];\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    return image || defaultImage; // Return extracted image or default\n" +
+                        "}" +
+                        "" +
+                        "function detectMovieState(movie) {\n" +
+                        "    let u = movie.videoUrl || \"\";\n" +
+                        "    let n = movie.title || \"\";\n" +
+                        "\n" +
+                        "    let seriesCase = n.includes(\"انمي\") || n.includes(\"برنامج\") || n.includes(\"مسلسل\") || u.includes(\"series\");\n" +
+                        "    let itemCase = u.includes(\"/watch\") || n.includes(\"حلقة\") || n.includes(\"حلقه\");\n" +
+                        "\n" +
+                        "    if (itemCase) {\n" +
+                        "        return "+Movie.ITEM_STATE+ ";" +
+                        "    } else if (seriesCase) {\n" +
+                        "        return "+Movie.GROUP_OF_GROUP_STATE+ ";" +
+                        "    }\n" +
+                        "    return "+Movie.ITEM_STATE+ ";" +
+                        "}\n" +
+                        "});";
+            }
+            else if (
                     movie.getState() == Movie.GROUP_OF_GROUP_STATE ||
                             movie.getState() == Movie.GROUP_STATE
             ) {
@@ -606,7 +747,8 @@ public class MyCimaServer extends AbstractServer {
                         "     }\n" +
                         "     }\n" +
                         " });";
-            } else if (movie.getState() == Movie.ITEM_STATE) {
+            }
+            else if (movie.getState() == Movie.ITEM_STATE) {
                 String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
                 script = "document.addEventListener('DOMContentLoaded', () => {\n" +
                         "if (!document.title.includes('Just a moment')){" +

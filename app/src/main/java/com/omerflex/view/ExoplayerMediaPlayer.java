@@ -601,6 +601,17 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
             case C.CONTENT_TYPE_SS:
                 return new SsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             case C.CONTENT_TYPE_DASH:
+//                // Configure DRM for PlayReady
+//                MediaItem.DrmConfiguration drmConfig = new MediaItem.DrmConfiguration.Builder(C.PLAYREADY_UUID)
+////                        .setLicenseUri("YOUR_PLAYREADY_LICENSE_SERVER_URL") // Replace with actual license URL
+////                        .setForceDefaultLicenseUri(true)
+//                        .setMultiSession(true)
+//                        .build();
+//                MediaItem mediaItem = new MediaItem.Builder()
+//                        .setUri(uri)
+//                        .setDrmConfiguration(drmConfig)
+//                        .build();
+//                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
                 return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             case C.CONTENT_TYPE_HLS:
                 return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));

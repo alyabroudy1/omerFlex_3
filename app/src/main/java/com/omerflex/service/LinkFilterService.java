@@ -22,11 +22,12 @@ public class LinkFilterService {
     static String TAG = "LinkFilterService";
 
     private static final Set<String> MEDIA_EXTENSIONS = new HashSet<>(Arrays.asList(
-            "mp4", "mkv", "avi", "mov", "wmv", "mp3", "m4a", "aac", "m3u8", "ts", "flv", "webm", "mpd"
+            "mp4", "mkv", "avi", "mov", "wmv", "mp3", "m4a", "aac", "m3u8", "ts", "flv", "webm"// , "mpd"
     ));
 
     private static final Pattern MEDIA_PATTERN = Pattern.compile(
-            "(\\.m3u8|\\.mpd|\\.ts|seg-|chunk-|/quality/|/bitrate/)",
+//            "(\\.m3u8|\\.mpd|\\.ts|seg-|chunk-|/quality/|/bitrate/)",
+            "(\\.m3u8|\\.ts|seg-|chunk-|/quality/|/bitrate/)",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -227,7 +228,7 @@ public class LinkFilterService {
         }
 
         // 4. Additional checks for streaming protocols
-        if (url.contains("m3u8") || url.contains("mpd")) return true;
+//        if (url.contains("m3u8") || url.contains("mpd")) return true;
 
         return false;
     }
@@ -297,7 +298,9 @@ public class LinkFilterService {
 //        if (!extension.isEmpty()){
         Log.d(TAG, "isMediaByMimeType:extension: "+ extension);
 //        }
-        return MEDIA_EXTENSIONS.contains(extension);
+        boolean isMedia = MEDIA_EXTENSIONS.contains(extension);
+
+        return isMedia && !url.contains("index_");
     }
 
     public static boolean isMediaByHeaders(Map<String, String> headers, String url) {
