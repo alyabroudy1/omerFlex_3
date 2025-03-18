@@ -15,6 +15,8 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LarozaServer extends AbstractServer{
 
@@ -82,12 +84,12 @@ public class LarozaServer extends AbstractServer{
             return movieList;
         }
 
-        movieList = generateSearchResultFromDoc(doc);
+        movieList = generateSearchResultFromDoc(doc, url);
         activityCallback.onSuccess(movieList, getLabel());
         return movieList;
     }
 
-    private ArrayList<Movie> generateSearchResultFromDoc(Document doc) {
+    private ArrayList<Movie> generateSearchResultFromDoc(Document doc, String searchUrl) {
 
         // Get all thumbnail elements
         Elements thumbnails = doc.select(".thumbnail");
@@ -143,41 +145,67 @@ if (!videoUrl.startsWith("http")){
             movieList.add(movie);
 
         }
-
-        Movie nextPage = generateNextPageMovie(doc);
-        if (nextPage != null){
-            movieList.add(nextPage);
+        if (searchUrl != null){
+            Movie nextPage = generateNextPageMovie(doc, searchUrl);
+            if (!movieList.isEmpty()) {
+                movieList.add(nextPage);
+            }
         }
+
         return movieList;
     }
 
-    private Movie generateNextPageMovie(Document doc) {
+    private Movie generateNextPageMovie(Document doc, String searchUrl) {
         // Find the pagination <ul>
-        Movie nextPage = null;
+//        Movie nextPage = null;
         // Find the <i> element with class "fa fa-arrow-left"
-        Element iElement = doc.selectFirst("i.fa.fa-arrow-left");
-        if (iElement == null) {
-            return null; // or throw an exception
+//        Element iElement = doc.selectFirst("i.fa.fa-arrow-left");
+//        Element aElement = doc.selectFirst("a:has(i.fa.fa-arrow-left)");
+//        if (aElement == null) {
+//            Log.d(TAG, "generateNextPageMovie: aElement: not found");
+//            Log.d(TAG, "generateNextPageMovie: "+ doc.body());
+//            return null; // or throw an exception
+//        }
+
+//        // Find the closest ancestor 'a' element
+//        Element aElement = iElement.closest("a");
+//
+//        if (aElement == null) {
+//            Log.d(TAG, "generateNextPageMovie: iElement link: not found");
+//            return null; // or throw an exception if no 'a' is found
+//        }
+
+//        String nextPageUrl  = aElement.attr("href");
+
+        // Regular expression to capture only the number after "&page="
+        Pattern pattern = Pattern.compile("&page=(\\d+)");
+        Matcher matcher = pattern.matcher(searchUrl);
+        String nextPageUrl = null;
+        if (matcher.find()) {
+//            String pageValue = matcher.group(); // Extracts "&page=33"
+            String pageNumber = matcher.group(1); // Extracts only "33"
+            if (pageNumber == null){return null;}
+            int newPageNumber = Integer.parseInt(pageNumber) + 1; // Increment the number
+            System.out.println("Page Number: " + pageNumber);
+
+            // Replace the old page number with the new one
+            nextPageUrl = searchUrl.replaceFirst("&page=" + pageNumber, "&page=" + newPageNumber);
+
+            System.out.println("Updated URL: " + nextPageUrl);
+        }else {
+            nextPageUrl = searchUrl + "&page=2";
         }
-
-        // Find the closest ancestor 'a' element
-        Element aElement = iElement.closest("a");
-
-        if (aElement == null) {
-            return null; // or throw an exception if no 'a' is found
-        }
-
- String nextPageUrl = aElement.attr("href");;
-                    nextPage = new Movie();
-                    nextPage.setTitle("التالي");
-                    nextPage.setDescription("0");
-                    nextPage.setStudio(Movie.SERVER_LAROZA);
-                    nextPage.setVideoUrl(nextPageUrl);
-                    nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
-                    nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
-                    nextPage.setState(Movie.NEXT_PAGE_STATE);
-                    nextPage.setMainMovie(nextPage);
-                    nextPage.setMainMovieTitle(nextPageUrl);
+        System.out.println("nextPageUrl: " + nextPageUrl);
+        Movie nextPage = new Movie();
+        nextPage.setTitle("التالي");
+        nextPage.setDescription("0");
+        nextPage.setStudio(Movie.SERVER_LAROZA);
+        nextPage.setVideoUrl(nextPageUrl);
+        nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
+        nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
+        nextPage.setState(Movie.NEXT_PAGE_STATE);
+        nextPage.setMainMovie(nextPage);
+        nextPage.setMainMovieTitle(nextPageUrl);
 
         return nextPage;
     }
@@ -275,7 +303,7 @@ if (!videoUrl.startsWith("http")){
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
         }
 
-        ArrayList<Movie> movieList = generateSearchResultFromDoc(doc);
+        ArrayList<Movie> movieList = generateSearchResultFromDoc(doc, null);
         movie.setSubList(movieList);
         activityCallback.onSuccess(movie, getLabel());
         return  new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
@@ -739,8 +767,8 @@ if (!videoUrl.startsWith("http")){
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-//        return search(getSearchUrl("البطل"), activityCallback);
-        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
+        return search(getSearchUrl("البطل"), activityCallback);
+//        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
 //        return search(getConfig().getUrl() + "/moslslat1.php", activityCallback);
 //        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
 //        return search(getConfig().getUrl() + "/category/المسلسلات", activityCallback);
