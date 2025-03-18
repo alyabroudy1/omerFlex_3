@@ -46,6 +46,7 @@ public class UpdateService {
     private static final int REQUEST_CODE_STORAGE_PERMISSION = 101;
     private boolean permissionRequested = false;
     private static String APK_URL = "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/omerFlex.apk";
+    private static String APK_NAME = "omerFlex";
 
     private long downloadId;
     private BroadcastReceiver downloadCompleteReceiver;
@@ -73,48 +74,6 @@ public class UpdateService {
 
     }
 
-    public void checkForUpdates_old(ServerConfig serverConfig, ServerConfigDTO githubServerConfigDTO) {
-        // Simulate checking for updates (replace with your logic)
-        boolean isUpdateAvailable = false; // Replace with actual update check
-
-
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        try {
-            Date githubDate = format.parse(githubServerConfigDTO.date);
-            //if github date is newer then take it
-            boolean isNewDate = githubDate.getTime() > serverConfig.getCreatedAt().getTime();
-            Log.d(TAG,
-                    "updateServerConfig:" +
-                            githubServerConfigDTO.name +
-                            ", isNewDate:" + isNewDate +
-                            ", g:" + githubDate +
-                            ", db:" + serverConfig.getCreatedAt() +
-                            ", gUrl: " + githubServerConfigDTO.url +
-                            ", dbUrl: " + serverConfig.getReferer()
-            );
-            if (isNewDate) {
-//                            serverConfig.setCreatedAt(serverConfigDTO.date);
-                serverConfig.setCreatedAt(githubDate);
-                serverConfig.setName(githubServerConfigDTO.name);
-                serverConfig.setUrl(githubServerConfigDTO.url);
-                serverConfig.setReferer(githubServerConfigDTO.referer);
-                serverConfig.setLabel(githubServerConfigDTO.label);
-                serverConfig.setActive(githubServerConfigDTO.isActive);
-//                            dbHelper.saveServerConfigAsCookieDTO(serverConfig, githubDate);
-//                dbHelper.saveServerConfig(serverConfig);
-                ServerConfigManager.updateConfig(serverConfig);
-                isUpdateAvailable = true;
-            }
-        } catch (ParseException e) {
-            e.printStackTrace();
-            Log.d(TAG, "initializeServerCookies: error:" + e.getMessage());
-        }
-
-//        if (isUpdateAvailable) {
-//            showUpdateDialog();
-//        }
-    }
-
     public boolean toBeUpdated(int newVersionCode) {
         // Get the package manager
         PackageManager pm = activity.getPackageManager();
@@ -127,11 +86,13 @@ public class UpdateService {
         }
 // Get the current version code
         int currentVersion = packageInfo.versionCode;
+        APK_NAME = APK_NAME + "_v"+ newVersionCode;
 // Get the current version name
         String currentVersionName = packageInfo.versionName;
 
-        Log.d(TAG, "toBeUpdated: version: " + currentVersion + ", name: " + currentVersionName);
-        Log.d(TAG, "toBeUpdated: new version: " + newVersionCode);
+//        Log.d(TAG, "toBeUpdated: version: " + currentVersion + ", name: " + currentVersionName);
+//        Log.d(TAG, "toBeUpdated: new version: " + newVersionCode);
+//        Log.d(TAG, "toBeUpdated: new APK_NAME: " + APK_NAME);
         return newVersionCode > currentVersion ;
 //        return true;
     }
@@ -153,7 +114,7 @@ public class UpdateService {
         request.setTitle("App Update");
         request.setDescription("Downloading the latest version...");
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "app_update.apk");
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, APK_NAME+".apk");
 
         // Enqueue the download
         DownloadManager downloadManager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
@@ -217,7 +178,7 @@ public class UpdateService {
         // Get the download directory
         File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         // Filter files to only those with the name pattern
-        File[] apkFiles = downloadDir.listFiles((dir, name) -> name.startsWith("app_update") && name.endsWith(".apk"));
+        File[] apkFiles = downloadDir.listFiles((dir, name) -> name.startsWith(APK_NAME) && name.endsWith(".apk"));
 
         if (apkFiles == null || apkFiles.length == 0) {
             Toast.makeText(activity, "APK file not found.", Toast.LENGTH_SHORT).show();

@@ -154,7 +154,7 @@ public abstract class AbstractServer implements ServerInterface {
                     isDomainUpdated = checkForDomainUpdate(currentUrl, initialHost);
                     redirectCount++;
                 } else {
-                    Log.e(TAG, "Unexpected status " + response.statusCode() + " for " + url);
+                    Log.e(TAG, "Unexpected status " + response.statusCode() + " for " + currentUrl);
                     return statusCode == HttpURLConnection.HTTP_NOT_FOUND ? null : response.parse();
                 }
             }

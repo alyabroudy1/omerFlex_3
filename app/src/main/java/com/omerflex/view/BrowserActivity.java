@@ -781,7 +781,7 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         private void processOnCookieState(String elementJson, ArrayList<Movie> movies, ServerConfig config) {
-            Log.d(TAG, "processOnCookieState " + movies.size());
+            Log.d(TAG, "processOnCookieState size: " + movies.size());
             if (movies.isEmpty()){
                 return;
             }
@@ -1567,48 +1567,6 @@ public class BrowserActivity extends AppCompatActivity {
                             "});";
                 }
                 */
-            } else if (movie.getStudio().equals(Movie.SERVER_ARAB_SEED)) {
-                if (movie.getState() == Movie.COOKIE_STATE) {
-                    Log.d(TAG, "getScript: SERVER_ARAB_SEED COOKIE_STATE");
-                    script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                            "var postDivs = document.getElementsByClassName(\"MovieBlock\");\n" +
-                            "if (postDivs.length > 0){\n" +
-                            "var postList = [];\n" +
-                            "for (var i = 0; i < postDivs.length; i++) {\n" +
-                            "var post = {};\n" +
-                            "var postDiv = postDivs[i];\n" +
-                            "var category = postDiv.getElementsByClassName(\"category\")[0].textContent;" +
-                            "if (category.match(/تطبيق|برامج|برنامج|موبايل|اغاني|العاب|لعبة|لعبه|صور/) != null){continue;}" +
-                            "var poster = postDiv.getElementsByClassName(\"Poster\")[0];\n" +
-                            "var imageDiv = poster.getElementsByTagName(\"img\")[0];\n" +
-                            "post.title = imageDiv.getAttribute(\"alt\");\n" +
-                            "post.videoUrl = postDiv.getElementsByTagName(\"a\")[0].getAttribute('href');\n" +
-                            "rateDiv = postDiv.getElementsByClassName(\"RateNumber\");\n" +
-                            "if(rateDiv.length > 0) {\n" +
-                            "post.rate = rateDiv[0].textContent;\n" +
-                            "}\n" +
-                            "post.cardImageUrl = imageDiv.getAttribute('data-src');" +
-                            "if (post.cardImageUrl == null ){ post.cardImageUrl = imageDiv.getAttribute('src'); }" +
-                            "post.bgImageUrl = post.cardImageUrl;\n" +
-                            "post.studio = \"" + Movie.SERVER_ARAB_SEED + "\";\n" +
-                            "post.state = 2;\n" +
-                            "postList.push(post);\n" +
-                            "}" +
-                            "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
-                            "}" +
-                            "});";
-
-                } else if (movie.getState() == Movie.ITEM_STATE) {
-                    Log.d(TAG, "getScript: SERVER_ARAB_SEED ITEM_STATE");
-//                    script ="document.addEventListener(\"DOMContentLoaded\", () => {" +
-//                            "var watchBtn = document.getElementsByClassName('watchBTn');" +
-//                            "if (watchBtn.length > 0){" +
-//                                "watchBtn[0].click();"+
-//                              //  "window.location= watchBtn[0].href;"+
-//                            "}" +
-//                            "});";
-                }
-
             } else if (movie.getStudio().equals(Movie.SERVER_CIMA4U)) {
                 if (movie.getState() == Movie.BROWSER_STATE) {
                     Log.d(TAG, "getScript:Shahid BROWSER_STATE");

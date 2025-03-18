@@ -365,6 +365,7 @@ if (!videoUrl.startsWith("http")){
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
         }
         Log.d(TAG, "fetchItem: title: "+ doc.title()+", "+doc.title().contains("Just a moment"));
+//        if (true) {
         if (doc.title().contains("Just a moment")) {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
@@ -436,95 +437,79 @@ if (!videoUrl.startsWith("http")){
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
             if (movie.getState() == Movie.COOKIE_STATE) {
                 Log.d(TAG, "getScript:WEB_VIEW_MODE_ON_PAGE_STARTED COOKIE_STATE");
-                script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
-                        "let articles = document.querySelectorAll(\"article[aria-label='post']\");\n" +
-                        "if (articles.length === 0) {\n" +
-                        "    articles = document.querySelectorAll(\"a:has(li[aria-label='title'])\");\n" +
-                        "}\n" +
+                script = "document.addEventListener(\"DOMContentLoaded\", () => {\n" +
+                        "    let thumbnails = document.querySelectorAll(\".thumbnail\");\n" +
+                        "    let movieList = [];\n" +
                         "\n" +
-                        "let movieList = [];\n" +
+                        "    thumbnails.forEach(thumbnail => {\n" +
+                        "        let movie = {};\n" +
                         "\n" +
-                        "articles.forEach(article => {\n" +
-                        "    let movie = {};\n" +
+                        "        // Extract title\n" +
+                        "        let titleElement = thumbnail.querySelector(\".caption\");\n" +
+                        "        let title = titleElement?.textContent.trim() || null;\n" +
                         "\n" +
-                        "    // Extract the video URL from the anchor tag\n" +
-                        "    let anchor = article.querySelector(\"a\");\n" +
-                        "    let title = anchor ? anchor.getAttribute(\"href\") : null;\n" +
+                        "        // Extract video URL\n" +
+                        "        let videoUrlElement = thumbnail.querySelector(\".pm-video-thumb a:not(.pm-watch-later-add)\");\n" +
+                        "        let videoUrl = videoUrlElement?.getAttribute(\"href\") || null;\n" +
                         "\n" +
-                        "    if (!title) {\n" +
-                        "        title = article.getAttribute(\"href\");\n" +
-                        "        if (!title) {\n" +
-                        "            return;\n" +
+                        "        if (!videoUrl) return;\n" +
+                        "\n" +
+                        "        if (!videoUrl.startsWith(\"http\")) {\n" +
+                        "            videoUrl = \""+getConfig().getUrl() + "\"+ \"/\" + videoUrl;\n" +
                         "        }\n" +
-                        "    }\n" +
-                        "    movie.videoUrl = title;\n" +
                         "\n" +
+                        "        console.log(\"Search result URL:\", videoUrl);\n" +
+                        "\n" +
+                        "        // Extract card image URL\n" +
+                        "        let cardImageElement = thumbnail.querySelector(\".pm-video-thumb img\");\n" +
+                        "        let cardImage = cardImageElement?.getAttribute(\"data-echo\") ||\n" +
+                        "                        cardImageElement?.getAttribute(\"data-src\") ||\n" +
+                        "                        cardImageElement?.getAttribute(\"data-original\") ||\n" +
+                        "                        cardImageElement?.getAttribute(\"src\") || null;\n" +
+                        "\n" +
+                        "        console.log(\"Generated search result image:\", cardImage);\n" +
+                        "\n" +
+                        "        movie.title = title;\n" +
+                        "        movie.description = title;\n" +
+                        "        movie.cardImageUrl = cardImage;\n" +
+                        "        movie.backgroundImageUrl = cardImage;\n" +
+                        "        movie.bgImageUrl = cardImage;\n" +
+                        "        movie.videoUrl = videoUrl;\n" +
+                        "        movie.studio = \""+Movie.SERVER_LAROZA+"\";\n" +
+                        "        movie.state = videoUrl.includes(\"-serie\") ? "+Movie.GROUP_STATE +" : "+ Movie.ITEM_STATE+";\n" +
+                        "\n" +
+                        "        movieList.push(movie);\n" +
+                        "    });\n" +
+                        "\n" +
+                        "    // Extract next page information\n" +
+                        "    let nextPageMovie = null;\n" +
+                        "    let iElement = document.querySelector(\"i.fa.fa-arrow-left\");\n" +
                         "    \n" +
+                        "    if (iElement) {\n" +
+                        "        let aElement = iElement.closest(\"a\");\n" +
+                        "        let nextPageUrl = aElement?.getAttribute(\"href\") || null;\n" +
                         "\n" +
-                        "    // Extract the movie title and category\n" +
-                        "    let titleElement = article.querySelector(\"li[aria-label='title']\");\n" +
-                        "    if (titleElement) {\n" +
-                        "        let titleText = titleElement.textContent;\n" +
-                        "        let parts = titleText.split(\"<em>\");\n" +
-                        "        if (parts.length > 0) {\n" +
-                        "let titleElement = article.querySelector(\"li[aria-label='title']\");\n" +
-                        "    let episodeElement = article.querySelector(\"li[aria-label='episode']\");\n" +
-                        "    let episode = episodeElement ? episodeElement.textContent.replace(\"الحلقة\", \"\").trim() : \"\";\n" +
+                        "        if (nextPageUrl) {\n" +
+                        "            nextPageMovie = {\n" +
+                        "                title: \"التالي\",\n" +
+                        "                description: \"0\",\n" +
+                        "                studio: \""+Movie.SERVER_LAROZA+"\",\n" +
+                        "                videoUrl: nextPageUrl,\n" +
+                        "                cardImageUrl: \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\",\n" +
+                        "                backgroundImageUrl: \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\",\n" +
+                        "                state: "+Movie.NEXT_PAGE_STATE+",\n" +
+                        "                 mainMovieTitle: nextPageUrl\n" +
+                        "            };\n" +
                         "\n" +
-                        "               movie.title = episode + ' الحلقة ' + parts[0].trim();\n" +
-                        "        }\n" +
-                        "        if (parts.length > 1) {\n" +
-                        "            movie.group = parts[1].replace(\"</em>\", \"\").trim();\n" +
-                        "        }\n" +
-                        "    }\n" +
-                        "\n" +
-                        "    // Extract the card image URL from the img tag\n" +
-                        "    let imgElement = article.querySelector(\"img\");\n" +
-                        "    if (imgElement) {\n" +
-                        "        movie.cardImageUrl = imgElement.getAttribute(\"data-src\");\n" +
-                        "        movie.setBackgroundImageUrl = imgElement.getAttribute(\"data-src\");\n" +
-                        "        movie.setBgImageUrl = imgElement.getAttribute(\"data-src\");\n" +
-                        "    }\n" +
-                        "\n" +
-                        "    movie.studio = '" + Movie.SERVER_CimaNow + "';\n" +
-                        "    movie.state = title.includes(\"/selary\") ? " + Movie.GROUP_STATE +" : " + Movie.ITEM_STATE +";\n" +
-                        "    movie.mainMovieTitle = movie.videoUrl;\n" +
-                        "\n" +
-                        "    movieList.push(movie);\n" +
-                        "});" +
-                        "" +
-                        "let nextPage = {};\n" +
-                        "let pagination = document.querySelector(\"ul[aria-label='pagination']\");\n" +
-                        "\n" +
-                        "if (pagination) {\n" +
-                        "    // Find the active <li> element\n" +
-                        "    let activePage = pagination.querySelector(\"li.active\");\n" +
-                        "\n" +
-                        "    if (activePage) {\n" +
-                        "        // Get the next <li> after the active one\n" +
-                        "        let nextPageElem = activePage.nextElementSibling;\n" +
-                        "\n" +
-                        "        // Check if the next <li> contains an <a> tag and has a valid href attribute\n" +
-                        "        if (nextPageElem && nextPageElem.querySelector(\"a\")) {\n" +
-                        "            let nextPageUrl = nextPageElem.querySelector(\"a\").getAttribute(\"href\");\n" +
-                        "\n" +
-                        "            nextPage.title= \"التالي\";\n" +
-                        "                nextPage.description = \"0\";\n" +
-                        "                nextPage.studio= 'imaNow';\n" +
-                        "                nextPage.videoUrl= nextPageUrl;\n" +
-                        "                nextPage.cardImageUrl= \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\";\n" +
-                        "                nextPage.backgroundImageUrl= \"https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png\";\n" +
-                        "                nextPage.state= 5;\n" +
-                        "                nextPage.mainMovieTitle= nextPageUrl;\n" +
                         "            console.log(\"Next page URL:\", nextPageUrl);\n" +
                         "        } else {\n" +
                         "            console.log(\"No next page found.\");\n" +
                         "        }\n" +
                         "    }\n" +
-                        "} " +
-                        "movieList.push(nextPage);" +
-
-                        "MyJavaScriptInterface.myMethod(JSON.stringify(movieList));" +
+                        "\n" +
+                        "    if (movieList.length > 0) {\n" +
+                        "        MyJavaScriptInterface.myMethod(JSON.stringify(movieList));\n" +
+                        "    }" +
                         "});";
             }
 ////            if (movie.getState() == Movie.GROUP_OF_GROUP_STATE){
@@ -539,6 +524,84 @@ if (!videoUrl.startsWith("http")){
 //                        "});";
 ////            }
 //
+            else if (movie.getState() == Movie.ITEM_STATE) {
+                Log.d(TAG, "getScript:WEB_VIEW_MODE_ON_PAGE_STARTED COOKIE_STATE");
+                script = "document.addEventListener(\"DOMContentLoaded\", () => {\n" +
+                        "let movieList = []; // Assuming 'movie' is already defined\n" +
+                        "\n" +
+                        "    let url = \"https://www.laroza.now/video.php?vid=4109d062a\";\n" +
+                        "\n" +
+                        "    // Replace \"video.php\" with \"play.php\" in URL if needed\n" +
+                        "    if (url.includes(\"video.php\")) {\n" +
+                        "        url = url.replace(\"video.php\", \"play.php\");\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    fetch(url)\n" +
+                        "        .then(response => response.text())\n" +
+                        "        .then(html => {\n" +
+                        "            let parser = new DOMParser();\n" +
+                        "            let doc = parser.parseFromString(html, \"text/html\");\n" +
+                        "\n" +
+                        "            // Extract description\n" +
+                        "            let descriptionDiv = doc.querySelector(\".description\");\n" +
+                        "            if (descriptionDiv) {\n" +
+                        "                let pElements = descriptionDiv.querySelectorAll(\"p\");\n" +
+                        "                for (let p of pElements) {\n" +
+                        "                    let text = p.textContent.trim();\n" +
+                        "                    if (text) {\n" +
+                        "                        console.log(\"Extracted Text:\", text);\n" +
+                        "                        //movie.description = text;\n" +
+                        "                    }\n" +
+                        "                }\n" +
+                        "            } else {\n" +
+                        "                console.log(\"Could not find the .description element.\");\n" +
+                        "            }\n" +
+                        "\n" +
+                        "            // Extract servers\n" +
+                        "            let servers = doc.querySelectorAll(\"ul.WatchList li\");\n" +
+                        "            if (servers.length === 0) {\n" +
+                        "                return;\n" +
+                        "            }\n" +
+                        "\n" +
+                        "            let referer = extractDomain(url, true, true);\n" +
+                        "\n" +
+                        "            // Process servers\n" +
+                        "            servers.forEach(server => {\n" +
+                        "                let title = server.querySelector(\"strong\")?.textContent.trim() || \"Unknown Server\";\n" +
+                        "                let dataIndex = server.getAttribute(\"data-embed-url\") || null;\n" +
+                        "\n" +
+                        "                if (dataIndex) {\n" +
+                        "                    let resolution = {}; // Clone movie object\n" +
+                        "                    resolution.state = "+Movie.RESOLUTION_STATE+";\n" +
+                        "                    resolution.title = title;\n" +
+                        "                    resolution.cardImageUrl = \""+movie.getCardImageUrl()+"\";\n" +
+                        "                    resolution.backgroundImageUrl = \""+movie.getBackgroundImageUrl()+"\";\n" +
+                        "                    resolution.studio = \""+Movie.SERVER_LAROZA+"\";\n" +
+                        "                    resolution.videoUrl = `${dataIndex}|Referer=${referer}`;\n" +
+                        "\n" +
+                        "                    movieList.push(resolution);\n" +
+                        "                }\n" +
+                        "            });\n" +
+                        "\n" +
+                        "    if (movieList.length > 0) {\n" +
+                        "        MyJavaScriptInterface.myMethod(JSON.stringify(movieList));\n" +
+                        "    }" +
+                        "        })\n" +
+                        "        .catch(error => console.error(\"Error fetching movie details:\", error));\n" +
+                        "\n" +
+                        "function extractDomain(url, includeProtocol = true, addTrailingSlash = true) {\n" +
+                        "    try {\n" +
+                        "        let parsedUrl = new URL(url);\n" +
+                        "        let domain = includeProtocol ? `${parsedUrl.protocol}//${parsedUrl.host}` : parsedUrl.host;\n" +
+                        "        return addTrailingSlash ? domain + \"/\" : domain;\n" +
+                        "    } catch (error) {\n" +
+                        "        console.error(\"Invalid URL:\", url, error);\n" +
+                        "        return null; // Handle invalid URLs gracefully\n" +
+                        "    }\n" +
+                        "}" +
+
+                        "});";
+            }
             if (movie.getState() == Movie.RESOLUTION_STATE) {
                 String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
                 int hashIndex = movie.getVideoUrl().indexOf('#');
