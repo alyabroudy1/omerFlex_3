@@ -212,8 +212,19 @@ public class BrowserActivity extends AppCompatActivity {
             redirectUrl = movie.getVideoUrl();
             LinkHeadersDTO linkHeadersDTO = prepareLoadingLink(movie);
 
-            Log.d(TAG, "onCreate: linkHeadersDTO: " + linkHeadersDTO.url);
+            Log.d(TAG, "onCreate: linkHeadersDTO url: " + linkHeadersDTO.url);
+            Log.d(TAG, "onCreate: linkHeadersDTO headers: " + linkHeadersDTO.headers);
             webView.loadUrl(linkHeadersDTO.url, linkHeadersDTO.headers);
+
+
+//           String pageUrl = "https://m.gamehub.cam/?post=4e6a49314e6a5931&wpost=aHR0cHM6Ly9tMTUuYXNkLnJlc3Q=HhZ35wNXMr,,AcFjgjB4_-ThremFtZiwlVVk_6u-dVJO9YsfDDvm1_PMFsPOF_Fjpq5o0Hoesr8jZt6dfIjEWDp_6jDZTG5qnM1vurAfVnO5DLblW6_f50BqNpIu1QGloTOIk25EGQ2Fblov1Jc9o8Oz0s3eJGdZJgpYmCVlErqtS9STA1eIEK-Qx3LSLtNVbpz60s9GoDPyFXrDcQjFPQxmP4q8kpOGJaUeCX5tdS2eCX1Rf-oYUVxAFaUV3j1IgaNagpeWQ0OmY5zgfFZxI9mr6sBiXH8fCX18nZ3atLzmtuLrLdOT798tG_ESwR2CDRpFPMBC1-F_dhUAShS19jdqNe";
+//            //        pageUrl = "https://www.google.com";
+//            HashMap<String, String> headers = new HashMap<>();
+//            headers.put("Referer", "https://m15.asd.rest/");
+//        headers.put("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36");
+
+
+//            webView.loadUrl(pageUrl, headers);
         }
     }
 
@@ -299,6 +310,92 @@ public class BrowserActivity extends AppCompatActivity {
         return linkHeaders;
     }
 
+    private void configureWebview_2(WebView webView) {
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+
+// Set User-Agent to a desktop browser (Chrome)
+//        webSettings.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        webSettings.setUserAgentString("Android 6");
+
+        webSettings.setBuiltInZoomControls(true);
+        webSettings.setDisplayZoomControls(false);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setLoadWithOverviewMode(true); // Load the WebView with an overview mode
+        webSettings.setUseWideViewPort(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        webView.addJavascriptInterface(new MyJavaScriptInterface(), "MyJavaScriptInterface");
+        // Set a custom User-Agent string
+        //String customUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36";
+//        String customUserAgent = server.getCustomUserAgent(movie.getState());
+        // String customUserAgent = "Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36 Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0";
+
+//        CookieManager cookieManager = CookieManager.getInstance();
+//        cookieManager.setAcceptCookie(true);
+//        cookieManager.setAcceptThirdPartyCookies(webView, true);
+//
+//        webView.clearCache(true);
+//        webView.clearFormData();
+//        webView.clearHistory();
+//        webSettings.setUserAgentString("Android 7");
+
+//        if (customUserAgent != null) {
+//            webSettings.setUserAgentString(customUserAgent);
+//        }
+//
+//        if (movie.getState() == Movie.ITEM_STATE ||
+//                movie.getState() == Movie.RESOLUTION_STATE ||
+//                movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE
+//        ) {
+//            webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+//        }
+//
+//        if (isCookieFetch){
+//            webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+//        }
+/// ######
+        // Enable hardware acceleration
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        } else {
+            webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        }
+
+        // Allow autoplay without user gesture (critical for Android TV)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
+        }
+
+// Enable hardware acceleration for smoother playback (optional)
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setFocusable(true);
+        webView.getSettings().setAllowContentAccess(true);
+        webView.requestFocus();
+/// ######
+        webView.setWebViewClient(new Browser_Home());
+//        webView.setWebViewClient(new WebViewClient());
+
+//        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new ChromeClient());
+
+/*        webSettings.setJavaScriptEnabled(true);
+        webSettings.setAppCacheEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setLoadsImagesAutomatically(false);
+       // webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        webSettings.setDomStorageEnabled(true);
+
+//        String userAgent = "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36";
+//        webSettings.setUserAgentString(userAgent);
+
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setPluginState(WebSettings.PluginState.ON);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);*/
+    }
     /**
      * configure the web view before loading the url like setting the custom userAgent and cache
      *
@@ -310,6 +407,7 @@ public class BrowserActivity extends AppCompatActivity {
 
 // Set User-Agent to a desktop browser (Chrome)
         webSettings.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+//        webSettings.setUserAgentString("Android 6");
 
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(false);
@@ -994,6 +1092,38 @@ public class BrowserActivity extends AppCompatActivity {
             return super.shouldInterceptRequest(view, request);
         }
 
+//        @Nullable
+//        @Override
+        public WebResourceResponse shouldInterceptRequest_2(WebView view, WebResourceRequest request) {
+           Uri url = request.getUrl();
+//             Log.d(TAG, "shouldInterceptRequest: " + url.getHost());
+            if (LinkFilterService.isAdDomain(url.getHost())){
+                Log.d(TAG, "Blocking resource: " + url.getHost());
+                return new WebResourceResponse("text/plain", "utf-8", null); // Return an empty response
+            }
+
+            headers = request.getRequestHeaders();
+
+            if (isSupportedStateInInterceptRequest() && LinkFilterService.isSupportedMedia(request, movie.getVideoUrl())) {
+//            if (isSupportedStateInInterceptRequest() && LinkFilterService.isSupportedMedia(request)) {
+                    return handleSupportedMedia(view, request, headers);
+            }
+
+            //            testCookie(view, request);
+            // if server doesnt want to intercept the request and avoid cookie update
+            if (!server.shouldInterceptRequest(view, request)) {
+                return super.shouldInterceptRequest(view, request);
+            }
+
+//            try {
+//                handleCookiesRefresh(request);
+//            } catch (Exception e) {
+//                Log.d(TAG, "shouldInterceptRequest: error:" + e.getMessage());
+//            }
+
+            return super.shouldInterceptRequest(view, request);
+        }
+
         /**
          * old method to refresh cookie
          *
@@ -1086,8 +1216,9 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            // Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
+             Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
             if (request.getUrl().getScheme() == null || !request.getUrl().getScheme().contains("http")) {
+                Log.d(TAG, "shouldOverrideUrlLoading 1 true: "+request.getUrl().toString());
                 return true;
             }
 
@@ -1114,14 +1245,19 @@ public class BrowserActivity extends AppCompatActivity {
             String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
 
             if (!server.shouldOverrideUrlLoading(movie, view, request)) {
+                Log.d(TAG, "shouldOverrideUrlLoading 2 false: "+request.getUrl().toString());
                 return false;
             }
 
-            if (movie.getState() == Movie.COOKIE_STATE || !Util.shouldOverrideUrlLoading(newUrl)) {
+//            if (movie.getState() == Movie.COOKIE_STATE ) {
+            if (movie.getState() == Movie.COOKIE_STATE  || !Util.shouldOverrideUrlLoading(newUrl)) {
                 if (url.startsWith("##")) {
                     url = url.replace("##", "");
+//                    Log.d(TAG, "shouldOverrideUrlLoading: replace ##");
                 }
                 // Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
+//                Log.d(TAG, "shouldOverrideUrlLoading 3 true: "+request.getUrl().toString());
+//                Log.d(TAG, "shouldOverrideUrlLoading 3 state: "+movie.getState());
                 view.loadUrl(url);
                 return true;
             }
@@ -1154,7 +1290,11 @@ public class BrowserActivity extends AppCompatActivity {
 //            }
 
             showRedirectBar(newUrl);
-            // Log.d(TAG, "shouldOverrideUrlLoading:6 true: " + url);
+
+//            if (!movie.getStudio().equals(Movie.SERVER_ARAB_SEED)){
+//                showRedirectBar(newUrl);
+//            }
+             Log.d(TAG, "shouldOverrideUrlLoading:6 true: " + url);
             return true;
         }
 
@@ -1217,7 +1357,7 @@ public class BrowserActivity extends AppCompatActivity {
             String cookies = cookieManager.getCookie(config.getUrl());
 //            url = "https://www.faselhds.care/account/login";
 //            Log.d(TAG, "Cookies for " + config.getUrl() + ": " + cookies);
-//            Log.d(TAG, "Cookies for " + movie.getVideoUrl() + ": " + cookies);
+            Log.d(TAG, "updateCookies for " + movie.getVideoUrl() + ": " + cookies);
             if (cookies == null) {
                 return;
             }
@@ -1722,5 +1862,8 @@ public class BrowserActivity extends AppCompatActivity {
 //
 //        return sslContext.getSocketFactory();
 //    }
+
+
+
 
 }

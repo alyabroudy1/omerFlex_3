@@ -5,6 +5,7 @@ import com.omerflex.server.Util;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerConfig {
 
@@ -19,6 +20,17 @@ public class ServerConfig {
 
     public ServerConfig (){
         headers = new HashMap<>();
+    }
+
+    // Add update method
+    public void updateFrom(ServerConfig other) {
+        if (other == null) return;
+
+        this.url = other.url;
+        this.referer = other.referer;
+        this.stringCookies = other.stringCookies;
+        this.headers = other.headers != null ?
+                new ConcurrentHashMap<>(other.headers) : null;
     }
 
     @Override

@@ -197,6 +197,8 @@ public class Util {
                 public static boolean shouldOverrideUrlLoading(String url) {
 
         boolean result =
+//                url.contains("game") ||
+                (url.contains("gamehub") && url.contains("post")) ||
                 url.contains("gamezone") ||
                         url.contains("cim")
                         || url.contains("faselhd")

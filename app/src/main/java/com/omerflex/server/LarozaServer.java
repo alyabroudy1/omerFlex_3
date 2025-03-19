@@ -69,7 +69,7 @@ public class LarozaServer extends AbstractServer{
             m.setTitle(title);
             m.setDescription("نتائج البحث في الاسفل...");
             m.setStudio(Movie.SERVER_LAROZA);
-            m.setVideoUrl(url);
+            m.setVideoUrl(doc.location());
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
             // m.setState(Movie.RESULT_STATE);
@@ -105,6 +105,10 @@ public class LarozaServer extends AbstractServer{
             Element videoUrlElement = thumbnail.selectFirst(".pm-video-thumb a:not(.pm-watch-later-add)");
             String videoUrl = videoUrlElement != null ? videoUrlElement.attr("href") : null;
 if (videoUrl == null){continue;}
+
+            if (title != null){
+                title = title.replace("مسلسل", "");
+            }
 
 if (!videoUrl.startsWith("http")){
     videoUrl = getConfig().getUrl() + "/" + videoUrl;
@@ -767,8 +771,8 @@ if (!videoUrl.startsWith("http")){
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getSearchUrl("البطل"), activityCallback);
-//        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
+//        return search(getSearchUrl("البطل"), activityCallback);
+        return search(getConfig().getUrl() + "/newvideos.php", activityCallback);
 //        return search(getConfig().getUrl() + "/moslslat1.php", activityCallback);
 //        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
 //        return search(getConfig().getUrl() + "/category/المسلسلات", activityCallback);

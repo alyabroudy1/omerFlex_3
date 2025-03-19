@@ -74,7 +74,7 @@ public class CardPresenter extends Presenter {
         Movie movie = (Movie) item;
         ImageCardView cardView = (ImageCardView) viewHolder.view;
 
-//        Log.d(TAG, "onBindViewHolder");
+//        Log.d(TAG, "onBindViewHolder:"+ movie.getCardImageUrl());
         if (movie.getCardImageUrl() != null) {
             cardView.setTitleText(movie.getTitle());
             cardView.setContentText(movie.getRate() + ' ' + movie.getStudio());
@@ -89,6 +89,7 @@ public class CardPresenter extends Presenter {
 
 
             ServerConfig config = ServerConfigManager.getConfig(movie.getStudio());
+            Log.d(TAG, "onBindViewHolder: config: "+ config);
 
             boolean noHeaderCondition = config == null ||
                     config.getHeaders() == null ||
@@ -100,15 +101,16 @@ public class CardPresenter extends Presenter {
                         //.centerCrop()
                         .error(mDefaultCardImage)
                         .into(cardView.getMainImageView());
+                Log.d(TAG, "onBindViewHolder: no headers");
                 return;
             }
 
             String cookies = config.getStringCookies();
+//            Log.d(TAG, "onBindViewHolder: cookies: " + cookies);
+//            Log.d(TAG, "onBindViewHolder: headers: " + config.getHeaders());
             if (cookies == null) {
                 cookies = "";
             }
-//            Log.d(TAG, "onBindViewHolder: cookies: " + cookies);
-//            Log.d(TAG, "onBindViewHolder: headers: " + config.getHeaders());
             LazyHeaders.Builder builder = new LazyHeaders.Builder()
                     .addHeader("Cookie", cookies);
 

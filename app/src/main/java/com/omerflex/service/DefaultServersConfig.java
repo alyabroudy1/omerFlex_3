@@ -20,7 +20,7 @@ import java.util.ArrayList;
 public class DefaultServersConfig {
 
     private static final String TAG = "DefaultServersConfig";
-    public static ArrayList<AbstractServer> getDefaultServers(MovieDbHelper dbHelper){
+    public static void initializeDefaultServers(MovieDbHelper dbHelper){
 //        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 //        Log.d(TAG, "addServerConfigsToDB: ");
 //        Date date = null;
@@ -31,7 +31,7 @@ public class DefaultServersConfig {
 //        }
 
 //        Log.d(TAG, "addServerConfigsToDB: date: "+date.toString());
-
+//        ArrayList<ServerConfig> configList = new ArrayList<>();
 
               //### mycima ###
         ServerConfig mycimaConfig = new ServerConfig();
@@ -39,13 +39,8 @@ public class DefaultServersConfig {
         mycimaConfig.setUrl("https://mycima.io");
         mycimaConfig.setReferer("https://mycima.io/");
         mycimaConfig.setActive(true);
-//        ServerConfigManager.addConfig(mycimaConfig);
 
-        AbstractServer mycima = new MyCimaServer();
-//        dbHelper.saveServerConfigAsCookieDTO(mycimaConfig, date);
         ServerConfigManager.addConfig(mycimaConfig, dbHelper);
-        ServerConfigManager.addServer(mycima);
-
 
         //         ### cimaNow ###
         ServerConfig cimaNowConfig = new ServerConfig();
@@ -54,9 +49,8 @@ public class DefaultServersConfig {
         cimaNowConfig.setUrl("https://cimanow.cc");
         cimaNowConfig.setReferer("https://cimanow.cc/");
 
-        AbstractServer cimaNowServer = new CimaNowServer();
         ServerConfigManager.addConfig(cimaNowConfig, dbHelper);
-        ServerConfigManager.addServer(cimaNowServer);
+
 
         //### arabseed ###
         ServerConfig arabseedConfig = new ServerConfig();
@@ -65,10 +59,7 @@ public class DefaultServersConfig {
         arabseedConfig.setReferer("https://arabseed.show/");
         arabseedConfig.setActive(true);
 
-        AbstractServer arabseedServer = new ArabSeedServer();
-
         ServerConfigManager.addConfig(arabseedConfig, dbHelper);
-        ServerConfigManager.addServer(arabseedServer);
 
         //        ### fasel ###
         ServerConfig faselConfig = new ServerConfig();
@@ -76,12 +67,8 @@ public class DefaultServersConfig {
         faselConfig.setName(Movie.SERVER_FASELHD);
         faselConfig.setUrl("https://www.faselhds.center");
         faselConfig.setReferer("https://www.faselhds.center/");
-//        ServerConfigManager.addConfig(faselConfig, dbHelper);
 
-        AbstractServer faselhd = new FaselHdServer();
-//        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
         ServerConfigManager.addConfig(faselConfig, dbHelper);
-        ServerConfigManager.addServer(faselhd);
 
         //         ### laroza ###
         ServerConfig larozaConfig = new ServerConfig();
@@ -90,9 +77,7 @@ public class DefaultServersConfig {
         larozaConfig.setUrl("https://www.laroza.now");
         larozaConfig.setReferer("https://www.laroza.now/");
 
-        AbstractServer larozaServer = new LarozaServer();
         ServerConfigManager.addConfig(larozaConfig, dbHelper);
-        ServerConfigManager.addServer(larozaServer);
 
 //         ### akwam ###
         ServerConfig akwamConfig = new ServerConfig();
@@ -101,10 +86,7 @@ public class DefaultServersConfig {
         akwamConfig.setUrl("https://ak.sv");
         akwamConfig.setReferer("https://ak.sv/");
 
-        AbstractServer akwamServer = new AkwamServer();
         ServerConfigManager.addConfig(akwamConfig, dbHelper);
-        ServerConfigManager.addServer(akwamServer);
-
 
         //### old_Akwam ###
         ServerConfig oldAkwamConfig = new ServerConfig();
@@ -113,9 +95,7 @@ public class DefaultServersConfig {
         oldAkwamConfig.setUrl("https://www.ak.sv/old");
         oldAkwamConfig.setReferer("https://www.ak.sv/old/");
 
-        AbstractServer oldAkwamServer = new OldAkwamServer();
         ServerConfigManager.addConfig(oldAkwamConfig, dbHelper);
-        ServerConfigManager.addServer(oldAkwamServer);
 
         //### iptv ###
         ServerConfig iptvConfig = new ServerConfig();
@@ -125,9 +105,7 @@ public class DefaultServersConfig {
         iptvConfig.setActive(true);
 //        ServerConfigManager.addConfig(iptvConfig);
 
-        AbstractServer iptv = new IptvServer();
         ServerConfigManager.addConfig(iptvConfig, dbHelper);
-        ServerConfigManager.addServer(iptv);
 
         // ### omar ###
         ServerConfig omarConfig = new ServerConfig();
@@ -137,24 +115,19 @@ public class DefaultServersConfig {
         omarConfig.setReferer("http://194.164.53.40/");
 //        ServerConfigManager.addConfig(omarConfig);
 
-        AbstractServer omarServer = new OmarServer();
         ServerConfigManager.addConfig(omarConfig, dbHelper);
-        ServerConfigManager.addServer(omarServer);
 
         //        ### Koora ###
-        ServerConfig kooraConfig = new ServerConfig();
-        kooraConfig.setActive(true);
-        kooraConfig.setName(Movie.SERVER_KOORA_LIVE);
-        kooraConfig.setUrl("https://www.as-goal.cc");
-//        kooraConfig.setUrl("https://kooora.live-koora.live");
-//        kooraConfig.setReferer("https://kooora.live-koora.live/");
-        kooraConfig.setReferer("https://www.as-goal.cc/");
+//        ServerConfig kooraConfig = new ServerConfig();
+//        kooraConfig.setActive(false);
+//        kooraConfig.setName(Movie.SERVER_KOORA_LIVE);
+//        kooraConfig.setUrl("https://www.as-goal.cc");
+////        kooraConfig.setUrl("https://kooora.live-koora.live");
+////        kooraConfig.setReferer("https://kooora.live-koora.live/");
+//        kooraConfig.setReferer("https://www.as-goal.cc/");
+////        ServerConfigManager.addConfig(kooraConfig);
+//
 //        ServerConfigManager.addConfig(kooraConfig, dbHelper);
-
-        AbstractServer koora = new KooraServer();
-//        dbHelper.saveServerConfigAsCookieDTO(faselConfig, date);
-        ServerConfigManager.addConfig(kooraConfig, dbHelper);
-        ServerConfigManager.addServer(koora);
 
         // ### app update ###
 //        ServerConfig appConfig = new ServerConfig();
@@ -163,7 +136,7 @@ public class DefaultServersConfig {
 //        appConfig.setUrl("https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/omerFlex.apk");
 //        appConfig.setReferer("https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/");
 //
-//        ServerConfigManager.addConfig(appConfig, dbHelper);
+//        ServerConfigManager.addConfig(appConfig);
 
 //        //### cimaclub ###
 //        ServerConfig cimaclubConfig = new ServerConfig();
@@ -195,6 +168,6 @@ public class DefaultServersConfig {
 
 
 //        Log.d(TAG, "addServerConfigsToDB: servers.size: "+ServerConfigManager.getServers().size());
-        return ServerConfigManager.getServers(dbHelper);
+//        return configList;
     }
 }

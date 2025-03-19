@@ -1,6 +1,7 @@
 package com.omerflex.server;
 
 import android.util.Log;
+import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 
@@ -70,18 +71,22 @@ public class ArabSeedServer extends AbstractServer {
         if (doc.title().contains("moment")) {
 //        if (true) {
 //            setCookieRefreshed(false);
+
+            //we need to update the url as domain might be updated in getSearchRequestDoc
+//            Log.d(TAG, "search: new Url: "+ doc.baseUri() + ", location:"+doc.location());
+
             //**** default
             // String title = "ابحث في موقع فاصل ..";
-            String title = searchContext;
+//            String title = query;
             //int imageResourceId = R.drawable.default_image;
             // String cardImageUrl = "android.resource://" + activity.getPackageName() + "/" + imageResourceId;
             String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
             String backgroundImageUrl = "http://commondatastorage.googleapis.com/android-tv/Sample%20videos/April%20Fool's%202013/Introducing%20Google%20Nose/bg.jpg";
             Movie m = new Movie();
-            m.setTitle(title);
+            m.setTitle(query);
             m.setDescription("نتائج البحث في الاسفل...");
             m.setStudio(Movie.SERVER_ARAB_SEED);
-            m.setVideoUrl(url);
+            m.setVideoUrl(doc.location());
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
             // m.setState(Movie.RESULT_STATE);
@@ -121,6 +126,7 @@ public class ArabSeedServer extends AbstractServer {
                     continue;
                 }
 
+                    title = title.replace("مسلسل", "");
 
                 String category = "";
                 Elements cateElems = videoUrlElem.getElementsByClass("category");
@@ -648,21 +654,44 @@ public class ArabSeedServer extends AbstractServer {
     }
 
     private MovieFetchProcess fetchServers(Document doc, Movie movie, String referer, ActivityCallback<Movie> activityCallback) {
-        Log.d(TAG, "fetchServers run-1: " + movie.getVideoUrl());
+//        Log.d(TAG, "fetchServers run-1: " + movie.getVideoUrl());
+//        Log.d(TAG, "fetchServers run-1 referer: " + referer);
 
 //        Document doc = getRequestDoc(movie.getVideoUrl());
         try {
             if (doc == null){
+                String host = Util.extractDomain(movie.getVideoUrl(), true, true);
+                String newCookie = CookieManager.getInstance().getCookie(host);
+
                 doc = Jsoup.connect(movie.getVideoUrl())
+//                        .userAgent("Android 8")
+                        .userAgent(getCustomUserAgent(movie.getState()))
+                        .headers(getConfig().getHeaders())
+                        .cookies(getConfig().getMappedCookies())
                         .header("referer", referer)
-                        .userAgent("Android 8")
-                        .followRedirects(true)
+                        .header("Cookie", newCookie)
+                        .followRedirects(false) // in this case dont follow redirect
                         .ignoreHttpErrors(true)
                         .timeout(0)
                         .ignoreContentType(true)
                         .get();
+//                Log.d(TAG, "fetchServers: headers "+ getConfig().getHeaders().toString());
+//                doc = getRequestDoc(movie.getVideoUrl());
+                Log.d(TAG, "fetchServers: new request-1 title:"+ doc.title());
+                if (doc.title().contains("Just a moment")) {
+                    Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+                    clonedMovie.setVideoUrl(movie.getVideoUrl() + "|Referer="+referer);
+                    Log.d(TAG, "fetchServers: new request title:"+ doc.title());
+                    activityCallback.onInvalidCookie(clonedMovie, getLabel());
+
+                    return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
+                }
+
             }
 
+            Log.d(TAG, "fetchServers: title:"+ doc.title());
             Elements serverElems = doc.getElementsByClass("containerServers");
             Log.d(TAG, "fetchServers:serverElems: "+serverElems.size());
             if (serverElems.isEmpty()) {
@@ -913,9 +942,11 @@ public class ArabSeedServer extends AbstractServer {
     @Override
     public String getWebScript(int mode, Movie movie) {
         String script = null;
+//        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
             if (movie.getState() == Movie.BROWSER_STATE) {
                 Log.d(TAG, "getScript:cimaClub RESOLUTION_STATE");
+
                 script = "document.addEventListener(\"DOMContentLoaded\", () => {" +
                         "var serverElems = document.getElementsByClassName('containerServers');\n" +
                         "var postList = [];\n" +
@@ -929,12 +960,11 @@ public class ArabSeedServer extends AbstractServer {
                         "    var listElem = listElems[b];\n" +
                         "        // Clone 'movie' object\n" +
                         "        var post = {};\n" +
-                        "        post.state = 3;\n" +
+                        "        post.state = "+Movie.RESOLUTION_STATE+";\n" +
                         "        post.studio = \"" + movie.getStudio() + "\";\n" +
                         "        post.fetch = \"" + movie.getFetch() + "\";\n" +
-                        "        post.cardImageUrl = \"" + movie.getStudio() + "\";\n" +
-                        "        post.backgroundImageUrl = \"" + movie.getBackgroundImageUrl() + "\";\n" +
                         "        post.cardImageUrl = \"" + movie.getCardImageUrl() + "\";\n" +
+                        "        post.backgroundImageUrl = \"" + movie.getBackgroundImageUrl() + "\";\n" +
                         "        post.getMainMovieTitle = \"" + movie.getMainMovieTitle() + "\";\n" +
                         "        var link = listElem.getAttribute('data-link');\n" +
                         "\n" +

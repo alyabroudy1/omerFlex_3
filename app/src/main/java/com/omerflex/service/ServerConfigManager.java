@@ -19,153 +19,134 @@ import com.omerflex.server.OmarServer;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerConfigManager {
 
-    private static final ArrayList<ServerConfig> serversConfigs = new ArrayList<>();
-    private static final ArrayList<AbstractServer> servers = new ArrayList<>();
     private static final String TAG = "ServerConfigManager";
+    // Using concurrent collections for thread safety
+    private static final Map<String, ServerConfig> serversConfigs = new ConcurrentHashMap<>();
+    private static final Map<String, AbstractServer> servers = new ConcurrentHashMap<>();
 
     public static ServerConfig getConfig(String serverId) {
-        for (ServerConfig config : serversConfigs) {
-            if (config.getName().equals(serverId)) {
-                return config;
-            }
-        }
-        return null;
+        return serversConfigs.get(serverId);
     }
 
+    // Basic update: just update the existing config's fields
     public static boolean updateConfig(ServerConfig newConfig) {
-        for (int i = 0; i < serversConfigs.size(); i++) {
-            ServerConfig config = serversConfigs.get(i);
-            if (config.getName().equals(newConfig.getName())) {
-                serversConfigs.set(i, newConfig); // Replace the existing config with the new config
-                return true;
-            }
+        ServerConfig existing = serversConfigs.get(newConfig.getName());
+        if (existing != null) {
+            existing.updateFrom(newConfig);
+            Log.d(TAG, "Config updated: " + newConfig.getName());
+            return true;
         }
-
+        Log.d(TAG, "error: fail updating Config: " + newConfig.getName());
         return false;
     }
 
+    // Update with additional DB and cookie handling
     public static boolean updateConfig(ServerConfig newConfig, MovieDbHelper dbHelper) {
-        Log.d(TAG, "updateConfig: " + newConfig);
-        if (updateConfig(newConfig)) {
-            if (newConfig.getStringCookies() != null) {
-                // Ensure the cookies are flushed and applied
-                CookieManager cookieManager = CookieManager.getInstance();
-                cookieManager.setAcceptCookie(true);
+        if (!updateConfig(newConfig)) return false;
+
+        // Cookie management
+        if (newConfig.getStringCookies() != null) {
+            CookieManager cookieManager = CookieManager.getInstance();
+            cookieManager.setAcceptCookie(true);
+
+            if (cookieManager.getCookie(newConfig.getUrl()) == null) {
+                // Always update cookies if config changed
                 cookieManager.setCookie(newConfig.getUrl(), newConfig.getStringCookies());
                 cookieManager.flush();
             }
-            dbHelper.saveServerConfig(newConfig);
-            return true;
         }
 
-        return false;
+        dbHelper.saveServerConfig(newConfig);
+        return true;
+    }
+    public static boolean addConfig(ServerConfig newConfig) {
+        if (newConfig == null) {
+            Log.w(TAG, "addConfig: Attempted to add a null config.");
+            return false;
+        }
+
+        String configName = newConfig.getName();
+        if (configName == null || configName.trim().isEmpty()) {
+            Log.w(TAG, "addConfig: Config name is null or empty.");
+            return false;
+        }
+
+        // Check if the config already exists
+        ServerConfig existingConfig = serversConfigs.get(configName);
+        if (existingConfig != null) {
+            Log.d(TAG, "addConfig: Config with name " + configName + " already exists. Updating instead.");
+            return updateConfig(newConfig); // Update the existing config
+        }
+
+        // Add the new config
+        serversConfigs.put(configName, newConfig);
+        Log.d(TAG, "addConfig: Added new config for " + configName);
+
+        return true;
     }
 
     public static boolean addConfig(ServerConfig newConfig, MovieDbHelper dbHelper) {
-        addConfig(newConfig); // Add the new config
-        dbHelper.saveServerConfig(newConfig);
-        return true; // Return true indicating the config was added successfully
+        boolean result = addConfig(newConfig);
+        if (result) {
+            dbHelper.saveServerConfig(newConfig);
+        }
+        AbstractServer server = createServerInstance(newConfig.getName());
+        if (server != null){
+//            Log.d(TAG, "initializeDefaultServers: Error: fail creating server: "+ newConfig.getName());
+            servers.put(newConfig.getName(), server);
+        }
+        return result;
     }
 
-    public static boolean addConfig(ServerConfig newConfig) {
-        Log.d(TAG, "addConfig: " + newConfig);
-        for (ServerConfig config : serversConfigs) {
-            if (config.getName().equals(newConfig.getName())) {
-                return updateConfig(newConfig); // Return false if the config with the specified name already exists
+    public static Map<String, AbstractServer> getServers(MovieDbHelper dbHelper) {
+        if (servers.isEmpty()) {
+            initializeServersFromDB(dbHelper);
+        }
+        return Collections.unmodifiableMap(servers);
+    }
+
+    private static void initializeServersFromDB(MovieDbHelper dbHelper) {
+        servers.clear();
+        serversConfigs.clear();
+
+        for (ServerConfig config : dbHelper.getAllServerConfigs()) {
+            addConfig(config);
+            AbstractServer server = createServerInstance(config.getName());
+            if (server != null) {
+                servers.put(server.getServerId(), server);
             }
         }
-        serversConfigs.add(newConfig); // Add the new config
-        return true; // Return true indicating the config was added successfully
-    }
 
-    public static ArrayList<AbstractServer> getServers(MovieDbHelper dbHelper) {
-        Log.d(TAG, "getServers: " + servers);
         if (servers.isEmpty()) {
-//           return initializeServers();
-            return initializeServersFromDB(dbHelper);
+            DefaultServersConfig.initializeDefaultServers(dbHelper);
         }
-        return servers;
-    }
-
-    private static ArrayList<AbstractServer> initializeServersFromDB(MovieDbHelper dbHelper) {
-        ArrayList<ServerConfig> serverConfigs = dbHelper.getAllServerConfigs();
-
-//        ArrayList<ServerConfig> serverConfigs = new ArrayList<>();
-        Log.d(TAG, "initializeServersFromDB " + serverConfigs);
-        if (serverConfigs.isEmpty()) {
-            return DefaultServersConfig.getDefaultServers(dbHelper);
-        }
-        return generateServers(serverConfigs);
     }
 
     public static AbstractServer getServer(String serverId) {
-        for (AbstractServer server : servers) {
-            if (server.getServerId().equals(serverId)) {
-                return server;
-            }
-        }
-        return null;
+        return servers.get(serverId);
     }
 
-
-    public static void addServer(AbstractServer newServer) {
-        Log.d(TAG, "addConfig: " + newServer);
-        for (AbstractServer server : servers) {
-            if (server.getServerId().equals(newServer.getServerId())) {
-                updateServer(newServer); // Return false if the config with the specified name already exists
-                break;
-            }
-        }
-        servers.add(newServer); // Add the new config
+    public static void updateServer(AbstractServer server) {
+        servers.put(server.getServerId(), server);
     }
 
-    public static boolean updateServer(AbstractServer newServer) {
-        for (int i = 0; i < servers.size(); i++) {
-            AbstractServer server = servers.get(i);
-            if (server.getServerId().equals(newServer.getServerId())) {
-                servers.set(i, newServer); // Replace the existing server with the new server
-                return true;
-            }
-        }
+//    public static void addServer(AbstractServer newServer) {
+//        Log.d(TAG, "addConfig: " + newServer);
+//        for (AbstractServer server : servers) {
+//            if (server.getServerId().equals(newServer.getServerId())) {
+//                updateServer(newServer); // Return false if the config with the specified name already exists
+//                break;
+//            }
+//        }
+//        servers.add(newServer); // Add the new config
+//    }
 
-        return false;
-    }
-
-    private static ArrayList<AbstractServer> generateServers(ArrayList<ServerConfig> serverConfigs) {
-        Log.d(TAG, "generateServers ");
-        for (ServerConfig serverConfig : serverConfigs) {
-            try {
-                Log.d(TAG, "generateServers: server: " + serverConfig.getName());
-                AbstractServer server = determineServer(serverConfig.getName());
-                if (server == null) {
-                    Log.d(TAG, "generateServers: undefined server: "+ serverConfig.getName());
-                    continue;
-                }
-//                ServerConfig config = new ServerConfig();
-//                config.setUrl(serverConfig.referer);
-//                config.setReferer(serverConfig.referer);
-//                config.setName(serverConfig.name);
-//                config.setCreatedAt(serverConfig.date);
-//
-////                config.setHeaders(getMappedHeaders(serverCookie.headers));
-//                Log.d(TAG, "generateServers: adding server:" + config);
-//                config.setHeaders(Util.convertJsonToHashMap(serverConfig.headers));
-//                config.setStringCookies(serverConfig.cookie);
-//                ServerConfigManager.addConfig(config);
-                ServerConfigManager.addConfig(serverConfig);
-                ServerConfigManager.addServer(server);
-//                Log.d(TAG, "generateServers: after adding servers.size: "+servers.size());
-            } catch (Exception e) {
-//                e.printStackTrace();
-                Log.d(TAG, "generateServers: error: " + e.getMessage());
-            }
-        }
-        Log.d(TAG, "generateServers: servers.size: " + servers.size());
-        return servers;
-    }
 
     private static AbstractServer determineServer(String serverId) {
         switch (serverId) {
@@ -206,6 +187,32 @@ public class ServerConfigManager {
 //                return WatanFlixController.getInstance(fragment, activity);
 //            case Movie.SERVER_KOORA_LIVE:
 //                return new KooraLiveController(listRowAdapter, activity);
+        }
+        return null;
+    }
+
+    private static AbstractServer createServerInstance(String serverId) {
+        switch (serverId) {
+            case Movie.SERVER_MyCima:
+                return new MyCimaServer();
+            case Movie.SERVER_CimaNow:
+                return new CimaNowServer();
+            case Movie.SERVER_ARAB_SEED:
+                return new ArabSeedServer();
+            case Movie.SERVER_FASELHD:
+                return new FaselHdServer();
+            case Movie.SERVER_AKWAM:
+                return new AkwamServer();
+            case Movie.SERVER_OLD_AKWAM:
+                return new OldAkwamServer();
+            case Movie.SERVER_IPTV:
+                return new IptvServer();
+            case Movie.SERVER_OMAR:
+                return new OmarServer();
+            case Movie.SERVER_KOORA_LIVE:
+                return new KooraServer();
+            case Movie.SERVER_LAROZA:
+                return new LarozaServer();
         }
         return null;
     }

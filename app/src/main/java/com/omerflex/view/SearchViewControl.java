@@ -35,6 +35,7 @@ import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -405,8 +406,9 @@ public abstract class SearchViewControl {
 
 
             Log.d(TAG, "loadHomepageRaws a " + finalQuery);
-            for (AbstractServer server : ServerConfigManager.getServers(dbHelper)) {
-                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+            for (Map.Entry<String, AbstractServer> entry : ServerConfigManager.getServers(dbHelper).entrySet()) {
+                AbstractServer server = entry.getValue();
+                ServerConfig config = ServerConfigManager.getConfig(entry.getKey());
 
                 Log.d(TAG, "loadHomepageRaws config: " + config);
 //                if (config == null || !config.isActive()){

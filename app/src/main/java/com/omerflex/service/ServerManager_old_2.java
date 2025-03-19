@@ -127,7 +127,7 @@ public class ServerManager_old_2 {
     }
 
     private ArrayList<AbstractServer> addServerConfigsToDB() {
-        this.servers = DefaultServersConfig.getDefaultServers(dbHelper);
+//        this.servers = DefaultServersConfig.getDefaultServers(dbHelper);
         return this.servers;
     }
 

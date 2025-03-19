@@ -77,6 +77,7 @@ public abstract class AbstractServer implements ServerInterface {
     public boolean shouldOverrideUrlLoading(Movie movie, WebView view, WebResourceRequest request){
         boolean result = false;
         String url = request.getUrl().toString();
+        String host = request.getUrl().getHost();
         String newUrl = request.getUrl().toString().length() > 25 ? request.getUrl().toString().substring(0, 25) : request.getUrl().toString();
 
         if (getConfig() != null) {
@@ -91,6 +92,11 @@ public abstract class AbstractServer implements ServerInterface {
             return false;
         }
 
+        if (host != null && host.contains("game") && url.contains("post")) {
+//                Log.d(TAG, "shouldOverrideUrlLoading:0 false: domain: " + Util.extractDomain(url, false, false) + ", u: " + url);
+            return false;
+        }
+
         if (url.contains("embed")) {
 //                if (url.contains("embed") || sameSite) {
             view.loadUrl(url);
@@ -99,19 +105,21 @@ public abstract class AbstractServer implements ServerInterface {
         }
 
 
-        if (movie.getState() == Movie.COOKIE_STATE || !Util.shouldOverrideUrlLoading(newUrl)) {
-            if (url.startsWith("##")) {
-                url = url.replace("##", "");
-            }
-            Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
-            view.loadUrl(url);
-            return true;
-            //  CURRENT_WEB_NAME = getWebName(url);
-        }
+//        if (movie.getState() == Movie.COOKIE_STATE || !Util.shouldOverrideUrlLoading(newUrl)) {
+//        if (movie.getState() == Movie.COOKIE_STATE || !Util.shouldOverrideUrlLoading(newUrl)) {
+//            if (url.startsWith("##")) {
+//                url = url.replace("##", "");
+//            }
+//            Log.d(TAG, "shouldOverrideUrlLoading:5 false: " + url);
+//            view.loadUrl(url);
+//            return true;
+//            //  CURRENT_WEB_NAME = getWebName(url);
+//        }
 
 
         return true;
     }
+
 
     protected Document getSearchRequestDoc(String url) {
         final int MAX_REDIRECTS = 5;
@@ -129,7 +137,8 @@ public abstract class AbstractServer implements ServerInterface {
                 Connection.Response response = Jsoup.connect(currentUrl)
                         .headers(config.getHeaders())
                         .cookies(config.getMappedCookies())
-                        .followRedirects(isDomainUpdated)
+                        .followRedirects(false)
+//                        .followRedirects(isDomainUpdated)
                         .ignoreHttpErrors(true)
                         .ignoreContentType(true)
                         .timeout(10000)
@@ -400,7 +409,7 @@ public abstract class AbstractServer implements ServerInterface {
     public abstract String getWebScript(int mode, Movie movie);
 
     public String getCustomUserAgent(int state){
-        String defaultUserAgent = "Android 7";
+        String defaultUserAgent = "Android 6";
 //        switch (state){
 //            case Movie.COOKIE_STATE:
 //                return defaultUserAgent;
