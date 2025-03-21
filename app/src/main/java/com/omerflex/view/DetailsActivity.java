@@ -1,7 +1,10 @@
 package com.omerflex.view;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
 
 import com.omerflex.R;
@@ -15,6 +18,7 @@ public class DetailsActivity extends FragmentActivity {
     public static final String MAIN_MOVIE = "Main_Movie";
     public static final String MOVIE_SUBLIST = "Movie_sub";
     public static final String QUERY = "Query";
+    public static final String TAG = "DetailsActivity";
     public static final String DETAILS_FRAGMENT_TAG = "details_fragment_tag";
 
 
@@ -32,4 +36,9 @@ public class DetailsActivity extends FragmentActivity {
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        Log.d(TAG, "onActivityResult: DetailsActivity");
+        super.onActivityResult(requestCode, resultCode, data);
+    }
 }

@@ -771,7 +771,7 @@ public class BrowserActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        Log.d(TAG, "onDestroy: ");
         // Clean up the WebView to prevent memory leaks
         if (webView != null) {
             webView.loadUrl("about:blank");
@@ -779,6 +779,7 @@ public class BrowserActivity extends AppCompatActivity {
             webView.clearCache(true);
             webView.destroy();
         }
+        super.onDestroy();
     }
 
     //    @Override
@@ -813,6 +814,7 @@ public class BrowserActivity extends AppCompatActivity {
             // Check if elementJson is an HTML content or specific commands
             if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) {
                 handleJSResultMovieUpdate(elementJson, movies);
+//                Log.d(TAG, "myMethod: REQUEST_CODE_MOVIE_UPDATE ");
                 return;
             }
 
@@ -866,6 +868,7 @@ public class BrowserActivity extends AppCompatActivity {
                     return;
                 case MovieFetchProcess.FETCH_PROCESS_RETURN_RESULT:
                     // this case is arabseed
+//                    Log.d(TAG, "processOnOtherMovieStates: FETCH_PROCESS_RETURN_RESULT");
                     setResult(
                             Activity.RESULT_OK,
                             Util.generateIntentResult(movieFetchProcess.movie)
@@ -873,6 +876,7 @@ public class BrowserActivity extends AppCompatActivity {
                     finish();
                     return;
                 default:
+//                    Log.d(TAG, "processOnOtherMovieStates: default");
                     Util.openVideoDetailsIntent(movieFetchProcess.movie, activity);
                     finish();
             }
@@ -891,6 +895,7 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         private void handleIframeRedirect(String elementJson) {
+//            Log.d(TAG, "handleIframeRedirect: "+elementJson);
             final String url = elementJson.replace("##", "");
             runOnUiThread(() -> webView.loadUrl(url));
         }
@@ -918,7 +923,7 @@ public class BrowserActivity extends AppCompatActivity {
             movie.setSubList(
                     movies
             );
-            // Log.d(TAG, "handleJSResultMovieUpdate: mainMovie: "+ movie.getMainMovie());
+//             Log.d(TAG, "handleJSResultMovieUpdate: mainMovie: "+ movie.getMainMovie());
             setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
             finish();
         }

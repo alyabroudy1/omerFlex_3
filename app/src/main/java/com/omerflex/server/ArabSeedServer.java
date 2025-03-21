@@ -942,7 +942,7 @@ public class ArabSeedServer extends AbstractServer {
     @Override
     public String getWebScript(int mode, Movie movie) {
         String script = null;
-//        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
+        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
         if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
             if (movie.getState() == Movie.BROWSER_STATE) {
                 Log.d(TAG, "getScript:cimaClub RESOLUTION_STATE");
@@ -978,7 +978,7 @@ public class ArabSeedServer extends AbstractServer {
                         "                 \n" +
                         "                            var title = titleElems[0].textContent;\n" +
                         "if (title.includes(\"عرب سيد\")) {\n" +
-                        "        post.videoUrl = \"" + movie.getVideoUrl() + "\"; \n" +
+                        "        continue;" +
                         "    }\n" +
                         "                            post.title = title;\n" +
                         "                        \n" +
@@ -1077,7 +1077,8 @@ public class ArabSeedServer extends AbstractServer {
                         "if (imageDiv == null) {\n" +
                         "                    continue;\n" +
                         "                }" +
-                        "post.title = imageDiv.getAttribute(\"alt\");\n" +
+                        "let title = imageDiv.getAttribute(\"alt\");\n" +
+                        "post.title = title.replace(\"مسلسل\", \"\");" +
                         "post.videoUrl = postDiv.getElementsByTagName(\"a\")[0].getAttribute('href');\n" +
                         "rateDiv = postDiv.getElementsByClassName(\"RateNumber\");\n" +
                         "if(rateDiv.length > 0) {\n" +
@@ -1097,107 +1098,126 @@ public class ArabSeedServer extends AbstractServer {
                         "});";
 
             }
-//            else if (movie.getState() == Movie.ITEM_STATE) {
-//                Log.d(TAG, "getScript: SERVER_ARAB_SEED ITEM_STATE");
-////                    script ="document.addEventListener(\"DOMContentLoaded\", () => {" +
-////                            "fetchMovieData();" +
-////                            "" +
-////                            "async function fetchMovieData() {\n" +
-////                            "    // Fetch description\n" +
-////                            "    let storyElem = document.querySelector('.StoryLine .descrip:not([style])');\n" +
-//////                            "    let description = storyElem ? storyElem.textContent.trim() : '';\n" +
-//////                            "\n" +
-//////                            "    // Set movie description\n" +
-//////                            "    setDescription(description);\n" +
-//////                            "\n" +
-////                            "    // Fetch watch links\n" +
-////                            "    let watchElem = document.querySelector('.WatchButtons');\n" +
-////                            "    if (!watchElem) return;\n" +
-////                            "\n" +
-////                            "            let domain = \"" + Util.extractDomain(movie.getVideoUrl(), true, true) +"\";" +
-////                            "    // Try fetching direct link from 'a' tags\n" +
-////                            "    let linkElem = watchElem.querySelector('a[href]');\n" +
-////                            "    if (linkElem) {\n" +
-////                            "        let link = linkElem.getAttribute('href');\n" +
-////                            "        if (link) {\n" +
-////                            "            let newMovie = { videoUrl: link, state: " + Movie.BROWSER_STATE +" };\n" +
-////                            "            return await fetchServers(null, newMovie, domain);\n" +
-////                            "        }\n" +
-////                            "    }\n" +
-////                            "\n" +
-////                            "    // Attempt to find a valid form for a POST request\n" +
-////                            "    let form = Array.from(watchElem.querySelectorAll('form')).find(f => \n" +
-////                            "        f.querySelector(\"input[type='hidden']\") && f.querySelector('button')\n" +
-////                            "    );\n" +
-////                            "    if (!form) return;\n" +
-////                            "\n" +
-////                            "    let postUrl = form.getAttribute('action');\n" +
-////                            "    if (!postUrl) return;\n" +
-////                            "\n" +
-////                            "    let hiddenInput = form.querySelector(\"input[type='hidden']\");\n" +
-////                            "    let inputName = hiddenInput?.getAttribute('name');\n" +
-////                            "    let inputValue = hiddenInput?.value;\n" +
-////                            "\n" +
-////                            "    if (!inputName || !inputValue) return;\n" +
-////                            "\n" +
-////                            "    let postData = new URLSearchParams();\n" +
-////                            "    postData.append(inputName, inputValue);\n" +
-////                            "\n" +
-////                            "    try {\n" +
-////                            "        let response = await fetch(postUrl, {\n" +
-////                            "            method: 'POST',\n" +
-////                            "            headers: {\n" +
-////                            "                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',\n" +
-////                            "                'Content-Type': 'application/x-www-form-urlencoded',\n" +
-////                            "                'Referer': domain,\n" +
-////                            "            },\n" +
-////                            "            body: postData\n" +
-////                            "        });\n" +
-////                            "\n" +
-////                            "        if (response.ok) {\n" +
-////                            "            let responseText = await response.text();\n" +
-////                            "            let parser = new DOMParser();\n" +
-////                            "            let responseDoc = parser.parseFromString(responseText, 'text/html');\n" +
-////                            "            return await fetchServers(responseDoc, movie, domain );\n" +
-////                            "        }\n" +
-////                            "    } catch (error) {\n" +
-////                            "        console.error('Error fetching POST request:', error);\n" +
-////                            "    }\n" +
-////                            "}\n" +
-////                            "\n" +
-////                            "async function fetchServers(responseDoc, movie, referer) {\n" +
-////                            "let doc = responseDoc ? responseDoc : document;" +
-////
-////                            "    let serverElems = doc.querySelectorAll('.containerServers [data-link]');\n" +
-////                            "    if (!serverElems?.length) {\n" +
-////                            "        return;\n" +
-////                            "    }\n" +
-////                            "    let movieList = [];\n" +
-////                            "\n" +
-////                            "    serverElems.forEach(elem => {\n" +
-////                            "        let link = elem.getAttribute('data-link');\n" +
-////                            "        if (!link) return;\n" +
-////                            "\n" +
-////                            "        if (link.includes('عرب سيد')) return;\n" +
-////                            "\n" +
-////                            "        link += `||Referer=${domain}`;\n" +
-////                            "\n" +
-////                            "        let server = { videoUrl: link, state: " + Movie.RESOLUTION_STATE+ " };\n" +
-////                            "        let title = elem.querySelector('span')?.textContent.trim() || elem.textContent.trim();\n" +
-////                            "        if (title) server.title = title;\n" +
-////                            "\n" +
-////                            "        movieList.push(server);\n" +
-////                            "    });\n" +
-////                            "\n" +
-////                            "if (movieList.length > 0){" +
-////                            "        MyJavaScriptInterface.myMethod(JSON.stringify(movieList));\n" +
-////                            "}" +
-////                            "}\n" +
-////                            "\n" +
-////                            "" +
-////
-////                            "});";
-//            }
+            else if (movie.getState() == Movie.ITEM_STATE) {
+                Log.d(TAG, "getScript: SERVER_ARAB_SEED ITEM_STATE");
+                    script ="document.addEventListener(\"DOMContentLoaded\", () => {\n" +
+                            "    fetchServers(\""+referer+"\");\n" +
+                            "    fetchResolutionLink(true);\n" +
+                            "});\n" +
+                            "\n" +
+//                            "window.onload = function () {\n" +
+
+//                            "};\n" +
+                            "\n" +
+                            "function fetchResolutionLink(click) {\n" +
+                            "    const watchElems = document.querySelectorAll(\".WatchButtons\");\n" +
+                            "    console.log(\"fetchItem: watchElems:\", watchElems.length);\n" +
+                            "\n" +
+                            "    for (const watchElem of watchElems) {\n" +
+                            "        const linkElems = watchElem.querySelectorAll(\"a\");\n" +
+                            "        console.log(\"fetchItem: watchElems-link:\", linkElems.length);\n" +
+                            "\n" +
+                            "        if (linkElems.length > 0) {\n" +
+                            "            for (const linkElem of linkElems) {\n" +
+                            "                const link = linkElem.getAttribute(\"href\");\n" +
+                            "                if (link) {\n" +
+                            "                    console.log(\"fetchItem: old-style link:\", link);\n" +
+                            "                    if (click) {\n" +
+                            "                        linkElem.click();\n" +
+                            "                    }\n" +
+                            "                    return link;\n" +
+                            "                }\n" +
+                            "            }\n" +
+                            "        }\n" +
+                            "\n" +
+                            "        // New style form handling\n" +
+                            "        try {\n" +
+                            "            const forms = watchElem.querySelectorAll(\"form\");\n" +
+                            "            let targetForm = null;\n" +
+                            "\n" +
+                            "            for (const form of forms) {\n" +
+                            "                if (form.querySelector(\"input[type='hidden']\") && form.querySelector(\"button\")) {\n" +
+                            "                    targetForm = form;\n" +
+                            "                    break;\n" +
+                            "                }\n" +
+                            "            }\n" +
+                            "\n" +
+                            "            if (!targetForm) {\n" +
+                            "                console.error(\"Error: Watch form not found.\");\n" +
+                            "                return null;\n" +
+                            "            }\n" +
+                            "\n" +
+                            "            const postUrl = targetForm.getAttribute(\"action\") || \"\";\n" +
+                            "            if (!postUrl) {\n" +
+                            "                console.error(\"Error: Post URL not found in form's action attribute.\");\n" +
+                            "                return null;\n" +
+                            "            }\n" +
+                            "\n" +
+                            "            if (click) {\n" +
+                            "                targetForm.submit();\n" +
+                            "            }\n" +
+                            "\n" +
+                            "            console.log(\"fetchItem: postUrl:\", postUrl);\n" +
+                            "\n" +
+                            "            const hiddenInput = targetForm.querySelector(\"input[type='hidden']\");\n" +
+                            "            if (!hiddenInput) {\n" +
+                            "                console.error(\"Error: Hidden input not found.\");\n" +
+                            "                return null;\n" +
+                            "            }\n" +
+                            "\n" +
+                            "            const hiddenInputName = hiddenInput.getAttribute(\"name\") || \"\";\n" +
+                            "            const hiddenInputValue = hiddenInput.value;\n" +
+                            "            console.log(\"fetchItem: hiddenInputName:\", hiddenInputName);\n" +
+                            "            console.log(\"fetchItem: hiddenInputValue:\", hiddenInputValue);\n" +
+                            "\n" +
+                            "            return `${postUrl}|${hiddenInputName}=${hiddenInputValue}`;\n" +
+                            "        } catch (error) {\n" +
+                            "            console.error(\"Error processing form:\", error);\n" +
+                            "        }\n" +
+                            "    }\n" +
+                            "\n" +
+                            "    return null;\n" +
+                            "}\n" +
+                            "\n" +
+                            "function fetchServers(referer) {\n" +
+                            "    const serverElems = document.querySelectorAll('.containerServers [data-link]');\n" +
+                            "\n" +
+                            "    if (!serverElems.length) {\n" +
+                            "        console.error(\"Error: No server elements found.\");\n" +
+                            "        return;\n" +
+                            "    }\n" +
+                            "\n" +
+                            "    const movieList = [];\n" +
+                            "\n" +
+                            "    serverElems.forEach(elem => {\n" +
+                            "        let link = elem.getAttribute(\"data-link\");\n" +
+                            "        if (!link || link.includes(\"عرب سيد\")) return;\n" +
+                            "\n" +
+                            "        link += `|Referer=${referer}`;\n" +
+                            "\n" +
+                            "        const server = {\n" +
+                            "            videoUrl: link,\n" +
+                            "            cardImageUrl: \""+movie.getCardImageUrl()+"\"," +
+                            "            backgroundImageUrl: \""+movie.getBackgroundImageUrl()+"\"," +
+                            "            state: "+Movie.RESOLUTION_STATE+","+
+                            "            studio: \""+Movie.SERVER_ARAB_SEED+"\""+
+                            "        };\n" +
+                            "\n" +
+                            "        const title = elem.querySelector(\"span\")?.textContent.trim() || elem.textContent.trim();\n" +
+                            "        if (title && title.includes(\"عرب سيد\")) {\n" +
+                            "           return;" +
+                            "        }\n" +
+                            "            server.title = title;\n" +
+                            "\n" +
+                            "        movieList.push(server);\n" +
+                            "    });\n" +
+                            "\n" +
+                            "    if (movieList.length > 0) {\n" +
+                            "        console.log(`Success: ${movieList.length} servers found.`);\n" +
+                            "        MyJavaScriptInterface.myMethod(JSON.stringify(movieList));\n" +
+                            "    }\n" +
+                            "}\n";
+            }
         }
         Log.d(TAG, "getWebScript: " + script);
         return script;
