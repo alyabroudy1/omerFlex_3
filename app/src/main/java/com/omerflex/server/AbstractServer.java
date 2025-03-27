@@ -393,8 +393,15 @@ public abstract class AbstractServer implements ServerInterface {
         }
     }
 
-    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request){
-        return true;
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request, Movie movie){
+        int state = movie.getState();
+        return  state == Movie.RESOLUTION_STATE || state == Movie.BROWSER_STATE;
+    }
+
+    public boolean shouldCleanWebPage(String pageUrl, Movie movie){
+        int state = movie.getState();
+            return state == Movie.RESOLUTION_STATE ||
+                    state == Movie.BROWSER_STATE;
     }
 
     protected abstract String getSearchUrl(String query);

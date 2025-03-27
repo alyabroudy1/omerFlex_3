@@ -217,8 +217,20 @@ public class ArabSeedServer extends AbstractServer {
     }
 
     @Override
-    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request) {
-        return false;
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request, Movie movie){
+        return movie.getState() == Movie.RESOLUTION_STATE;
+    }
+
+    @Override
+    public boolean shouldCleanWebPage(String pageUrl, Movie movie){
+        int state = movie.getState();
+        String videoUrl = movie.getVideoUrl();
+
+        return state == Movie.RESOLUTION_STATE &&
+                !(videoUrl.contains("vidmoly")  ||
+         movie.getVideoUrl().contains("voe.sx") ||
+                movie.getVideoUrl().contains("brucevotewithin")
+                );
     }
 
     @Override

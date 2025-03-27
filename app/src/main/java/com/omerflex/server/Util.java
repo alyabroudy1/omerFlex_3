@@ -175,12 +175,6 @@ public class Util {
 
     public static Map<String, String> extractHeaders(String url) {
         Map<String, String> headersMap = new HashMap<>();
-//        Log.d(TAG, "extractHeaders: u: "+url.contains("|")+", "+url);
-        // Check if the URL contains headers part
-//        if (url.contains("|")) {
-//            String[] parts = url.split("\\|", 2);
-//            if (parts.length == 2) {
-//                String headersPart = parts[1];
                 String[] headers = url.split("&");
                 for (String header : headers) {
                     String[] keyValue = header.split("=", 2);
@@ -189,8 +183,6 @@ public class Util {
                         headersMap.put(keyValue[0], keyValue[1]);
                     }
                 }
-//            }
-
         return headersMap;
     }
 

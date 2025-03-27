@@ -1310,7 +1310,7 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
 //                activity.finish();
             }
 
-            server.shouldInterceptRequest(view, request);
+            server.shouldInterceptRequest(view, request, movie);
 //            testCookie(view, request);
             if (
                     movie.getStudio().equals(Movie.SERVER_ARAB_SEED) ||

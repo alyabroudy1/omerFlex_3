@@ -1011,7 +1011,7 @@ public class OldAkwamServer extends AbstractServer {
         return false;
     }
 
-    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request){
+    public boolean shouldInterceptRequest(WebView view, WebResourceRequest request, Movie movie){
         return false;
     }
 
