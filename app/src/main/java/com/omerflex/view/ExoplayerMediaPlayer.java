@@ -3,6 +3,7 @@ package com.omerflex.view;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -77,7 +78,21 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
     public static long CONNECTION_TIMEOUT = 5000;
     private static final float MIN_SEEK_DISTANCE = 100; //  pixels
     public static float initialX = 0;
+    public static float initialY = 0;
     private Map<String, String> headers;
+
+
+    ///  -----
+    private Handler seekHandler = new Handler();
+    private Runnable seekRunnable;
+    private boolean isSeeking = false;
+    private long currentSeekStep;
+    private int seekDirection = 0; // 1 for forward, -1 for backward
+    private long initialSeekPosition;
+    private int viewWidth;
+
+    private static final float MAX_TAP_DISTANCE = 20; // pixels
+    private static final float MIN_VERTICAL_DISTANCE = 100; // pixels
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -218,18 +233,179 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 //
 //// Prepare the player.
 //        player.prepare();
-        MediaSource mediaSource = buildMediaSource(movie);
+//        MediaSource mediaSource = buildMediaSource(movie);
+//        player.prepare(mediaSource);
 
-        player.prepare(mediaSource);
+        buildPlaylist(player, movie);
+
         Log.d(TAG, "onCreate: player.prepare(mediaSource) ");
 
         playerView.setControllerAutoShow(false);
+
 
 
         // Set the touch listener for the view that displays the ExoPlayer
         playerView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        initialX = event.getX();
+                        initialY = event.getY();
+                        initialSeekPosition = player.getCurrentPosition();
+                        viewWidth = v.getWidth();
+                        isSeeking = false;
+
+                        // Only handle touch if controls are visible
+                        return playerView.isControllerFullyVisible();
+                    }
+
+                    case MotionEvent.ACTION_MOVE: {
+                        if (!playerView.isControllerFullyVisible()) return false;
+
+                        float deltaX = event.getX() - initialX;
+                        float deltaY = event.getY() - initialY;
+
+                        // Check if movement is primarily horizontal
+                        if (Math.abs(deltaX) > MIN_SEEK_DISTANCE &&
+                                Math.abs(deltaY) < MIN_VERTICAL_DISTANCE) {
+
+                            isSeeking = true;
+                            viewWidth = v.getWidth();
+                            long totalDuration = player.getDuration();
+
+                            if (totalDuration > 0) {
+                                float fractionMoved = deltaX / viewWidth;
+                                long seekDelta = (long) (totalDuration * fractionMoved);
+                                long newPosition = initialSeekPosition + seekDelta;
+
+                                newPosition = Math.max(0, Math.min(newPosition, totalDuration));
+                                player.seekTo(newPosition);
+                            }
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    case MotionEvent.ACTION_UP: {
+                        if (!playerView.isControllerFullyVisible()) return false;
+
+                        float finalX = event.getX();
+                        float finalY = event.getY();
+                        float deltaX = finalX - initialX;
+                        float deltaY = finalY - initialY;
+
+                        // Check if it's a stationary tap
+                        if (Math.abs(deltaX) < MAX_TAP_DISTANCE &&
+                                Math.abs(deltaY) < MAX_TAP_DISTANCE) {
+
+                            // Hide controls on stationary tap
+                            playerView.hideController();
+                        } else if (isSeeking) {
+                            // Show controls a bit longer after seeking
+                            playerView.showController();
+//                            playerView.hideAfterTimeout();
+                        }
+                        isSeeking = false;
+                        return true;
+                    }
+
+                    default:
+                        return false;
+                }
+            }
+
+
+            public boolean onTouch_old3(View v, MotionEvent event) {
+                // Prevent seeking if controls are hidden
+                if (!playerView.isControllerFullyVisible()) {
+                    return false; // Let default touch handling work (show controls on tap)
+                }
+
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        initialX = event.getX();
+                        initialSeekPosition = player.getCurrentPosition();
+                        viewWidth = v.getWidth();
+                        isSeeking = true;
+
+                        // Lock controls visibility during seek
+                        playerView.setControllerAutoShow(false);
+                        return true;
+                    }
+                    case MotionEvent.ACTION_MOVE: {
+                        if (!isSeeking) return false;
+
+                        if (viewWidth <= 0) viewWidth = v.getWidth();
+                        long totalDuration = player.getDuration();
+                        if (totalDuration <= 0) return true;
+
+                        float deltaX = event.getX() - initialX;
+                        float fractionMoved = deltaX / viewWidth;
+
+                        long seekDelta = (long) (totalDuration * fractionMoved);
+                        long newPosition = initialSeekPosition + seekDelta;
+
+                        newPosition = Math.max(0, Math.min(newPosition, totalDuration));
+                        player.seekTo(newPosition);
+
+                        // Update controls position without resetting timeout
+                        playerView.showController();
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP: {
+                        isSeeking = false;
+                        // Restore normal controls behavior
+                        playerView.setControllerAutoShow(true);
+                        playerView.hideController(); // Start auto-hide timeout
+                        return true;
+                    }
+                    default:
+                        return true;
+                }
+            }
+
+            public boolean onTouch_old2(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        initialX = event.getX();
+                        initialSeekPosition = player.getCurrentPosition();
+                        viewWidth = v.getWidth();
+
+                        // Keep controller visible during interaction
+                        playerView.showController();
+                        playerView.setControllerAutoShow(false); // Prevent auto-hide
+                        return true;
+                    }
+                    case MotionEvent.ACTION_MOVE: {
+                        if (viewWidth <= 0) viewWidth = v.getWidth();
+                        long totalDuration = player.getDuration();
+                        if (totalDuration <= 0) return true;
+
+                        float deltaX = event.getX() - initialX;
+                        float fractionMoved = deltaX / viewWidth;
+
+                        long seekDelta = (long) (totalDuration * fractionMoved);
+                        long newPosition = initialSeekPosition + seekDelta;
+
+                        newPosition = Math.max(0, Math.min(newPosition, totalDuration));
+                        player.seekTo(newPosition);
+
+                        // Update time bar position and keep controller visible
+                        playerView.showController();
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP: {
+                        // Restore normal controller behavior
+                        playerView.setControllerAutoShow(true);
+                        playerView.showController();
+                        return true;
+                    }
+                    default:
+                        return true;
+                }
+            }
+            public boolean onTouch_old(View v, MotionEvent event) {
                 Log.d(TAG, "onTouch: ");
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     // Save the initial x position of the touch event
@@ -347,6 +523,21 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         playerView.setKeepScreenOn(true);
         player.play();
         //   player.play();
+
+    }
+
+    private void buildPlaylist(ExoPlayer player, Movie movie) {
+        player.setMediaSource(buildMediaSource(movie));
+        Log.d(TAG, "buildPlaylist: "+ movie.getSubList().size());
+        for (Movie item : movie.getSubList()) {
+            if (Objects.equals(item.getVideoUrl(), movie.getVideoUrl())){ continue;}
+            if (item.getState() == movie.getState()){
+                Log.d(TAG, "buildPlaylist: adding media source");
+                player.addMediaSource(buildMediaSource(item));
+            }
+        }
+        // Prepare the player.
+        player.prepare();
 
     }
 

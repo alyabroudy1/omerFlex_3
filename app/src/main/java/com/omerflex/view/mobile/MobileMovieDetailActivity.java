@@ -113,6 +113,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                         new ServerInterface.ActivityCallback<Movie>() {
                             @Override
                             public void onSuccess(Movie result, String title) {
+                                result.setSubList(mSelectedMovie.getSubList());
                                 Util.openExoPlayer(result, activity, true);
                             }
 
@@ -445,6 +446,10 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                 case VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY:
 //                    dbHelper.addMainMovieToHistory(movie);
                     Util.openExternalVideoPlayer(movie, activity);
+                    break;
+                case VideoDetailsFragment.ACTION_OPEN_EXOPLAYER_ACTIVITY:
+//                    dbHelper.addMainMovieToHistory(movie);
+                    Util.openExoPlayer(movie, activity, true);
                     break;
                 case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
 //                    dbHelper.addMainMovieToHistory(movie);

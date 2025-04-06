@@ -30,6 +30,8 @@ import com.omerflex.server.Util;
 import com.omerflex.service.M3U8ContentFetcher;
 import com.omerflex.service.ServerConfigManager;
 import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.service.phub.ParadiseHillServer;
+import com.omerflex.service.phub.PornhubServer;
 import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 
@@ -420,17 +422,19 @@ public abstract class SearchViewControl {
 //                }
                 Log.d(TAG, "loadCategoriesInBackground: " + server.getServerId());
                 if (
-//                        server instanceof OldAkwamServer ||
-//                                server instanceof AkwamServer ||
-//                                server instanceof ArabSeedServer ||
-//                                server instanceof CimaNowServer ||
-//                                server instanceof LarozaServer ||
-//                                server instanceof FaselHdServer ||
-//                                server instanceof OmarServer ||
-//                                server instanceof IptvServer ||
-//                                server instanceof MyCimaServer ||
-//                                server instanceof KooraServer
-                        (server instanceof KooraServer && !query.isEmpty())
+                        server instanceof OldAkwamServer ||
+                                server instanceof AkwamServer ||
+                                server instanceof ArabSeedServer ||
+                                server instanceof CimaNowServer ||
+                                server instanceof LarozaServer ||
+                                server instanceof FaselHdServer ||
+                                server instanceof OmarServer ||
+//                                server instanceof ParadiseHillServer ||
+//                                server instanceof PornhubServer ||
+                                server instanceof IptvServer ||
+                                server instanceof MyCimaServer ||
+                                server instanceof KooraServer
+//                        (server instanceof KooraServer && !query.isEmpty())
                 ) {
                     continue;
                 }

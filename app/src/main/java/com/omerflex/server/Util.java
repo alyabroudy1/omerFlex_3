@@ -325,7 +325,7 @@ public class Util {
 //        }.getType();
 //        List<Movie> movieSublist = gson.fromJson(movieJson, type);
 //        Log.d(TAG, "onCreate: subList:" + movieSublist);
-
+        Log.d(TAG, "recieveSelectedMovie: sublist: "+ movieSublist);
 
         if (movieSublist != null) {
             movie.setSubList(movieSublist);

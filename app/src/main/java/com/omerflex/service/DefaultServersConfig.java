@@ -117,6 +117,28 @@ public class DefaultServersConfig {
 
         ServerConfigManager.addConfig(omarConfig, dbHelper);
 
+
+        // ### paradiseHill ###
+        ServerConfig paradiseHillConfig = new ServerConfig();
+        paradiseHillConfig.setName(Movie.SERVER_PARADISE_HILL);
+        paradiseHillConfig.setActive(true);
+        paradiseHillConfig.setUrl("https://en.paradisehill.cc");
+        paradiseHillConfig.setReferer("https://en.paradisehill.cc/");
+//        ServerConfigManager.addConfig(omarConfig);
+
+        ServerConfigManager.addConfig(paradiseHillConfig, dbHelper);
+
+
+        // ### pornHub ###
+        ServerConfig pornHubConfig = new ServerConfig();
+        pornHubConfig.setName(Movie.SERVER_PORN_HUB);
+        pornHubConfig.setActive(true);
+        pornHubConfig.setUrl("https://pornhub.com");
+        pornHubConfig.setReferer("https://pornhub.com/");
+//        ServerConfigManager.addConfig(omarConfig);
+
+        ServerConfigManager.addConfig(pornHubConfig, dbHelper);
+
         //        ### Koora ###
 //        ServerConfig kooraConfig = new ServerConfig();
 //        kooraConfig.setActive(false);

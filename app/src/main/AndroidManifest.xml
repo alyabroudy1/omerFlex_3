@@ -39,14 +39,15 @@
             android:name=".view.mobile.MobileSearchResultActivity"
             android:exported="false"
             android:theme="@style/AppMobileTheme" /> <!-- <activity -->
-        <!-- android:name=".view.mobile.MobileHomepageActivity" -->
-        <!-- android:exported="true" -->
-        <!-- android:theme="@style/AppMobileTheme"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
+        <activity
+         android:name=".view.mobile.MobileHomepageActivity"
+         android:exported="true"
+         android:theme="@style/AppMobileTheme">
+         <intent-filter>
+         <action android:name="android.intent.action.MAIN" />
+         <category android:name="android.intent.category.LAUNCHER" />
+         </intent-filter>
+         </activity>
         <activity
             android:name=".view.mobile.MobileWelcomeActivity"
             android:exported="true"

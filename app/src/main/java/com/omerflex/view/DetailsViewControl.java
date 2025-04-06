@@ -100,6 +100,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
 //                                        String type = "video/*";
                                 // Uri uri = Uri.parse(res.getSubList().get(0).getVideoUrl());
                                 Log.d(TAG, "onActionClicked: Resolutions " + result);
+                            result.setSubList(movie.getSubList()); //to add a playlist to exoplayer
                                 Util.openExoPlayer(result, activity, true);
                                 //dbHelper.addMainMovieToHistory(res.getMainMovieTitle(), null);
                                 updateClickedMovieItem(clickedAdapter, 0, result);
@@ -190,6 +191,10 @@ public abstract class DetailsViewControl extends SearchViewControl {
             case VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY:
                 dbHelper.addMainMovieToHistory(movie);
                 Util.openExternalVideoPlayer(movie, activity);
+                break;
+            case VideoDetailsFragment.ACTION_OPEN_EXOPLAYER_ACTIVITY:
+                dbHelper.addMainMovieToHistory(movie);
+                Util.openExoPlayer(movie, activity, true);
                 break;
             case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
                 dbHelper.addMainMovieToHistory(movie);

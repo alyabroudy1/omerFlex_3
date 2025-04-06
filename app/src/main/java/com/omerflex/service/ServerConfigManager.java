@@ -17,6 +17,8 @@ import com.omerflex.server.MyCimaServer;
 import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.OmarServer;
 import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.service.phub.ParadiseHillServer;
+import com.omerflex.service.phub.PornhubServer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -148,48 +150,50 @@ public class ServerConfigManager {
 //    }
 
 
-    private static AbstractServer determineServer(String serverId) {
-        switch (serverId) {
-            case Movie.SERVER_MyCima:
-                return new MyCimaServer();
-            case Movie.SERVER_CimaNow:
-                return new CimaNowServer();
-            case Movie.SERVER_ARAB_SEED:
-                return new ArabSeedServer();
-            case Movie.SERVER_FASELHD:
-                return new FaselHdServer();
-            case Movie.SERVER_AKWAM:
-                return new AkwamServer();
-            case Movie.SERVER_OLD_AKWAM:
-                return new OldAkwamServer();
-            case Movie.SERVER_IPTV:
-                return new IptvServer();
-            case Movie.SERVER_OMAR:
-                return new OmarServer();
-            case Movie.SERVER_KOORA_LIVE:
-                return new KooraServer();
-            case Movie.SERVER_LAROZA:
-                return new LarozaServer();
-//                return MyCimaServer.getInstance(activity, fragment);
+//    private static AbstractServer determineServer(String serverId) {
+//        switch (serverId) {
+//            case Movie.SERVER_MyCima:
+//                return new MyCimaServer();
+//            case Movie.SERVER_CimaNow:
+//                return new CimaNowServer();
+//            case Movie.SERVER_ARAB_SEED:
+//                return new ArabSeedServer();
+//            case Movie.SERVER_FASELHD:
+//                return new FaselHdServer();
 //            case Movie.SERVER_AKWAM:
-//                return AkwamServer.getInstance(activity, fragment);
-
-//            case Movie.SERVER_CIMA4U:
-//                return Cima4uController.getInstance(fragment, activity);
-//            case Movie.SERVER_SHAHID4U:
-//                return Shahid4uController.getInstance(fragment, activity);
-////            case Movie.SERVER_SERIES_TIME:
-////                return new SeriesTimeController(listRowAdapter, activity);
-//            case Movie.SERVER_CIMA_CLUB:
-//                return CimaClubServer.getInstance(fragment, activity);
-
-//            case Movie.SERVER_WATAN_FLIX:
-//                return WatanFlixController.getInstance(fragment, activity);
+//                return new AkwamServer();
+//            case Movie.SERVER_OLD_AKWAM:
+//                return new OldAkwamServer();
+//            case Movie.SERVER_IPTV:
+//                return new IptvServer();
+//            case Movie.SERVER_OMAR:
+//                return new OmarServer();
 //            case Movie.SERVER_KOORA_LIVE:
-//                return new KooraLiveController(listRowAdapter, activity);
-        }
-        return null;
-    }
+//                return new KooraServer();
+//            case Movie.SERVER_LAROZA:
+//                return new LarozaServer();
+//            case Movie.SERVER_PARADISE_HILL:
+//                return new ParadiseHillServer();
+////                return MyCimaServer.getInstance(activity, fragment);
+////            case Movie.SERVER_AKWAM:
+////                return AkwamServer.getInstance(activity, fragment);
+//
+////            case Movie.SERVER_CIMA4U:
+////                return Cima4uController.getInstance(fragment, activity);
+////            case Movie.SERVER_SHAHID4U:
+////                return Shahid4uController.getInstance(fragment, activity);
+//////            case Movie.SERVER_SERIES_TIME:
+//////                return new SeriesTimeController(listRowAdapter, activity);
+////            case Movie.SERVER_CIMA_CLUB:
+////                return CimaClubServer.getInstance(fragment, activity);
+//
+////            case Movie.SERVER_WATAN_FLIX:
+////                return WatanFlixController.getInstance(fragment, activity);
+////            case Movie.SERVER_KOORA_LIVE:
+////                return new KooraLiveController(listRowAdapter, activity);
+//        }
+//        return null;
+//    }
 
     private static AbstractServer createServerInstance(String serverId) {
         switch (serverId) {
@@ -213,7 +217,12 @@ public class ServerConfigManager {
                 return new KooraServer();
             case Movie.SERVER_LAROZA:
                 return new LarozaServer();
+            case Movie.SERVER_PARADISE_HILL:
+                return new ParadiseHillServer();
+            case Movie.SERVER_PORN_HUB:
+                return new PornhubServer();
         }
+        Log.e(TAG, "createServerInstance: "+"Unknown Server: "+ serverId+ ", add it to ServerConfigManager::createServerInstance");
         return null;
     }
 }

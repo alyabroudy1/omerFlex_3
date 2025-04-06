@@ -40,6 +40,8 @@ public class Movie implements Parcelable {
     public final static String SERVER_ARAB_SEED = "arabseed";
     public static final String SERVER_LAROZA = "laroza";
     public final static String SERVER_WATAN_FLIX = "watanflix";
+    public static final String SERVER_PARADISE_HILL = "paradiseHill";
+    public static final String SERVER_PORN_HUB = "pornHub";
     public final static int GROUP_OF_GROUP_STATE = 0;
     public final static int GROUP_STATE = 1;
     public final static int ITEM_STATE = 2;

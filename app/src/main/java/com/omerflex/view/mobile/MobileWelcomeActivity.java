@@ -13,7 +13,8 @@ public class MobileWelcomeActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mobile_welcome);
-        Intent mainActivity = new Intent(this, MainActivity.class);
+//        Intent mainActivity = new Intent(this, MainActivity.class);
+        Intent mainActivity = new Intent(this, MobileHomepageActivity.class);
         startActivity(mainActivity);
         finish();
     }

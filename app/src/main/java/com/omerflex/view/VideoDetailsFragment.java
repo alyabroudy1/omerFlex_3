@@ -9,7 +9,9 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
+import android.util.TypedValue;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -18,6 +20,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.app.DetailsSupportFragment;
 import androidx.leanback.app.DetailsSupportFragmentBackgroundController;
+import androidx.leanback.widget.AbstractDetailsDescriptionPresenter;
 import androidx.leanback.widget.Action;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.ClassPresenterSelector;
@@ -74,6 +77,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     public static final int ACTION_OPEN_EXTERNAL_ACTIVITY = 2;
     public static final int ACTION_OPEN_NO_ACTIVITY = 3;
     private static final int ACTION_OPEN_BROWSER_FOR_RESULT = 4;
+    public static final int ACTION_OPEN_EXOPLAYER_ACTIVITY = 5;
 
     private static final int ACTION_WATCH = 1;
     private static final int ACTION_WATCH_TRAILER = 2;
