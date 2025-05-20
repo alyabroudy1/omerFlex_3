@@ -15,11 +15,14 @@ android {
         versionCode 7
         versionName "7"
 
+        // Enable multidex for large app support
+        multiDexEnabled true
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -27,31 +30,74 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    // Enable view binding for more efficient view access
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {
-
+    // AndroidX core libraries
     implementation 'androidx.leanback:leanback:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'com.github.bumptech.glide:glide:4.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'  // Updated from 1.2.0
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'org.jsoup:jsoup:1.13.1'
-    implementation 'androidx.media3:media3-exoplayer:1.1.1'
-    implementation 'androidx.media3:media3-exoplayer:1.1.1'
-    implementation 'androidx.media3:media3-exoplayer-hls:1.1.1'
-    implementation 'androidx.media3:media3-exoplayer-dash:1.1.1'
-    implementation 'androidx.media3:media3-exoplayer-smoothstreaming:1.1.1'
-    implementation 'androidx.media3:media3-ui:1.1.1'
-    implementation 'androidx.media3:media3-ui-leanback:1.1.1'
-    implementation "androidx.media3:media3-session:1.4.1"
-    implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.2'
-    implementation 'io.reactivex.rxjava2:rxandroid:2.1.0'
+    implementation 'androidx.activity:activity:1.8.2'  // Updated from 1.8.0
     implementation 'androidx.webkit:webkit:1.11.0'
-    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
-    implementation "androidx.room:room-runtime:2.6.1"
-    implementation 'androidx.activity:activity:1.8.0'
+    implementation 'androidx.multidex:multidex:2.0.1'  // Added for multidex support
 
+    // Image loading
+    implementation 'com.github.bumptech.glide:glide:4.16.0'  // Updated from 4.12.0
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'  // Added for Glide performance
+
+    // Media playback
+    def media3_version = '1.4.1'  // Unified Media3 version
+    implementation "androidx.media3:media3-exoplayer:$media3_version"  // Updated from 1.1.1
+    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"  // Updated from 1.1.1
+    implementation "androidx.media3:media3-exoplayer-dash:$media3_version"  // Updated from 1.1.1
+    implementation "androidx.media3:media3-exoplayer-smoothstreaming:$media3_version"  // Updated from 1.1.1
+    implementation "androidx.media3:media3-ui:$media3_version"  // Updated from 1.1.1
+    implementation "androidx.media3:media3-ui-leanback:$media3_version"  // Updated from 1.1.1
+    implementation "androidx.media3:media3-session:$media3_version"
+
+    // Network and parsing
+    implementation 'org.jsoup:jsoup:1.16.2'  // Updated from 1.13.1
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'  // Updated from 4.10.0
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'  // Added for HTTP logging
+
+    // Reactive programming
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.21'  // Updated from 2.2.2
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'  // Updated from 2.1.0
+
+    // Database
+    def room_version = "2.6.1"
+    implementation "androidx.room:room-runtime:$room_version"
+    annotationProcessor "androidx.room:room-compiler:$room_version"  // Added for Room code generation
+
+    // Testing dependencies
+    // JUnit for unit testing
+    testImplementation 'junit:junit:4.13.2'
+
+    // Mockito for mocking in tests
+    testImplementation 'org.mockito:mockito-core:5.10.0'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+
+    // Robolectric for testing Android components on JVM
+    testImplementation 'org.robolectric:robolectric:4.11.1'
+
+    // AndroidX Test Core and JUnit extensions
+    testImplementation 'androidx.test:core:1.5.0'
+    testImplementation 'androidx.test.ext:junit:1.1.5'
+
+    // Espresso for UI testing
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+
+    // AndroidX Test Core for instrumented tests
+    androidTestImplementation 'androidx.test:core:1.5.0'
 }

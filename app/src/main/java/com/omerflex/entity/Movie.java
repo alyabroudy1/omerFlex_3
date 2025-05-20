@@ -426,6 +426,19 @@ public class Movie implements Parcelable {
         this.group = group;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Movie movie = (Movie) obj;
+        return videoUrl != null && videoUrl.equals(movie.videoUrl);
+    }
+
+    @Override
+    public int hashCode() {
+        return videoUrl != null ? videoUrl.hashCode() : 0;
+    }
+
     public String getTrailerUrl() {
         return trailerUrl;
     }

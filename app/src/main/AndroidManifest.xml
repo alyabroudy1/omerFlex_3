@@ -20,6 +20,7 @@
         android:required="true" />
 
     <application
+        android:name=".OmerFlexApplication"
         android:allowBackup="true"
         android:banner="@drawable/app_icon_your_company"
         android:enableOnBackInvokedCallback="true"
