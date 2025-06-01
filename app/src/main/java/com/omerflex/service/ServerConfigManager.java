@@ -1,5 +1,6 @@
 package com.omerflex.service;
 
+import android.content.Context;
 import android.util.Log;
 import android.webkit.CookieManager;
 
@@ -26,15 +27,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ServerConfigManager {
 
     private static final String TAG = "ServerConfigManager";
-    // Using concurrent collections for thread safety
+    private static Context applicationContext;
     private static final Map<String, ServerConfig> serversConfigs = new ConcurrentHashMap<>();
     private static final Map<String, AbstractServer> servers = new ConcurrentHashMap<>();
+
+    public static void initialize(Context context) {
+        if (context != null) {
+            applicationContext = context.getApplicationContext();
+        }
+    }
+
+    public static Context getContext() {
+        return applicationContext;
+    }
 
     public static ServerConfig getConfig(String serverId) {
         return serversConfigs.get(serverId);
     }
 
-    // Basic update: just update the existing config's fields
     public static boolean updateConfig(ServerConfig newConfig) {
         ServerConfig existing = serversConfigs.get(newConfig.getName());
         if (existing != null) {
@@ -65,6 +75,7 @@ public class ServerConfigManager {
         dbHelper.saveServerConfig(newConfig);
         return true;
     }
+
     public static boolean addConfig(ServerConfig newConfig) {
         if (newConfig == null) {
             Log.w(TAG, "addConfig: Attempted to add a null config.");
@@ -98,7 +109,6 @@ public class ServerConfigManager {
         }
         AbstractServer server = createServerInstance(newConfig.getName());
         if (server != null){
-//            Log.d(TAG, "initializeDefaultServers: Error: fail creating server: "+ newConfig.getName());
             servers.put(newConfig.getName(), server);
         }
         return result;
@@ -136,18 +146,6 @@ public class ServerConfigManager {
         servers.put(server.getServerId(), server);
     }
 
-//    public static void addServer(AbstractServer newServer) {
-//        Log.d(TAG, "addConfig: " + newServer);
-//        for (AbstractServer server : servers) {
-//            if (server.getServerId().equals(newServer.getServerId())) {
-//                updateServer(newServer); // Return false if the config with the specified name already exists
-//                break;
-//            }
-//        }
-//        servers.add(newServer); // Add the new config
-//    }
-
-
     private static AbstractServer determineServer(String serverId) {
         switch (serverId) {
             case Movie.SERVER_MyCima:
@@ -170,23 +168,6 @@ public class ServerConfigManager {
                 return new KooraServer();
             case Movie.SERVER_LAROZA:
                 return new LarozaServer();
-//                return MyCimaServer.getInstance(activity, fragment);
-//            case Movie.SERVER_AKWAM:
-//                return AkwamServer.getInstance(activity, fragment);
-
-//            case Movie.SERVER_CIMA4U:
-//                return Cima4uController.getInstance(fragment, activity);
-//            case Movie.SERVER_SHAHID4U:
-//                return Shahid4uController.getInstance(fragment, activity);
-////            case Movie.SERVER_SERIES_TIME:
-////                return new SeriesTimeController(listRowAdapter, activity);
-//            case Movie.SERVER_CIMA_CLUB:
-//                return CimaClubServer.getInstance(fragment, activity);
-
-//            case Movie.SERVER_WATAN_FLIX:
-//                return WatanFlixController.getInstance(fragment, activity);
-//            case Movie.SERVER_KOORA_LIVE:
-//                return new KooraLiveController(listRowAdapter, activity);
         }
         return null;
     }

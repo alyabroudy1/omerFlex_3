@@ -870,7 +870,7 @@ public class MainFragment extends BrowseSupportFragment {
 //                        .post();
 //                Log.d(TAG, "test: "+doc2.outerHtml());
 ////            String docTitle = doc.title();
-////            Log.d(TAG, "getRequestDoc: " + docTitle);
+////            Log.d(TAG, "getSearchRequestDoc: " + docTitle);
 ////            if (docTitle.contains("Just a moment")) {
 ////                return fetchDocUsingWebView(url);
 ////            }

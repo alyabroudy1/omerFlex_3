@@ -370,7 +370,7 @@ public class ArabSeedServer extends AbstractServer {
         Log.i(TAG, "FetchSeriesLink url:" + url);
         //descriptionTextView = activity.findViewById(R.id.textViewDesc);
 
-        Document doc = getRequestDoc(url);
+        Document doc = getSearchRequestDoc(url);
 
         if (doc == null) {
             Log.d(TAG, "fetchGroup: error doc is null ");
@@ -522,7 +522,7 @@ public class ArabSeedServer extends AbstractServer {
         Log.d(TAG, "fetchItem: source Network");
 
         String url = movie.getVideoUrl();
-        Document doc = getRequestDoc(url);
+        Document doc = getSearchRequestDoc(url);
 //            Document doc = Jsoup.connect(url)
 //                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
 //                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
@@ -669,7 +669,7 @@ public class ArabSeedServer extends AbstractServer {
 //        Log.d(TAG, "fetchServers run-1: " + movie.getVideoUrl());
 //        Log.d(TAG, "fetchServers run-1 referer: " + referer);
 
-//        Document doc = getRequestDoc(movie.getVideoUrl());
+//        Document doc = getSearchRequestDoc(movie.getVideoUrl());
         try {
             if (doc == null){
                 String host = Util.extractDomain(movie.getVideoUrl(), true, true);
@@ -688,7 +688,7 @@ public class ArabSeedServer extends AbstractServer {
                         .ignoreContentType(true)
                         .get();
 //                Log.d(TAG, "fetchServers: headers "+ getConfig().getHeaders().toString());
-//                doc = getRequestDoc(movie.getVideoUrl());
+//                doc = getSearchRequestDoc(movie.getVideoUrl());
                 Log.d(TAG, "fetchServers: new request-1 title:"+ doc.title());
                 if (doc.title().contains("Just a moment")) {
                     Movie clonedMovie = Movie.clone(movie);
@@ -1262,7 +1262,7 @@ public class ArabSeedServer extends AbstractServer {
             movie.setSubList(movies);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_RETURN_RESULT, movie);
         }
-        return super.handleJSResult(elementJson, movies, movie);
+        return super.handleJSResult(elementJson, (ArrayList<Movie>) movies, movie);
     }
 
     public boolean shouldOverrideUrlLoading(Movie movie, WebView view, WebResourceRequest request) {

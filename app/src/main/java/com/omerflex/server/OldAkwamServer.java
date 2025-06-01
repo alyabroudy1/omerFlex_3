@@ -44,7 +44,7 @@ public class OldAkwamServer extends AbstractServer {
         }
 
         Log.d(TAG, "search: url: " + url);
-        Document doc = this.getRequestDoc(url);
+        Document doc = this.getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
             return null;
@@ -317,7 +317,7 @@ public class OldAkwamServer extends AbstractServer {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
         Log.d(TAG, "fetchGroup: source network");
-        Document doc = getRequestDoc(movie.getVideoUrl());
+        Document doc = getSearchRequestDoc(movie.getVideoUrl());
         if (doc == null) {
             Log.d(TAG, "fetchGroup: error doc is null ");
             activityCallback.onInvalidLink(movie);

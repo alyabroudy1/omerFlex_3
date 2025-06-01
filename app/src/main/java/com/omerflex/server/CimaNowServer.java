@@ -208,7 +208,7 @@ public class CimaNowServer extends AbstractServer{
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
         Log.i(TAG, "ur:" + url);
-        Document doc = getRequestDoc(url);
+        Document doc = getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
             return null;
@@ -269,7 +269,7 @@ public class CimaNowServer extends AbstractServer{
 //            ).timeout(6000).get();
         //Elements links = doc.select("a[href]");
 
-        Document doc = getRequestDoc(url);
+        Document doc = getSearchRequestDoc(url);
         if (doc == null) {
             Log.d(TAG, "fetchGroup: error doc is null ");
             activityCallback.onInvalidLink(movie);
@@ -405,7 +405,7 @@ public class CimaNowServer extends AbstractServer{
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
 
         // get watch link referer
-        Document doc1 = getRequestDoc(movie.getVideoUrl());
+        Document doc1 = getSearchRequestDoc(movie.getVideoUrl());
         if (doc1 == null) {
             activityCallback.onInvalidLink(movie);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
@@ -535,7 +535,7 @@ public class CimaNowServer extends AbstractServer{
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
     }
 
-//        Document doc = getRequestDoc(url);
+//        Document doc = getSearchRequestDoc(url);
 
 
 // Loop through the elements and extract the movie information

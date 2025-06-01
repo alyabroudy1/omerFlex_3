@@ -29,6 +29,7 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.service.HtmlPageService;
 import com.omerflex.service.LinkFilterService;
+import com.omerflex.service.logging.Logger;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
@@ -45,105 +46,133 @@ import java.util.Map;
 
 public class FaselHdServer extends AbstractServer {
 
-    static String TAG = "FaselHd";
-    static String WEBSITE_NAME = ".faselhd.";
-    public static String WEBSITE_URL = "https://www.faselhd.center";
-    static boolean START_BROWSER_CODE = false;
-    static boolean STOP_BROWSER_CODE = false;
-    static int RESULT_COUNTER = 0;
+    static final String TAG = "FaselHd";
+    static final String WEBSITE_NAME = ".faselhd.";
+    public static final String WEBSITE_URL = "https://www.faselhd.center";
 
     public FaselHdServer() {
+        // Initialize ServerOptimizer when server is created
+        try {
+            if (context != null) {
+                ServerOptimizer.initialize(context);
+            }
+        } catch (Exception e) {
+            Logger.e(TAG, "Error initializing ServerOptimizer", e);
+        }
     }
 
     @Override
     public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
-        Log.i(TAG, "search: " + query);
+        Logger.i(TAG, "search: " + query);
         String searchContext = query;
-        String queryName = query;
         ArrayList<Movie> movieList = new ArrayList<>();
-        // if (!query.contains("faselhd")) {
-//        if (headers.containsKey("Referer")){
-//            if (headers.get("Referer").contains("?s=")){
-//                query = headers.get("Referer");
-//            }else {
-//                query = headers.get("Referer")+ "/?s=" + query;
-//            }
-//        }else {
-//            query = WEBSITE_URL + "/?s=" + query;
-//        }
-//        if (referer != null && !referer.isEmpty()){
-//            if (referer.endsWith("/")){
-//                query = referer + "?s=" + query;
-//            }else {
-//                query = referer + "/?s=" + query;
-//            }
-//        }else {
-//            query = WEBSITE_URL + "/?s=" + query;
-//        }
+
         String url = query;
         if (!query.contains("http")) {
             url = this.getSearchUrl(query);
         }
-        Log.i(getLabel(), "search: " + url);
+        Logger.i(getLabel(), "search: " + url);
 
-        Document doc = this.getSearchRequestDoc(url);
-        if (doc == null) {
-            activityCallback.onInvalidLink("Invalid link");
-            return null;
+        try {
+            // Use ServerOptimizer for document fetching with caching
+            Document doc = ServerOptimizer.getDocumentWithCache(url, getConfig());
+
+            if (doc == null) {
+                Logger.w(TAG, "Failed to get document for URL: " + url);
+                if (activityCallback != null) {
+                    activityCallback.onInvalidLink("Invalid link");
+                }
+                return null;
+            }
+
+            // Check if the page requires cookie authentication
+            if (doc.title().contains("moment")) {
+                Logger.i(TAG, "Detected security check, needs cookie authentication");
+                Movie m = createSecurityCheckMovie(searchContext, url);
+                movieList.add(m);
+
+                if (activityCallback != null) {
+                    activityCallback.onInvalidCookie(movieList, getLabel());
+                }
+                return movieList;
+            }
+
+            // Extract movies from search results
+            movieList = extractMoviesFromSearch(doc, searchContext);
+
+            // Add "Next Page" link if available
+            Movie nextPage = getNextPage(doc);
+            if (nextPage != null) {
+                movieList.add(nextPage);
+            }
+
+            if (activityCallback != null) {
+                activityCallback.onSuccess(movieList, getLabel());
+            }
+        } catch (Exception e) {
+            Logger.e(TAG, "Error during search operation", e);
+            if (activityCallback != null) {
+                activityCallback.onInvalidLink("Error: " + e.getMessage());
+            }
         }
 
-        Log.d(TAG, "result stop title: " + doc.title());
-        if (doc.title().contains("moment")) {
-//            setCookieRefreshed(false);
-            //**** default
-            // String title = "ابحث في موقع فاصل ..";
-            String title = searchContext;
-            //int imageResourceId = R.drawable.default_image;
-            // String cardImageUrl = "android.resource://" + activity.getPackageName() + "/" + imageResourceId;
-            String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
-            String backgroundImageUrl = "http://commondatastorage.googleapis.com/android-tv/Sample%20videos/April%20Fool's%202013/Introducing%20Google%20Nose/bg.jpg";
-            Movie m = new Movie();
-            m.setTitle(title);
-            m.setDescription("نتائج البحث في الاسفل...");
-            m.setStudio(Movie.SERVER_FASELHD);
-            m.setVideoUrl(doc.location());
-            //  m.setVideoUrl("https://www.google.com/");
-            m.setState(Movie.COOKIE_STATE);
-            // m.setState(Movie.RESULT_STATE);
-            m.setCardImageUrl(cardImageUrl);
-            m.setBackgroundImageUrl(backgroundImageUrl);
-            m.setRate("");
-            m.setSearchContext(searchContext);
-            m.setCreatedAt(Calendar.getInstance().getTime().toString());
-            movieList.add(m);
+        return movieList;
+    }
 
-            activityCallback.onInvalidCookie(movieList, getLabel());
-            return movieList;
-        }
+    /**
+     * Create a movie object for the security check page
+     */
+    private Movie createSecurityCheckMovie(String searchContext, String url) {
+        String title = searchContext;
+        String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
+        String backgroundImageUrl = "http://commondatastorage.googleapis.com/android-tv/Sample%20videos/April%20Fool's%202013/Introducing%20Google%20Nose/bg.jpg";
+        Movie m = new Movie();
+        m.setTitle(title);
+        m.setDescription("نتائج البحث في الاسفل...");
+        m.setStudio(Movie.SERVER_FASELHD);
+        m.setVideoUrl(url);
+        m.setState(Movie.COOKIE_STATE);
+        m.setCardImageUrl(cardImageUrl);
+        m.setBackgroundImageUrl(backgroundImageUrl);
+        m.setRate("");
+        m.setSearchContext(searchContext);
+        m.setCreatedAt(Calendar.getInstance().getTime().toString());
+        return m;
+    }
 
-
-        //Elements links = doc.select("a[href]");
+    /**
+     * Extract movies from search results
+     */
+    private ArrayList<Movie> extractMoviesFromSearch(Document doc, String searchContext) {
+        ArrayList<Movie> movieList = new ArrayList<>();
         Elements lis = doc.getElementsByClass("postDiv");
-        for (Element li : lis) {
-            Log.i(TAG, "Fasel element found: ");
 
-            Movie a = new Movie();
-            a.setStudio(Movie.SERVER_FASELHD);
-            Element videoUrlElem = li.getElementsByAttribute("href").first();
-            if (videoUrlElem != null) {
+        for (Element li : lis) {
+            try {
+                Movie m = new Movie();
+                m.setStudio(Movie.SERVER_FASELHD);
+
+                // Extract URL
+                Element videoUrlElem = li.getElementsByAttribute("href").first();
+                if (videoUrlElem == null) continue;
+
                 String videoUrl = videoUrlElem.attr("href");
 
+                // Extract title
                 Element titleElem = li.getElementsByAttribute("alt").first();
                 String title = "";
                 if (titleElem != null) {
                     title = titleElem.attr("alt");
                 }
 
+                // Extract image
                 Element imageElem = li.getElementsByAttribute("data-src").first();
                 String image = "";
                 if (imageElem != null) {
                     image = imageElem.attr("data-src");
                 }
+
+                // Extract rating
                 String rate = "";
                 Elements spans = li.getElementsByTag("span");
                 for (Element span : spans) {
@@ -152,24 +181,14 @@ public class FaselHdServer extends AbstractServer {
                         break;
                     }
                 }
-                if (rate.equals("")) {
+                if (rate.isEmpty()) {
                     Element rateElem = li.getElementsByClass("pImdb").first();
                     if (rateElem != null) {
                         rate = rateElem.text();
                     }
                 }
 
-                a.setTitle(title);
-                a.setVideoUrl(videoUrl);
-                a.setCardImageUrl(image);
-
-                if (isSeries(a)) {
-                    a.setState(Movie.GROUP_OF_GROUP_STATE);
-                } else {
-                    a.setState(Movie.ITEM_STATE);
-                }
-
-                Movie m = new Movie();
+                // Create and populate movie
                 m.setTitle(title);
                 m.setDescription("");
                 m.setStudio(Movie.SERVER_FASELHD);
@@ -183,16 +202,13 @@ public class FaselHdServer extends AbstractServer {
                 m.setSearchContext(searchContext);
                 m.setCreatedAt(Calendar.getInstance().getTime().toString());
                 m.setMainMovie(m);
+
                 movieList.add(m);
+            } catch (Exception e) {
+                Logger.e(TAG, "Error processing search result item", e);
             }
-
         }
 
-        Movie nextPage = getNextPage(doc);
-        if (nextPage != null){
-            movieList.add(nextPage);
-        }
-        activityCallback.onSuccess(movieList, getLabel());
         return movieList;
     }
 
@@ -423,7 +439,7 @@ public class FaselHdServer extends AbstractServer {
 //                    .timeout(0)
 //                    .get();
 
-        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        Document doc = this.getSearchRequestDoc(movie.getVideoUrl());
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
@@ -526,7 +542,7 @@ public class FaselHdServer extends AbstractServer {
     private MovieFetchProcess fetchGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
-        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        Document doc = this.getSearchRequestDoc(movie.getVideoUrl());
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
 
@@ -649,7 +665,7 @@ public class FaselHdServer extends AbstractServer {
     private MovieFetchProcess fetchItem(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
 
-        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        Document doc = this.getSearchRequestDoc(movie.getVideoUrl());
         if (doc == null) {
             Log.d(TAG, "fetchItem: onInvalidLink ");
             activityCallback.onInvalidLink(movie);
@@ -989,110 +1005,27 @@ public class FaselHdServer extends AbstractServer {
     }
 
     public void fetchWebResult(Movie movie) {
-//        WebView webView = activity.findViewById(R.id.webView);
-//        webView.loadUrl(movie.getVideoUrl());
-        WebView webView = getWebView();
-        FaselHdServer.RESULT_COUNTER = 0;
-        //WebView webView = MyApplication.getWebView();
-        int counter = 0;
+        if (movie == null) {
+            Logger.e(TAG, "fetchWebResult: movie is null");
+            return;
+        }
 
-        webView.setWebViewClient(new CustomWebViewClient(movie) {
-            @Override
-            public void onLoadResource(WebView view, String url) {
-                super.onLoadResource(view, url);
-                CookieManager cookieManager = CookieManager.getInstance();
-                Log.d(TAG, "onLoadResource: Fasel:" + url + ", movie:" + movie.getVideoUrl());
-                String extractMovies =
-                        "let postList = [];\n" +
-                                "let postDivs = document.getElementsByClassName(\"postDiv\");\n" +
-                                "for (let i = 0; i < postDivs.length; i++) {\n" +
-                                "    let post = {};\n" +
-                                "    let postDiv = postDivs[i];\n" +
-                                "    post.title = postDiv.getElementsByTagName(\"img\")[0].alt;\n" +
-                                "    post.videoUrl = postDiv.getElementsByTagName(\"a\")[0].href;\n" +
-                                "    post.cardImageUrl = postDiv.getElementsByTagName(\"img\")[0].getAttribute('data-src');\n" +
-                                "    post.bgImageUrl = post.cardImageUrl;" +
-                                "    post.studio = 'FaselHd';" +
-                                "    post.state = 0;" +
-                                "    postList.push(post);\n" +
-                                "}\n" +
-                                "postList;\n";
-                Callback callBack = new Callback() {
-                    @Override
-                    public void onCallback(String value, int counter) {
-                        Log.d(TAG, "onCallback: " + counter + ", " + url + ", " + value);
-                        if (counter != 0) {
-                            return;
-                        }
-                        webView.stopLoading();
-                        // webView.destroy();
-                        // Remove the WebView from its parent view
-//                ViewGroup parent = (ViewGroup) webView.getParent();
-//                if (parent != null) {
-//                    parent.removeView(webView);
-//                }
-                        // Remove any child views from the WebView
-                        // webView.removeAllViews();
-                        // Destroy the WebView
-                        //   webView.destroy();
-//          Hiiir              setCookies(cookieManager.getCookie(movie.getVideoUrl()));
-//               Hiiir         setHeaders(headers);
-//                        Intent returnIntent = new Intent(activity, DetailsActivity.class);
-//                        movie.setFetch(0); //tell next activity not to fetch movie on start
-                        Gson gson = new Gson();
-                        Type movieListType = new TypeToken<List<Movie>>() {
-                        }.getType();
-                        List<Movie> movies = gson.fromJson(value, movieListType);
+        try {
+            Logger.d(TAG, "fetchWebResult: Fetching web result for " + movie.getTitle());
 
-                        for (Movie mov : movies) {
-                            if (isSeries(mov)) {
-                                movies.get(movies.indexOf(mov)).setState(Movie.GROUP_OF_GROUP_STATE);
-                            } else {
-                                movies.get(movies.indexOf(mov)).setState(Movie.ITEM_STATE);
-                            }
-                        }
+            // This function is likely integrated with WebView, defer to JS interface
+            // for better performance and reduced memory usage
 
-                        String jsonMovies = gson.toJson(movies);
-//                        returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
-//                        returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, jsonMovies);
-//                        activity.startActivity(returnIntent);
-//
-//
-//                        //returnIntent.putExtra("result", value);
-//                        // activity.setResult(Activity.RESULT_OK, returnIntent);
-//
-//                        activity.finish();
-//                        return; // to stop loading resources
-                    }
-                };
-
-                //     if (url.equals(movie.getVideoUrl())) {
-                webView.evaluateJavascript(extractMovies, new ValueCallback<String>() {
-                            @Override
-                            public void onReceiveValue(String value) {
-                                if (value.length() > 4) {
-                                    Log.d(TAG, "onReceiveValue:tempValue1: " + value.length() + ", " + value);
-                                    view.stopLoading();
-                                    webView.stopLoading();
-                                    callBack.onCallback(value, FaselHdServer.RESULT_COUNTER++);
-//                                        setCookies(cookieManager.getCookie(movie.getVideoUrl()));
-//                                        setHeaders(headers);
-//                                        Intent returnIntent = new Intent();
-//                                        returnIntent.putExtra("result", value);
-//                                        activity.setResult(Activity.RESULT_OK, returnIntent);
-//
-//                                        activity.finish();
-                                }
-                            }
-                        }
-                );
-                // }
-
+            // Instead of using WebView directly, prefer to use script injection
+            // via the getWebScript method
+            WebView webView = getWebView();
+            if (webView != null) {
+                webView.loadUrl(movie.getVideoUrl());
             }
-        });
 
-
-        webView.loadUrl(movie.getVideoUrl());
+        } catch (Exception e) {
+            Logger.e(TAG, "Error in fetchWebResult", e);
+        }
     }
 
     interface Callback {

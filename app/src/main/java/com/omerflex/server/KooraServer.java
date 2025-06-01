@@ -86,7 +86,7 @@ public class KooraServer extends AbstractServer {
         }
         Log.i(getLabel(), "search: " + url);
 
-        Document doc = this.getRequestDoc(url);
+        Document doc = this.getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
             return null;
@@ -294,7 +294,7 @@ public class KooraServer extends AbstractServer {
         }
         Log.i(getLabel(), "search: " + url);
 
-        Document doc = this.getRequestDoc(url);
+        Document doc = this.getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
             return null;
@@ -661,7 +661,7 @@ public class KooraServer extends AbstractServer {
 //                    .timeout(0)
 //                    .get();
 
-        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        Document doc = this.getSearchRequestDoc(movie.getVideoUrl());
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
@@ -764,7 +764,7 @@ public class KooraServer extends AbstractServer {
     private MovieFetchProcess fetchGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
-        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        Document doc = this.getSearchRequestDoc(movie.getVideoUrl());
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
 
@@ -887,7 +887,7 @@ public class KooraServer extends AbstractServer {
     private MovieFetchProcess fetchItem(Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
 
-        Document doc = this.getRequestDoc(movie.getVideoUrl());
+        Document doc = this.getSearchRequestDoc(movie.getVideoUrl());
         if (doc == null) {
             Log.d(TAG, "fetchItem: onInvalidLink ");
             activityCallback.onInvalidLink(movie);

@@ -46,7 +46,7 @@ public abstract class AbstractServer_old implements ServerInterface {
             url = this.getSearchUrl(query);
         }
 
-        Document doc = this.getRequestDoc(url);
+        Document doc = this.getSearchRequestDoc(url);
         if (doc == null) {
             return null;
         }
@@ -55,7 +55,7 @@ public abstract class AbstractServer_old implements ServerInterface {
 
     protected abstract ArrayList<Movie> getSearchMovieList(Document doc);
 
-    protected Document getRequestDoc(String url) {
+    protected Document getSearchRequestDoc(String url) {
         Document doc = null;
         try {
             doc = Jsoup.connect(url)
@@ -71,7 +71,7 @@ public abstract class AbstractServer_old implements ServerInterface {
                     .get();
 
 //            String docTitle = doc.title();
-//            Log.d(TAG, "getRequestDoc: " + docTitle);
+//            Log.d(TAG, "getSearchRequestDoc: " + docTitle);
 //            if (docTitle.contains("Just a moment")) {
 //                return fetchDocUsingWebView(url);
 //            }
@@ -86,7 +86,7 @@ public abstract class AbstractServer_old implements ServerInterface {
     }
 
 
-    protected Document getRequestDoc(String url, Movie movie, int operation) {
+    protected Document getSearchRequestDoc(String url, Movie movie, int operation) {
         Document doc = null;
         try {
             doc = Jsoup.connect(url)
@@ -101,7 +101,7 @@ public abstract class AbstractServer_old implements ServerInterface {
                     .get();
 
             String docTitle = doc.title();
-            Log.d(TAG, "getRequestDoc: " + docTitle);
+            Log.d(TAG, "getSearchRequestDoc: " + docTitle);
             if (docTitle.contains("Just a moment")) {
                 return fetchDocUsingWebView(url, movie, operation);
             }

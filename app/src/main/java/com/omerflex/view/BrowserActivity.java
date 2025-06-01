@@ -416,7 +416,7 @@ public class BrowserActivity extends AppCompatActivity {
         }
 
         private void processOnOtherMovieStates(String elementJson, List<Movie> movies, ServerConfig config) {
-            MovieFetchProcess movieFetchProcess = server.handleJSResult(elementJson, movies, movie);
+            MovieFetchProcess movieFetchProcess = server.handleJSResult(elementJson, (ArrayList<Movie>)movies, movie);
             switch (movieFetchProcess.stateCode) {
                 case MovieFetchProcess.FETCH_PROCESS_UPDATE_CONFIG_AND_RETURN_RESULT:
                     // config being updated in the server and here saved to db

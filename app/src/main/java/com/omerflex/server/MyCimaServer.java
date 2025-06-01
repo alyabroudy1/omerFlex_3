@@ -128,7 +128,7 @@ public class MyCimaServer extends AbstractServer {
     private void getExtraSearchMovieList(String url, ArrayList<Movie> movies) {
         //search series
         String seriesSearch = url + "/list/series/";
-        Document doc = getRequestDoc(seriesSearch);
+        Document doc = getSearchRequestDoc(seriesSearch);
 
         Elements lis2 = doc.getElementsByClass("GridItem");
         for (Element li : lis2) {
@@ -140,7 +140,7 @@ public class MyCimaServer extends AbstractServer {
 
         //search anime
         String animeSearch = url + "/list/anime/";
-        doc = getRequestDoc(animeSearch);
+        doc = getSearchRequestDoc(animeSearch);
         Elements lis3 = doc.getElementsByClass("GridItem");
         for (Element li : lis3) {
             //              Log.i(TAG, "element found: ");
@@ -354,7 +354,7 @@ public class MyCimaServer extends AbstractServer {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
         Log.i(TAG, "ur:" + url);
-        Document doc = getRequestDoc(url);
+        Document doc = getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
             return null;
@@ -436,7 +436,7 @@ public class MyCimaServer extends AbstractServer {
 //            ).timeout(6000).get();
         //Elements links = doc.select("a[href]");
 
-        Document doc = getRequestDoc(url);
+        Document doc = getSearchRequestDoc(url);
         if (doc == null) {
             Log.d(TAG, "fetchGroup: error doc is null ");
             activityCallback.onInvalidLink(movie);
@@ -503,7 +503,7 @@ public class MyCimaServer extends AbstractServer {
 //            ).timeout(0).get();
         //Elements links = doc.select("a[href]");
 
-        Document doc = getRequestDoc(url);
+        Document doc = getSearchRequestDoc(url);
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
