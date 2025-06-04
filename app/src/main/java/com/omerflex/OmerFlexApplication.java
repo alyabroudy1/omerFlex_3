@@ -1,6 +1,7 @@
 package com.omerflex;
 
 import android.app.Application;
+import dagger.hilt.android.HiltAndroidApp;
 import android.content.Context;
 import android.os.Build;
 import android.os.StrictMode;
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Custom Application class for OmerFlex.
  * Handles initialization of app-wide components and provides access to them.
  */
+@HiltAndroidApp
 public class OmerFlexApplication extends Application {
     private static final String TAG = "OmerFlexApplication";
 

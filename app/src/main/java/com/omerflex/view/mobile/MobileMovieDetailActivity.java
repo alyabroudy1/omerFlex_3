@@ -1,6 +1,10 @@
 package com.omerflex.view.mobile;
 
 import android.app.Activity;
+import androidx.lifecycle.ViewModelProvider; // Added for ViewModel
+import dagger.hilt.android.AndroidEntryPoint; // Added for Hilt
+import com.omerflex.utils.Resource; // Added for ViewModel observations
+import android.widget.Toast; // Added for messages
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -20,24 +24,26 @@ import com.bumptech.glide.Glide;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
-import com.omerflex.server.AbstractServer;
-import com.omerflex.server.ServerInterface;
+import com.omerflex.server.AbstractServer; // May become unused if all logic moves to ViewModel
+import com.omerflex.server.ServerInterface; // May become unused
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerConfigManager;
-import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.service.ServerConfigManager; // May become unused
+// import com.omerflex.service.database.MovieDbHelper; // Removed
 import com.omerflex.view.DetailsActivity;
-import com.omerflex.view.VideoDetailsFragment;
+// import com.omerflex.view.VideoDetailsFragment; // May become unused
 import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 import com.omerflex.view.mobile.view.OnMovieClickListener;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executors; // May become unused
 
+@AndroidEntryPoint // Added for Hilt
 public class MobileMovieDetailActivity extends AppCompatActivity {
     public static final String TAG = "MobileDetailActivity";
-    public static final String EXTRA_MOVIE_TITLE = "extra_movie_title";
+    // Keys for intent extras should ideally match ViewModel's SavedStateHandle keys
+    // public static final String EXTRA_MOVIE_TITLE = "extra_movie_title";
     public static final String EXTRA_MOVIE_IMAGE_URL = "extra_movie_image_url";
     public static final String EXTRA_MOVIE_CATEGORY = "extra_movie_category";
     public static final String EXTRA_MOVIE_RATING = "extra_movie_rating";
@@ -53,194 +59,169 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
     private TextView descriptionTextView;
     private TextView historyTextView;
     private Button watchButtonView;
-    private Movie mSelectedMovie;
-    private Handler handler = new Handler();
+    // private Movie mSelectedMovie; // ViewModel will hold the movie state
+    private Handler handler = new Handler(); // Keep for UI updates if needed, but prefer LiveData
     Activity activity;
-    static AbstractServer server;
-    public MovieDbHelper dbHelper;
-    private static int clickedMovieIndex = 0;
+    // static AbstractServer server; // ViewModel will handle server logic via Repository
+    // public MovieDbHelper dbHelper; // Removed
+    // private static int clickedMovieIndex = 0; // Manage in adapter or pass data directly
+
+    private MobileMovieDetailActivityViewModel viewModel;
+    private HorizontalMovieAdapter relatedMoviesAdapter;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_mobile_movie_detail);
-//        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-//            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-//            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-//            return insets;
-//        });
         activity = this;
-        dbHelper = MovieDbHelper.getInstance(activity);
 
-        mSelectedMovie = Util.recieveSelectedMovie(getIntent());
-//        server = ServerManager.determineServer(mSelectedMovie, null, activity, null);
-        server = ServerConfigManager.getServer(mSelectedMovie.getStudio());
+        // Initialize ViewModel
+        // The Movie object is passed to ViewModel's SavedStateHandle via Intent extra
+        // (Key: MobileMovieDetailActivityViewModel.MOVIE_ARG_KEY)
+        viewModel = new ViewModelProvider(this).get(MobileMovieDetailActivityViewModel.class);
 
-        initializeView(mSelectedMovie);
-
-        // Set up the related movies RecyclerView
-        fetchRelatedMovies(mSelectedMovie);
+        initializeUIElements();
+        observeViewModel();
+        setupUIListeners(); // Setup listeners after UI elements and ViewModel are ready
     }
 
-    private void initializeView(Movie mSelectedMovie) {
+    private void initializeUIElements() {
         titleTextView = findViewById(R.id.titleTextView);
-        categoryTextView = findViewById(R.id.categoryTextView);
-        imageView = findViewById(R.id.imageView);
+        categoryTextView = findViewById(R.id.categoryTextView); // This might display e.g. "Episodes" or "Related"
+        imageView = findViewById(R.id.imageView); // Should be detail_movie_image based on new layout draft
         relatedMoviesRecyclerView = findViewById(R.id.relatedMoviesRecyclerView);
-
-        // Set the movie details
-        titleTextView.setText(mSelectedMovie.getTitle());
-        Glide.with(this).load(mSelectedMovie.getCardImageUrl()).into(imageView);
 
         ratingTextView = findViewById(R.id.ratingTextView);
         studioTextView = findViewById(R.id.studioTextView);
         descriptionTextView = findViewById(R.id.descriptionTextView);
-        historyTextView = findViewById(R.id.historyTextView);
+        historyTextView = findViewById(R.id.historyTextView); // To display episode/season from MovieHistory
         watchButtonView = findViewById(R.id.watch_button);
 
-
-        watchButtonView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.d(TAG, "onClick: watch button");
-                Movie sampleMovie = relatedMoviesAdapter.getMovieList().get(0);
-                clickedMovieIndex = 0;
-//                dbHelper.addMainMovieToHistory(mSelectedMovie);
-                MovieFetchProcess movieFetchProcess= server.fetch(
-                        sampleMovie,
-                        Movie.ACTION_WATCH_LOCALLY,
-                        new ServerInterface.ActivityCallback<Movie>() {
-                            @Override
-                            public void onSuccess(Movie result, String title) {
-                                Util.openExoPlayer(result, activity, true);
-                            }
-
-                            @Override
-                            public void onInvalidCookie(Movie result, String title) {
-                                fetchCookie(result);
-                            }
-
-                            @Override
-                            public void onInvalidLink(Movie result) {
-
-                            }
-
-
-                            @Override
-                            public void onInvalidLink(String message) {
-
-                            }
-                        }
-                );
-//                if (movieFetchProcess.stateCode == MovieFetchProcess.FETCH_PROCESS_EXOPLAYER){
-//                    Util.openExoPlayer(movieFetchProcess.movie, activity, true);
-//                }
-            }
-        });
-
-
-        // Set the rating and studio name
-        ratingTextView.setText(mSelectedMovie.getRate());
-        studioTextView.setText(mSelectedMovie.getStudio());
-        descriptionTextView.setText(mSelectedMovie.getDescription());
-
-        String history = "";
-        if (mSelectedMovie.getMovieHistory() != null &&
-                (
-                        mSelectedMovie.getState() == Movie.GROUP_OF_GROUP_STATE ||
-                                mSelectedMovie.getState() == Movie.GROUP_STATE
-                )
-        ) {
-            history = ((mSelectedMovie.getMovieHistory().getEpisode() != null) ?
-                    (" | " + mSelectedMovie.getMovieHistory().getEpisode()) : "") +
-                    ((mSelectedMovie.getMovieHistory().getSeason() != null) ? (" | " + mSelectedMovie.getMovieHistory().getSeason()) : "");
-        }
-
-
-        historyTextView.setText(history);
-
-        categoryTextView.setText(server.determineRelatedMovieLabel(mSelectedMovie));
-        relatedMoviesAdapter = new HorizontalMovieAdapter(this, new ArrayList<>(), new RelatedMovieItemClickListener(this, dbHelper));
+        // Setup RecyclerView for related movies/episodes
+        relatedMoviesAdapter = new HorizontalMovieAdapter(this, new ArrayList<>(), new RelatedMovieItemClickListener(this));
         relatedMoviesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         relatedMoviesRecyclerView.setAdapter(relatedMoviesAdapter);
     }
 
-    private void fetchCookie(Movie result) {
-        result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
-        Util.openBrowserIntent(result, activity, true, true, true);
-    }
-
-    private void evaluateWatchButton() {
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (!relatedMoviesAdapter.getMovieList().isEmpty()){
-                    Movie sampleMovie = relatedMoviesAdapter.getMovieList().get(0);
-                    boolean watchButtonCond = sampleMovie.getState() == Movie.RESOLUTION_STATE ||
-                            sampleMovie.getState() == Movie.VIDEO_STATE;
-
-                    if (watchButtonCond){
-                        watchButtonView.setVisibility(View.VISIBLE);
-                    }
+    private void setupUIListeners() {
+        watchButtonView.setOnClickListener(view -> {
+            Log.d(TAG, "onClick: watch button");
+            Resource<Movie> movieResource = viewModel.movieDetails.getValue();
+            if (movieResource != null && movieResource.data != null) {
+                // For the main watch button, usually play the primary content or first episode
+                Movie movieToPlay = movieResource.data;
+                if (movieToPlay.getSubList() != null && !movieToPlay.getSubList().isEmpty() &&
+                    (movieToPlay.getState() == Movie.GROUP_STATE || movieToPlay.getState() == Movie.GROUP_OF_GROUP_STATE)) {
+                    // If it's a series and has sub-items, play the first sub-item (episode)
+                    // This logic might need refinement based on how "primary content" vs "episodes" are structured.
+                    // For now, assume if sublist exists, it's what the main watch button targets.
+                    // Or, the watch button should be disabled and users click on sublist items.
+                    // Let's assume for now the watch button tries to play the main movie if it's playable,
+                    // otherwise user clicks on sublist.
+                     Log.d(TAG, "Watch button clicked for main movie: " + movieToPlay.getTitle());
+                     handleMoviePlayback(movieToPlay);
+                } else if (movieToPlay.getVideoUrl() != null && !movieToPlay.getVideoUrl().isEmpty()){
+                     Log.d(TAG, "Watch button clicked for direct play: " + movieToPlay.getTitle());
+                     handleMoviePlayback(movieToPlay);
+                } else {
+                    Toast.makeText(activity, "No playable content for main watch button.", Toast.LENGTH_SHORT).show();
                 }
+            } else {
+                Toast.makeText(activity, "Movie details not loaded yet.", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void fetchRelatedMovies(Movie movie) {
+    private void observeViewModel() {
+        viewModel.movieDetails.observe(this, resource -> {
+            if (resource == null) {
+                Log.e(TAG, "Movie details resource is null");
+                Toast.makeText(this, "Error: Movie details could not be loaded.", Toast.LENGTH_LONG).show();
+                return;
+            }
 
-        if (movie.getFetch() == Movie.NO_FETCH_MOVIE_AT_START && movie.getSubList() != null) {
-            Log.d(TAG, "fetchRelatedMovies: NO_FETCH_MOVIE_AT_START");
-            updateRelatedMovieAdapter((ArrayList<Movie>) movie.getSubList());
-            evaluateWatchButton();
-            return;
+            Movie movie = resource.data;
+
+            switch (resource.status) {
+                case LOADING:
+                    Log.d(TAG, "Loading movie details...");
+                    Toast.makeText(this, "Loading details...", Toast.LENGTH_SHORT).show();
+                    if (movie != null) populateUI(movie); // Show potentially stale/initial data
+                    watchButtonView.setVisibility(View.GONE); // Hide watch button while loading
+                    break;
+                case SUCCESS:
+                    if (movie != null) {
+                        Log.d(TAG, "Successfully loaded movie details for: " + movie.getTitle());
+                        populateUI(movie);
+                        if (movie.getSubList() != null && !movie.getSubList().isEmpty()) {
+                            relatedMoviesAdapter.setMovies(movie.getSubList());
+                            categoryTextView.setText(movie.getSubList().get(0).getGroup() != null ? movie.getSubList().get(0).getGroup() : "Related Content");
+                        } else {
+                            relatedMoviesAdapter.setMovies(new ArrayList<>()); // Clear related movies
+                            categoryTextView.setText("No related content");
+                        }
+                        // Determine watch button visibility based on loaded movie
+                        boolean canPlayMainMovie = movie.getVideoUrl() != null && !movie.getVideoUrl().isEmpty() &&
+                                                  (movie.getState() == Movie.ITEM_STATE || movie.getState() == Movie.VIDEO_STATE || movie.getState() == Movie.RESOLUTION_STATE);
+                        boolean hasSublist = movie.getSubList() != null && !movie.getSubList().isEmpty();
+
+                        // Show watch button if main movie is directly playable or if there's a sublist (implying episodes)
+                        // This logic might need refinement. For now, show if main is playable.
+                        watchButtonView.setVisibility(canPlayMainMovie ? View.VISIBLE : View.GONE);
+
+
+                    } else {
+                        Log.e(TAG, "Movie details success but data is null.");
+                        Toast.makeText(this, "Failed to load movie details.", Toast.LENGTH_LONG).show();
+                        watchButtonView.setVisibility(View.GONE);
+                    }
+                    break;
+                case ERROR:
+                    Log.e(TAG, "Error loading movie details: " + resource.message);
+                    Toast.makeText(this, "Error: " + resource.message, Toast.LENGTH_LONG).show();
+                    if (movie != null) populateUI(movie); // Show potentially stale/initial data
+                    watchButtonView.setVisibility(View.GONE);
+                    break;
+            }
+        });
+    }
+
+    private void populateUI(Movie movie) {
+        if (movie == null) return;
+
+        titleTextView.setText(movie.getTitle());
+        descriptionTextView.setText(movie.getDescription());
+        studioTextView.setText(movie.getStudio()); // Studio might be server name
+        ratingTextView.setText(movie.getRate());
+
+        String imageUrl = movie.getCardImageUrl() != null ? movie.getCardImageUrl() : movie.getBackgroundImageUrl();
+        Glide.with(this)
+             .load(imageUrl)
+             .error(R.drawable.default_background) // Ensure this drawable exists
+             .into(imageView);
+
+        // History text (e.g. Last Watched Episode)
+        // This would typically come from a MovieHistory object associated with the series.
+        // For now, if mSelectedMovie has MovieHistory, display it.
+        if (movie.getMovieHistory() != null) {
+            String historyStr = "Last: S" + movie.getMovieHistory().getSeason() + " E" + movie.getMovieHistory().getEpisode();
+            historyTextView.setText(historyStr);
+            historyTextView.setVisibility(View.VISIBLE);
+        } else {
+            historyTextView.setVisibility(View.GONE);
         }
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.submit(() -> {
-            MovieFetchProcess movieFetchProcess = server.fetch(
-                    mSelectedMovie,
-                    mSelectedMovie.getState(),
-                    new ServerInterface.ActivityCallback<Movie>() {
-                        @Override
-                        public void onSuccess(Movie result, String title) {
-                            updateCurrentMovieView(result);
-                            updateRelatedMovieAdapter((ArrayList<Movie>) result.getSubList());
-                            evaluateWatchButton();
-                        }
-
-                        @Override
-                        public void onInvalidCookie(Movie result, String title) {
-                            fetchCookie(result);
-                        }
-
-                        @Override
-                        public void onInvalidLink(Movie result) {
-                            return;
-                        }
-
-                        @Override
-                        public void onInvalidLink(String message) {
-
-                        }
-                    }
-            );
-//            if (
-//                    movieFetchProcess.stateCode == MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN ||
-//                    movieFetchProcess.movie.getSubList() == null
-//            ) {
-//                // todo: Handle error
-//                return;
-//            }
-
-//            updateMovieView(movieFetchProcess.movie);
-//            updateRelatedMovieAdapter(movieFetchProcess.movie);
-//            evaluateWatchButton();
-        });
-
-        executor.shutdown();
+        // Category for sublist (e.g. "Episodes")
+        // This is dynamic based on sublist content, set in SUCCESS block of observer.
+        // Here we just ensure it's visible if there will be content.
+         categoryTextView.setVisibility(movie.getSubList() != null && !movie.getSubList().isEmpty() ? View.VISIBLE : View.GONE);
     }
+
+
+    // Removed fetchRelatedMovies, fetchCookie, evaluateWatchButton, updateCurrentMovieView
+    // Their logic is now handled by ViewModel or within observers.
 
 //    private Movie updateMovieOnActivityResult(Movie resultMovie, List<Movie> resultMovieSublist) {
 //        if (resultMovie == null) {
@@ -281,203 +262,67 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        Log.d("TAG", "onActivityResult: ");
-
-
-        // cases:
-        // 1.Movie.REQUEST_CODE_MOVIE_UPDATE
-        // 2.Movie.REQUEST_CODE_EXOPLAYER
-        // 3.Movie.REQUEST_CODE_FETCH_HTML
-        // 4.Movie.REQUEST_CODE_EXTERNAL_PLAYER
-        // 5.Movie.REQUEST_CODE_MOVIE_LIST
-        // should update:
-        // 1.mSelectedMovie
-        // 2.relatedMovieAdapter
-
-        // real cases:
-        // 1. fetch movie details using web browser as the website contains only js
-        //      - suggestion: Movie.REQUEST_CODE_MOVIE_UPDATE
-        // 2. fetch a real movie link using the browser
-        //      - suggestion: Movie.REQUEST_CODE_MOVIE_UPDATE
-        // 3. fetch cookie and movie details
-        //      - suggestion: Movie.REQUEST_CODE_MOVIE_UPDATE
-        //      - to be aware of the movie state and how to handle the situation
-        // requests to be :
-        // Movie.REQUEST_CODE_MOVIE_UPDATE
-        // Movie.REQUEST_CODE_EXTERNAL_PLAYER
-        // Movie.REQUEST_CODE_EXOPLAYER
-
-        if (resultCode != Activity.RESULT_OK || data == null) {
-            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
-            return;
-        }
-//        Gson gson = new Gson();
-
-        Movie resultMovie = (Movie) data.getParcelableExtra(DetailsActivity.MOVIE);
-//        Type type = new TypeToken<List<Movie>>() {
-//        }.getType();
-//        ArrayList<Movie> movieSublistString = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
-        ArrayList<Movie> resultMovieSublist = data.getParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST);
-
-//        List<Movie> resultMovieSublist = gson.fromJson(movieSublistString, type);
-
-        String result = data.getStringExtra("result");
-
-
-        Log.d(TAG, "onActivityResult:RESULT_OK ");
-
-        //requestCode Movie.REQUEST_CODE_MOVIE_UPDATE is one movie object or 2 for a list of movies
-        //this result is only to update the clicked movie of the sublist only and in some cases to update the description of mSelectedMovie
-        //the id property of Movie object is used to identify the index of the clicked sublist movie
-        switch (requestCode) {
-//            case Movie.REQUEST_CODE_MOVIE_UPDATE:
-//                // update current movie data
-//                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_MOVIE_UPDATE");
-////            case Movie.REQUEST_CODE_MOVIE_LIST:
-////                // fetch a list of movie like search result
-////                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_MOVIE_LIST");
-////                // returns null or movie
-////                mSelectedMovie = updateMovieOnActivityResult(resultMovie, resultMovieSublist);
-////                break;
-////            case Movie.REQUEST_CODE_FETCH_HTML:
-////                // unknown ?
-////                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_FETCH_HTML");
-//////                mSelectedMovie = (Movie) server.handleOnActivityResultHtml(result, mSelectedMovie);
-////                break;
-            case Movie.REQUEST_CODE_EXOPLAYER:
-                // open exoplayer after a web activity to fetch the real video link
-                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_EXOPLAYER");
-               if (resultMovie != null){
-                   resultMovie.setSubList(resultMovieSublist);
-               }
-                Util.openExoPlayer(resultMovie, activity, true);
-                // todo: handle dbHelper
-                updateRelatedMovieItem(clickedMovieIndex, resultMovie);
-//                 dbHelper.addMainMovieToHistory(mSelectedMovie);
-//                mSelectedMovie = resultMovie;
-                break;
-            case Movie.REQUEST_CODE_EXTERNAL_PLAYER:
-                // open external activity after a web activity to fetch the real video link
-                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE_EXTERNAL_PLAYER");
-                Util.openExternalVideoPlayer(resultMovie, activity);
-                // todo: handle dbHelper
-//                 dbHelper.addMainMovieToHistory(mSelectedMovie);
-                updateRelatedMovieItem(clickedMovieIndex, resultMovie);
-//                mSelectedMovie = resultMovie;
-                break;
-            default: //case Movie.REQUEST_CODE_MOVIE_UPDATE
-                Log.d(TAG, "handleOnDetailsActivityResult: REQUEST_CODE unknown: "+ requestCode);
-                updateCurrentMovieView(resultMovie);
-                if (resultMovieSublist != null && !resultMovieSublist.isEmpty()){
-                    updateRelatedMovieAdapter(resultMovieSublist);
-                }
-        }
-
+        Log.d(TAG, "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
+        // TODO: Implement onActivityResult logic, potentially delegating to ViewModel
+        // For example, if BrowserActivity returns a result for a cookie:
+        // if (requestCode == DetailsActivity.REQUEST_CODE_BROWSER_LOGIN && resultCode == Activity.RESULT_OK && data != null) {
+        //     Movie returnedMovie = data.getParcelableExtra(MobileMovieDetailActivityViewModel.MOVIE_ARG_KEY);
+        //     boolean success = data.getBooleanExtra("success", false); // Assuming BrowserActivity sets this
+        //     if (returnedMovie != null && success) {
+        //         viewModel.loadMovieDetails(returnedMovie); // Refresh or retry with new cookie state via repository
+        //     } else {
+        //         Toast.makeText(this, "Cookie operation may have failed.", Toast.LENGTH_SHORT).show();
+        //     }
+        // }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    private void updateRelatedMovieItem(int clickedMovieIndex, Movie resultMovie) {
-        resultMovie.setTitle(mSelectedMovie.getTitle());
-        relatedMoviesAdapter.getMovieList().set(clickedMovieIndex, resultMovie);
-        relatedMoviesAdapter.notifyItemChanged(clickedMovieIndex);
-    }
+    // Removed updateRelatedMovieItem, updateRelatedMovieAdapter, updateCurrentMovieView.
+    // UI updates are now driven by observing viewModel.movieDetails.
 
-    private void updateRelatedMovieAdapter(ArrayList<Movie> movieList) {
-//        Log.d("TAG", "updateRelatedMovieAdapter: "+ movieList);
-        if (movieList.isEmpty()){
-            return;
-        }
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                relatedMoviesAdapter.getMovieList().addAll(movieList);
-                relatedMoviesAdapter.notifyDataSetChanged();
-            }
-        });
-    }
-
-    private void updateCurrentMovieView(Movie movie) {
-        Log.d("TAG", "updateRelatedMovieAdapter: "+ movie);
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                titleTextView.setText(movie.getTitle());
-                descriptionTextView.setText(movie.getDescription());
-                Glide.with(activity).load(movie.getCardImageUrl()).into(imageView);
-                relatedMoviesAdapter.notifyDataSetChanged();
-            }
-        });
-    }
-    public static class RelatedMovieItemClickListener implements OnMovieClickListener {
+    public class RelatedMovieItemClickListener implements OnMovieClickListener {
         Activity activity;
-        public String TAG = "RelatedMovieItemClickListener";
+        // MovieDbHelper dbHelper; // Removed
 
-        CategoryAdapter categoryAdapter;
-        MovieDbHelper dbHelper;
-
-        public RelatedMovieItemClickListener(Activity activity, MovieDbHelper dbHelper) {
+        public RelatedMovieItemClickListener(Activity activity /*, MovieDbHelper dbHelper removed */) {
             this.activity = activity;
-            this.dbHelper = dbHelper;
+            // this.dbHelper = dbHelper;
         }
 
         public void onMovieClick(Movie movie, int position, HorizontalMovieAdapter horizontalMovieAdapter) {
-// Check if the clicked movie matches the criteria to extend the category
-//            Log.d(TAG, "onMovieClick: "+ categoryAdapter.getItemCount());
-
-            clickedMovieIndex = position;
-            // 1. case: open external movie player
-            // 2. case open web browser
-            // 3. case open details activity
-//            boolean externalPlayerCond = movie.getState() == Movie.VIDEO_STATE || movie.getState() == Movie.RESOLUTION_STATE;
-//            if (externalPlayerCond) {
-//                Util.openExternalVideoPlayer(movie, activity);
-//            } else if (movie.getState() == Movie.BROWSER_STATE || movie.getState() == Movie.COOKIE_STATE) {
-//                movie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
-//                Util.openBrowserIntent(movie, activity, false, true);
-//            } else {
-//                Util.openMobileDetailsIntent(movie, activity, false);
-//            }
-            int nextAction = server.fetchNextAction(movie);
-            switch (nextAction){
-                case VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY:
-                    Util.openMobileDetailsIntent(movie, activity, false);
-                    break;
-                case VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY:
-//                    dbHelper.addMainMovieToHistory(movie);
-                    Util.openExternalVideoPlayer(movie, activity);
-                    break;
-                case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
-//                    dbHelper.addMainMovieToHistory(movie);
-                    MovieFetchProcess process = server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
-                        @Override
-                        public void onSuccess(Movie result, String title) {
-                            Util.openExternalVideoPlayer(movie, activity);
-                        }
-
-                        @Override
-                        public void onInvalidCookie(Movie result, String title) {
-                            movie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
-                            Util.openBrowserIntent(movie, activity, false, true, true);
-                        }
-
-                        @Override
-                        public void onInvalidLink(Movie result) {
-
-                        }
-
-                        @Override
-                        public void onInvalidLink(String message) {
-
-                        }
-                    });
-                    break;
-
-            }
-
+            Log.d(TAG, "Related movie/episode clicked: " + movie.getTitle());
+            // For sub-items like episodes, we usually want to play them directly.
+            // The `playMovieLink` method in ViewModel can handle if it needs further resolution.
+            handleMoviePlayback(movie);
         }
     }
 
+    private void handleMoviePlayback(Movie movieToPlay) {
+        viewModel.playMovieLink(movieToPlay).observe(this, resource -> {
+            if (resource == null) return;
+            if (resource.status == Resource.Status.SUCCESS && resource.data != null) {
+                Movie playableMovie = resource.data;
+                Log.d(TAG, "Attempting to play: " + playableMovie.getTitle() + " URL: " + playableMovie.getVideoUrl());
+                if (playableMovie.getVideoUrl() != null && !playableMovie.getVideoUrl().isEmpty()) {
+                    Util.openExoPlayer(playableMovie, this, playableMovie.getStudio().equals(Movie.SERVER_IPTV));
+                    viewModel.markAsWatched(playableMovie);
+                } else {
+                    Toast.makeText(this, "No playable URL found for " + playableMovie.getTitle(), Toast.LENGTH_SHORT).show();
+                }
+            } else if (resource.status == Resource.Status.ERROR) {
+                Toast.makeText(this, "Error preparing link: " + resource.message, Toast.LENGTH_LONG).show();
+            } else if (resource.status == Resource.Status.LOADING) {
+                Toast.makeText(this, "Preparing link...", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
 
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed(); // Standard back button behavior for up navigation
+        return true;
+    }
 }
 
 

@@ -5,9 +5,13 @@ import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
+import androidx.room.TypeConverters;
 
+import com.omerflex.service.database.Converters;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
@@ -19,6 +23,7 @@ import java.util.List;
  * Movie class represents video entity with title, description, image thumbs and video url.
  */
 @Entity(tableName = "movies")
+@TypeConverters(com.omerflex.service.database.Converters.class)
 public class Movie implements Parcelable {
     public static final String SERVER_APP = "app";
     public static final String SERVER_OMAR = "omar";
@@ -76,16 +81,20 @@ public class Movie implements Parcelable {
     private String rate;
     private int state;
     private String mainMovieTitle;
+    @Ignore
     private List<Movie> subList;
     private List<String> categories;
     private int isHistory;
     private long playedTime;
+    @Ignore
     private Movie mainMovie;
-    private String createdAt;
+    private Long createdAt;
     private Date updatedAt;
     private int fetch;
     private String backgroundImageUrl;
+    @ColumnInfo(name = "group_column")
     private String group;
+    @Ignore
     private MovieHistory movieHistory;
 
 
@@ -93,7 +102,7 @@ public class Movie implements Parcelable {
        // this.createdAt = Calendar.getInstance().getTime().toString();
         this.subList= new ArrayList<>();
         this.categories= new ArrayList<>();
-        this.createdAt = new Date().toString();
+        this.createdAt = System.currentTimeMillis();
         this.updatedAt = new Date();
         this.rate = "";
         this.fetch = 1;
@@ -114,7 +123,7 @@ public class Movie implements Parcelable {
             String trailerUrl,
             int isHistory,
             long playedTime,
-            String createdAt,
+            Long createdAt,
             Date updatedAt,
             int fetch,
             String backgroundImageUrl,
@@ -159,7 +168,7 @@ public class Movie implements Parcelable {
         trailerUrl = in.readString();
         isHistory = in.readInt();
         playedTime = in.readLong();
-        createdAt = in.readString();
+        createdAt = in.readLong();
         updatedAt = new Date(in.readLong());
         fetch = in.readInt();
         backgroundImageUrl = in.readString();
@@ -189,7 +198,7 @@ public class Movie implements Parcelable {
         dest.writeString(trailerUrl);
         dest.writeInt(isHistory);
         dest.writeLong(playedTime);
-        dest.writeString(createdAt);
+        dest.writeLong(createdAt);
         dest.writeLong(updatedAt.getTime());
         dest.writeInt(fetch);
         dest.writeString(backgroundImageUrl);
@@ -335,7 +344,7 @@ public class Movie implements Parcelable {
             String trailerUrl,
             int isHistory,
             long playedTime,
-            String createdAt,
+            Long createdAt,
             Date updatedAt,
             int fetch,
             String group
@@ -370,11 +379,11 @@ public class Movie implements Parcelable {
         this.mainMovieTitle = mainMovieTitle;
     }
 
-    public String getCreatedAt() {
+    public Long getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(String createdAt) {
+    public void setCreatedAt(Long createdAt) {
         this.createdAt = createdAt;
     }
 

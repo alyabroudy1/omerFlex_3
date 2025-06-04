@@ -7,6 +7,12 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
+import androidx.lifecycle.ViewModelProvider; // Added for ViewModel
+import dagger.hilt.android.AndroidEntryPoint; // Added for Hilt
+import java.util.HashMap; // Added for serverRowAdapterMap
+import java.util.Map; // Added for serverRowAdapterMap
+import com.omerflex.entity.ServerConfig; // Added for ViewModel
+import com.omerflex.utils.Resource; // Added for ViewModel
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -39,9 +45,10 @@ import com.bumptech.glide.request.transition.Transition;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerManager;
+import com.omerflex.service.ServerManager; // Will be refactored or injected later
 import com.omerflex.service.UpdateService;
-import com.omerflex.service.database.MovieDbHelper;
+// import com.omerflex.service.database.MovieDbHelper; // Removed for Hilt
+// import com.omerflex.view.MainViewControl; // To be removed
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +57,7 @@ import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+@AndroidEntryPoint // Added for Hilt
 public class MainFragment extends BrowseSupportFragment {
     private static final String TAG = "MainFragment";
 
@@ -70,20 +78,23 @@ public class MainFragment extends BrowseSupportFragment {
     private BackgroundManager mBackgroundManager;
 
     //*****
-    MovieDbHelper dbHelper;
+    // MovieDbHelper dbHelper; // Removed for Hilt
+    private MainFragmentViewModel viewModel; // Added for ViewModel
+    private Map<String, ArrayObjectAdapter> serverRowAdapterMap = new HashMap<>(); // Added
+
     Fragment fragment;
-    ServerManager serverManager;
+    // ServerManager serverManager; // To be refactored or Injected
     Activity activity;
-    ArrayObjectAdapter rowsAdapter;
-    public static List<Movie> iptvList;
+    ArrayObjectAdapter rowsAdapter; // This is mRowsAdapter from BrowseSupportFragment, usually not directly reassigned
+    public static List<Movie> iptvList; // Static usage - consider refactoring
 
     private boolean isInitialized = false;
 
-    private MainViewControl mainViewControl;
+    // private MainViewControl mainViewControl; // To be phased out - REMOVED
     int defaultHeadersCounter = 0;
-    int totalHeadersCounter = 0;
-    ArrayObjectAdapter clickedMovieAdapter;
-    int clickedMovieIndex = 0;
+    int totalHeadersCounter = 0; // Consider if this is still needed or managed by adapter size
+    ArrayObjectAdapter clickedMovieAdapter; // For item click context, may still be needed or refactored
+    int clickedMovieIndex = 0;   // For item click context
     //*****
 
     UpdateService updateService;
@@ -125,12 +136,14 @@ public class MainFragment extends BrowseSupportFragment {
     private void initializeThings() {
         fragment = this;
         activity = getActivity();
-        dbHelper = MovieDbHelper.getInstance(activity);
-        updateService = new UpdateService(fragment);
-        serverManager = new ServerManager(activity, fragment, updateService);
-        serverManager.updateServers();
-        rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
-        iptvList = new ArrayList<>();
+        // dbHelper = MovieDbHelper.getInstance(activity); // Removed
+        updateService = new UpdateService(fragment); // Keep for now, may need refactor
+        // serverManager = new ServerManager(activity, fragment, updateService); // Removed, Hilt/ViewModel will manage data
+        // serverManager.updateServers(); // Removed
+        // rowsAdapter needs to be initialized before setAdapter is called.
+        // BrowseSupportFragment initializes its own adapter (mRowsAdapter). We get it via getAdapter().
+        // rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter()); // This creates a new one, not the one used by fragment
+        iptvList = new ArrayList<>(); // Static usage, review
     }
 
     @Override
@@ -147,89 +160,133 @@ public class MainFragment extends BrowseSupportFragment {
         setAdapter(rowsAdapter);
         CookieManager.getInstance().setAcceptCookie(true);
 
-        // load rows of the home screen
-        setSelectedPosition(0);
-        setAdapter(rowsAdapter);
-
-//        loadHomepageRaws();
-
-
-
-        mainViewControl = new MainViewControl(activity, fragment, dbHelper) {
-            @Override
-            public <T> void handleMovieItemClick(Movie movie, int position, T rowsAdapter, T clickedRow, int defaultHeadersCounter) {
-                super.handleMovieItemClick(movie, position, rowsAdapter, clickedRow, defaultHeadersCounter);
-            }
-
-            @Override
-            protected void openDetailsActivity(Movie movie, Activity activity) {
-                Log.d(TAG, "openDetailsActivity: SearchResult");
-                Util.openVideoDetailsIntent(movie, activity);
-            }
-
-            @Override
-            protected <T> void removeRow(T rowsAdapter, int i) {
-                if (rowsAdapter instanceof ArrayObjectAdapter){
-                    try {
-                        ArrayObjectAdapter adapter = ((ArrayObjectAdapter) rowsAdapter);
-                        activity.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (adapter.size() > i ){
-                                    adapter.remove(adapter.get(i));
-                                    adapter.notifyItemRangeChanged(0, adapter.size());
-                                    totalHeadersCounter--;
-                                    Log.d(TAG, "run: item "+i+ " removed");
-                                }
-                            }
-                        });
-                    } catch (Exception exception) {
-                        Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
-                    }
-                }
-            }
-
-//            @Override
-//            public void loadCategoriesInBackground(String query) {
-//                super.loadCategoriesInBackground(query);
-//            }
-
-            @Override
-            protected <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie) {
-                // If you need to handle specific adapter types, use instanceof and cast
-                if (clickedAdapter instanceof ArrayObjectAdapter) {
-                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
-                    updateRelatedMovieItem(adapter, clickedMovieIndex, resultMovie);
-                }
-                // Handle other adapter types similarly
-            }
-
-            @Override
-            protected void updateCurrentMovie(Movie movie) {
-                Log.d(TAG, "updateCurrentMovie: MainFragment");
-            }
+        // Get the adapter from BrowseSupportFragment
+        rowsAdapter = (ArrayObjectAdapter) getAdapter();
+        if (rowsAdapter == null || !(rowsAdapter.getPresenterSelector() instanceof ListRowPresenter)) {
+             // Ensure rowsAdapter is not null and uses ListRowPresenter, or initialize it here if getAdapter() returned null
+            rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
+            setAdapter(rowsAdapter); // Set it for the fragment
+        }
 
 
-            protected <T> void updateMovieListOfMovieAdapter(ArrayList<Movie> movies, T clickedAdapter) {
-//                updateMovieListOfHorizontalMovieAdapter(movies);
-                Log.d(TAG, "updateMovieListOfMovieAdapter: MainFragment");
-                Log.d(TAG, clickedAdapter.toString());
-                if (clickedAdapter instanceof ArrayObjectAdapter) {
-                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
-                    extendMovieListOfHorizontalMovieAdapter(movies, adapter);
-                }
-            }
+        // mainViewControl initialization and usage will be reduced/removed.
+        // mainViewControl = new MainViewControl(activity, fragment, null /* dbHelper removed */) { ... }; // REMOVED
+        // mainViewControl.loadCategoriesInBackground(""); // REMOVED
 
-            protected <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
-                return (T) generateCategoryView(title, movies, isDefaultHeader);
-            }
-        };
-
-//        test();
-        mainViewControl.loadCategoriesInBackground("");
-
+        // ViewModel Initialization and Observation
+        viewModel = new ViewModelProvider(this).get(MainFragmentViewModel.class);
+        observeViewModel();
     }
 
+    private void observeViewModel() {
+        viewModel.serverConfigs.observe(getViewLifecycleOwner(), serverConfigs -> {
+            if (serverConfigs == null) return;
+
+            Log.d(TAG, "Server configs loaded: " + serverConfigs.size());
+            rowsAdapter.clear(); // Clear existing rows
+            serverRowAdapterMap.clear();
+            totalHeadersCounter = 0; // Reset if used for HeaderItem IDs
+
+            for (ServerConfig config : serverConfigs) {
+                HeaderItem header = new HeaderItem(totalHeadersCounter++, config.getLabel());
+                ArrayObjectAdapter movieAdapter = new ArrayObjectAdapter(new CardPresenter());
+                serverRowAdapterMap.put(config.getName(), movieAdapter);
+                rowsAdapter.add(new ListRow(header, movieAdapter));
+            }
+
+            // Optionally, load movies for the first category or based on some other logic
+            if (!serverConfigs.isEmpty()) {
+                viewModel.setSelectedServerId(serverConfigs.get(0).getName());
+            }
+        });
+
+        viewModel.moviesForSelectedServer.observe(getViewLifecycleOwner(), resource -> {
+            String currentServerId = viewModel.getSelectedServerIdLiveData().getValue();
+            if (currentServerId == null || resource == null) {
+                Log.w(TAG, "MoviesForSelectedServer updated, but currentServerId or resource is null.");
+                return;
+            }
+
+            ArrayObjectAdapter movieAdapter = serverRowAdapterMap.get(currentServerId);
+            if (movieAdapter == null) {
+                Log.e(TAG, "No adapter found in map for serverId: " + currentServerId);
+                return;
+            }
+
+            switch (resource.status) {
+                case LOADING:
+                    Log.d(TAG, "Loading movies for server: " + currentServerId);
+                    // TODO: Implement a way to show loading in the row, e.g., clear and add a loading card
+                    movieAdapter.clear(); // Simple way to indicate loading
+                    break;
+                case SUCCESS:
+                    Log.d(TAG, "Movies loaded for server: " + currentServerId);
+                    movieAdapter.clear();
+                    if (resource.data != null && !resource.data.isEmpty()) {
+                        movieAdapter.addAll(0, resource.data);
+                    } else {
+                        // TODO: Optionally add a "No movies found" card
+                        Log.d(TAG, "No movies found for server: " + currentServerId);
+                    }
+                    break;
+                case ERROR:
+                    Log.e(TAG, "Error loading movies for " + currentServerId + ": " + resource.message);
+                    // TODO: Optionally add an error card to the row
+                    movieAdapter.clear();
+                    break;
+            }
+        });
+
+        viewModel.getMovieActionOutcome().observe(getViewLifecycleOwner(), resource -> {
+            if (resource == null) return;
+
+            switch (resource.status) {
+                case LOADING:
+                    Log.d(TAG, "Movie action loading for: " + (resource.data != null ? resource.data.getTitle() : "Unknown"));
+                    // TODO: Show loading feedback in Leanback UI, perhaps a temporary message card or spinner
+                    Toast.makeText(activity, "Processing: " + (resource.data != null ? resource.data.getTitle() : "..."), Toast.LENGTH_SHORT).show();
+                    break;
+                case SUCCESS:
+                    Movie resultMovie = resource.data;
+                    if (resultMovie != null) {
+                        Log.d(TAG, "Movie action success: " + resultMovie.getTitle() + " state: " + resultMovie.getState());
+                        if (resultMovie.getState() == Movie.COOKIE_STATE) {
+                            Util.openBrowserIntent(resultMovie, fragment, true, true); // Pass fragment
+                        } else if (resultMovie.getState() == Movie.VIDEO_STATE && resultMovie.getVideoUrl() != null && !resultMovie.getVideoUrl().isEmpty()) {
+                            Util.openExoPlayer(resultMovie, activity, resultMovie.getStudio().equals(Movie.SERVER_IPTV));
+                            viewModel.markAsWatched(resultMovie);
+                        } else if (resultMovie.getState() == Movie.BROWSER_STATE && resultMovie.getVideoUrl() != null && !resultMovie.getVideoUrl().isEmpty()) {
+                            Util.openBrowserIntent(resultMovie, fragment, false, false); // Pass fragment
+                        } else if (resultMovie.getState() == Movie.PLAYLIST_STATE && Movie.SERVER_IPTV.equals(resultMovie.getStudio())) {
+                            // This case might need special handling to refresh or load new IPTV group rows.
+                            // For now, logging. A more complex solution might involve another LiveData for IPTV groups.
+                            Log.d(TAG, "IPTV Playlist selected: " + resultMovie.getTitle() + ". Further expansion logic needed.");
+                            Toast.makeText(activity, "Expanding IPTV Playlist: " + resultMovie.getTitle(), Toast.LENGTH_SHORT).show();
+                            // Potentially trigger a new ViewModel method to load these specific sub-items
+                            // viewModel.loadIptvSubGroup(resultMovie);
+                        }
+                        else {
+                            Util.openVideoDetailsIntent(resultMovie, activity); // Default action
+                        }
+                    }
+                    break;
+                case ERROR:
+                    Log.e(TAG, "Movie action error: " + resource.message);
+                    Toast.makeText(activity, resource.message, Toast.LENGTH_LONG).show();
+                    if (resource.data != null && resource.data.getState() == Movie.COOKIE_STATE) {
+                        Util.openBrowserIntent(resource.data, fragment, true, true); // Pass fragment
+                    }
+                    break;
+            }
+        });
+    }
+
+
+    // This method might be simplified or removed if MainViewControl is fully phased out for row generation.
+    // For now, it's called by the legacy MainViewControl reference if any part of it is still used.
+    // If MainViewControl is fully removed, this method should be integrated into the ViewModel observation logic.
+    // UPDATE: This method is no longer called by MainViewControl as MainViewControl is removed.
+    // It could be a utility if needed by onActivityResult for example.
     private void extendMovieListOfHorizontalMovieAdapter(ArrayList<Movie> movies, ArrayObjectAdapter adapter) {
         Log.d(TAG, "extendMovieListOfHorizontalMovieAdapter: ");
         if (adapter == null) {
@@ -266,32 +323,27 @@ public class MainFragment extends BrowseSupportFragment {
         });
     }
 
-    private ArrayObjectAdapter generateCategoryView(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
-        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
-        HeaderItem header = new HeaderItem(totalHeadersCounter++, title);
-
-        new Handler(Looper.getMainLooper()).post(() -> {
-            if (!movies.isEmpty()) {
-                adapter.addAll(0, movies);
-            }
-            rowsAdapter.add(new ListRow(header, adapter));
-            if (isDefaultHeader) {
-                defaultHeadersCounter++;
-            }
-        });
-
-        return adapter;
-    }
-
-    private ArrayObjectAdapter addRowToMainAdapter(String label) {
-        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
-        HeaderItem header = new HeaderItem(HEADER_ROWS_COUNTER++, label);
-        new Handler(Looper.getMainLooper()).post(() -> {
-            rowsAdapter.add(new ListRow(header, adapter));
-        });
-
-        return adapter;
-    }
+    // This method is problematic as it directly modifies rowsAdapter from a background thread
+    // via MainViewControl. It needs to be refactored to be called from ViewModel observers on MainThread.
+    // For now, its direct usage by MainViewControl might still occur if MainViewControl isn't fully removed.
+    // However, the primary row generation should now happen in viewModel.serverConfigs.observe.
+//    private ArrayObjectAdapter generateCategoryView(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
+//        ArrayObjectAdapter adapter = new ArrayObjectAdapter(new CardPresenter());
+//        HeaderItem header = new HeaderItem(totalHeadersCounter++, title);
+//
+//        new Handler(Looper.getMainLooper()).post(() -> {
+//            if (rowsAdapter != null) { // Check if rowsAdapter is initialized
+//                 if (!movies.isEmpty()) {
+//                    adapter.addAll(0, movies);
+//                }
+//                rowsAdapter.add(new ListRow(header, adapter));
+//                if (isDefaultHeader) {
+//                    defaultHeadersCounter++;
+//                }
+//            }
+//        });
+//        return adapter;
+//    }
 
 
 //    private void loadOmarServerHomepage(AbstractServer server) {
@@ -523,8 +575,17 @@ public class MainFragment extends BrowseSupportFragment {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(TAG, "onActivityResult: " + requestCode + ", " + resultCode + ", " + data);
 
-        mainViewControl.onActivityResult(requestCode, resultCode, data, clickedMovieAdapter, clickedMovieIndex);
-        updateService.handleOnActivityResult(requestCode, resultCode, data);
+        // mainViewControl.onActivityResult(requestCode, resultCode, data, clickedMovieAdapter, clickedMovieIndex); // Removed
+        // updateService.handleOnActivityResult(requestCode, resultCode, data); // Removed for now
+
+        // TODO: Implement necessary onActivityResult logic, possibly interacting with ViewModel
+        // For example, if BrowserActivity for cookie returns, you might want to retry an action:
+        // if (requestCode == DetailsActivity.REQUEST_CODE_BROWSER_LOGIN && resultCode == Activity.RESULT_OK) {
+        //     Movie movieToRetry = ... // retrieve the movie that needed the cookie
+        //     if (movieToRetry != null) {
+        //         viewModel.handleMovieClickAction(movieToRetry);
+        //     }
+        // }
 //
 //        if (resultCode != Activity.RESULT_OK || data == null) {
 //            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
@@ -1057,10 +1118,30 @@ public class MainFragment extends BrowseSupportFragment {
             Movie movie = (Movie) item;
 
             clickedMovieAdapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
-//            clickedMovie = movie;
             clickedMovieIndex = clickedMovieAdapter.indexOf(movie);
 
-            mainViewControl.handleMovieItemClick(movie, clickedMovieIndex, rowsAdapter, (ListRow) row, defaultHeadersCounter);
+            // mainViewControl.handleMovieItemClick(movie, clickedMovieIndex, rowsAdapter, (ListRow) row, defaultHeadersCounter); // Removed
+
+            Log.d(TAG, "onItemClicked: " + movie.getTitle() + ", state: " + movie.getState() + ", studio: " + movie.getStudio());
+
+            if (movie.getState() == Movie.VIDEO_STATE ||
+                (movie.getStudio().equals(Movie.SERVER_IPTV) && movie.getState() != Movie.PLAYLIST_STATE && movie.getVideoUrl() != null && !movie.getVideoUrl().isEmpty())) {
+                Log.d(TAG, "Direct play condition met for: " + movie.getTitle());
+                Util.openExoPlayer(movie, activity, movie.getStudio().equals(Movie.SERVER_IPTV));
+                viewModel.markAsWatched(movie);
+            } else if (movie.getState() == Movie.COOKIE_STATE ||
+                       movie.getState() == Movie.BROWSER_STATE ||
+                       movie.getState() == Movie.GROUP_OF_GROUP_STATE ||
+                       movie.getState() == Movie.GROUP_STATE ||
+                       movie.getState() == Movie.ITEM_STATE ||
+                       movie.getState() == Movie.RESOLUTION_STATE ||
+                       (movie.getStudio().equals(Movie.SERVER_IPTV) && movie.getState() == Movie.PLAYLIST_STATE)) {
+                 Log.d(TAG, "Complex action / data fetch needed for: " + movie.getTitle());
+                viewModel.handleMovieClickAction(movie);
+            } else {
+                Log.d(TAG, "Defaulting to details intent for: " + movie.getTitle());
+                Util.openVideoDetailsIntent(movie, activity); // For TV, DetailsActivity is usually VideoDetailsActivity
+            }
 //            handleItemClicked(itemViewHolder, item, row);
 //            if (item instanceof Movie) {
 //                Movie movie = (Movie) item;
@@ -1316,8 +1397,32 @@ public class MainFragment extends BrowseSupportFragment {
 
             @Override
             public void onClick(View view) {
+                // The original behavior was to launch GetSearchQueryActivity.
+                // To integrate ViewModel, the query should be obtained and then passed to ViewModel.
+                // This might require onActivityResult handling if GetSearchQueryActivity returns the query.
+                // For a direct search (if Leanback provided an input field):
+                // String query = ... obtain query ...
+                // String selectedServerId = viewModel.getSelectedServerIdLiveData().getValue(); // Or some other selection logic
+                // if (selectedServerId != null && query != null && !query.isEmpty()) {
+                //     viewModel.searchMovies(selectedServerId, query).observe(getViewLifecycleOwner(), resource -> {
+                //         // Handle search results: update a specific search row or display in a new fragment/activity
+                //         if (resource.status == Resource.Status.SUCCESS) {
+                //             Log.d(TAG, "Search results: " + resource.data);
+                //             // Example: display search results in a new row
+                //             HeaderItem searchHeader = new HeaderItem("Search Results for \"" + query + "\"");
+                //             ArrayObjectAdapter searchAdapter = new ArrayObjectAdapter(new CardPresenter());
+                //             if (resource.data != null) {
+                //                 searchAdapter.addAll(0, resource.data);
+                //             }
+                //             // Need to manage adding/updating this search row in rowsAdapter
+                //             // This might involve removing previous search result row if any.
+                //         }
+                //     });
+                // }
+                // For now, keep original behavior of launching activity.
+                // Actual search triggering using ViewModel would happen after query is received.
                 Intent getQueryIntent = new Intent(getActivity(), GetSearchQueryActivity.class);
-                startActivity(getQueryIntent);
+                startActivity(getQueryIntent); // The result of this should be handled in onActivityResult
             }
         });
 

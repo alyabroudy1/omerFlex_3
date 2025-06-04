@@ -4,15 +4,24 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.room.TypeConverters;
+
+import com.omerflex.service.database.Converters;
 
 import java.io.Serializable;
 import java.util.Date;
 
+@Entity(tableName = "movie_history")
+@TypeConverters(Converters.class)
 public class MovieHistory implements Serializable, Parcelable {
 
     static final long serialVersionUID = 787566175075960653L;
 
     private int id;
+    @PrimaryKey
+    @NonNull
     private String mainMovieUrl;
     private String episode;
     private String season;

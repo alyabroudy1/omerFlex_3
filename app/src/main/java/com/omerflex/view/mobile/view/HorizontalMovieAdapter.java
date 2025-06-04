@@ -78,6 +78,47 @@ public class HorizontalMovieAdapter extends RecyclerView.Adapter<HorizontalMovie
         return movieList.addAll(movies);
     }
 
+    public void setMovies(List<Movie> newMovies) {
+        this.movieList.clear();
+        if (newMovies != null) {
+            this.movieList.addAll(newMovies);
+        }
+        notifyDataSetChanged(); // Consider DiffUtil for better performance later
+    }
+
+    // These are simplified versions. A real implementation might change item visibility,
+    // show a progress bar in the item, or display text differently.
+    public void showLoading(boolean isLoading) {
+        // This is tricky to do well without modifying item layouts or using multiple view types.
+        // For now, we'll log, and a more complex UI would be needed to show per-item loading.
+        // If the whole adapter represents one category, the loading state might be shown
+        // at the CategoryAdapter level or on the RecyclerView itself.
+        // This method is a placeholder for where such logic would go if items could show individual loading.
+        if (isLoading) {
+            Log.d(TAG, "showLoading: true (individual items might not reflect this without layout changes)");
+            // Example: if you had a loading indicator per item, you'd manage it here
+            // or if this adapter is for a single category that is loading,
+            // you might clear items and show a single "loading" item.
+            // For now, clearing and adding a placeholder could be an option if desired.
+            // movieList.clear();
+            // notifyDataSetChanged(); // Show empty while loading
+        } else {
+            Log.d(TAG, "showLoading: false");
+        }
+    }
+
+    public void showError(String message) {
+        // Similar to showLoading, displaying a specific error per item is complex without layout changes.
+        // This might involve showing a single item with the error message.
+        Log.e(TAG, "showError: " + message);
+        // Example: Clear items and show a placeholder error item
+        // movieList.clear();
+        // Movie errorMovie = new Movie(); // Create a dummy movie or use a specific error type
+        // errorMovie.setTitle(message != null ? message : "Error loading movies");
+        // movieList.add(errorMovie);
+        // notifyDataSetChanged();
+    }
+
 
     public static class MovieViewHolder extends RecyclerView.ViewHolder {
         ImageView movieImageView;

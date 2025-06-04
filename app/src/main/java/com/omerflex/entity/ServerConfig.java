@@ -1,14 +1,22 @@
 package com.omerflex.entity;
 
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.room.TypeConverters;
+
 import com.omerflex.server.Util;
+import com.omerflex.service.database.Converters;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Entity(tableName = "server_configs")
+@TypeConverters(Converters.class)
 public class ServerConfig {
 
+    @PrimaryKey
     private String name;
     private String label;
     private boolean isActive;

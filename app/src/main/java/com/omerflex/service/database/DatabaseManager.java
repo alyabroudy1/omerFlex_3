@@ -1,21 +1,32 @@
 package com.omerflex.service.database;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
+import android.os.Handler;
+import android.os.Looper;
+// import android.database.sqlite.SQLiteDatabase; // No longer needed
 import android.util.Log;
+import android.content.Context; // Added for @ApplicationContext
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.omerflex.OmerFlexApplication;
+// import com.omerflex.OmerFlexApplication; // No longer needed for config
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.ServerConfig;
 import com.omerflex.service.concurrent.ThreadPoolManager;
 import com.omerflex.service.config.ConfigManager;
+import com.omerflex.service.database.dao.IptvDao;
+import com.omerflex.service.database.dao.MovieDao;
+import com.omerflex.service.database.dao.MovieHistoryDao;
+import com.omerflex.service.database.dao.ServerConfigDao;
 import com.omerflex.service.logging.Logger;
+
+import dagger.hilt.android.qualifiers.ApplicationContext; // Added for Hilt
+import javax.inject.Inject; // Added for Hilt
+import javax.inject.Singleton; // Added for Hilt
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,17 +37,19 @@ import java.util.concurrent.TimeUnit;
  * Manager class for database operations.
  * Provides optimized access to the database with proper threading and caching.
  */
+@Singleton
 public class DatabaseManager {
     private static final String TAG = "DatabaseManager";
 
-    // Singleton instance
-    private static volatile DatabaseManager instance;
-
-    // Database helper
-    private final MovieDbHelper dbHelper;
+    // DAOs will be injected
+    private final MovieDao movieDao;
+    private final ServerConfigDao serverConfigDao;
+    private final MovieHistoryDao movieHistoryDao;
+    private final IptvDao iptvDao;
 
     // Thread pool for database operations
     private final Executor diskExecutor;
+    private final Handler mainThreadHandler;
 
     // Cache for frequently accessed data
     private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
@@ -46,130 +59,98 @@ public class DatabaseManager {
     private final int maxCacheEntries;
     private final long cacheTtlMs;
 
-    private DatabaseManager(Context context) {
-        // Initialize the database helper
-        dbHelper = MovieDbHelper.getInstance(context.getApplicationContext());
+    @Inject
+    public DatabaseManager(@ApplicationContext Context context,
+                           ThreadPoolManager threadPoolManager,
+                           ConfigManager configManager,
+                           MovieDao movieDao,
+                           ServerConfigDao serverConfigDao,
+                           MovieHistoryDao movieHistoryDao,
+                           IptvDao iptvDao) {
+        this.movieDao = movieDao;
+        this.serverConfigDao = serverConfigDao;
+        this.movieHistoryDao = movieHistoryDao;
+        this.iptvDao = iptvDao;
 
-        // Get thread pool from ThreadPoolManager
-        diskExecutor = ThreadPoolManager.getInstance().getDiskExecutor();
+        this.diskExecutor = threadPoolManager.getDiskExecutor();
+        this.mainThreadHandler = new Handler(Looper.getMainLooper());
 
-        // Get configuration
-        ConfigManager configManager = OmerFlexApplication.getInstance().getConfigManager();
-        cacheEnabled = configManager.getBoolean("feature.enable_cache", true);
-        maxCacheEntries = configManager.getInt("db.cache_size_entries", 500);
-        cacheTtlMs = configManager.getInt("db.cache_ttl_ms", 300000); // 5 minutes default
+        // Get configuration from injected ConfigManager
+        this.cacheEnabled = configManager.getBoolean("feature.enable_cache", true);
+        this.maxCacheEntries = configManager.getInt("db.cache_size_entries", 500);
+        this.cacheTtlMs = configManager.getInt("db.cache_ttl_ms", 300000); // 5 minutes default
 
-        Logger.i(TAG, "DatabaseManager initialized, cache " +
+        Logger.i(TAG, "DatabaseManager initialized with Hilt, cache " +
                 (cacheEnabled ? "enabled (" + maxCacheEntries + " entries)" : "disabled"));
     }
 
-    /**
-     * Get the singleton instance of DatabaseManager
-     * @param context Application context
-     * @return DatabaseManager instance
-     */
-    public static synchronized DatabaseManager getInstance(Context context) {
-        if (instance == null) {
-            instance = new DatabaseManager(context.getApplicationContext());
-        }
-        return instance;
-    }
+    // New methods using DAOs (getInstance removed)
 
-    /**
-     * Execute a database read operation asynchronously
-     * @param operation Database operation to execute
-     */
-    public void executeRead(final DatabaseOperation operation) {
+    public void getAllServerConfigs(java.util.function.Consumer<List<ServerConfig>> onSuccess, java.util.function.Consumer<Exception> onError) {
         diskExecutor.execute(() -> {
-            SQLiteDatabase db = null;
             try {
-                db = dbHelper.getReadableDatabase();
-                operation.execute(db);
-            } catch (Exception e) {
-                Logger.e(TAG, "Error executing database read operation", e);
-                operation.onError(e);
-            }
-        });
-    }
-
-    /**
-     * Execute a database write operation asynchronously
-     * @param operation Database operation to execute
-     */
-    public void executeWrite(final DatabaseOperation operation) {
-        diskExecutor.execute(() -> {
-            SQLiteDatabase db = null;
-            try {
-                db = dbHelper.getWritableDatabase();
-                db.beginTransaction();
-                operation.execute(db);
-                db.setTransactionSuccessful();
-                // Invalidate cache after writes
-                if (cacheEnabled) {
-                    clearCache();
+                List<ServerConfig> configs = serverConfigDao.getAllServerConfigs();
+                if (onSuccess != null) {
+                    mainThreadHandler.post(() -> onSuccess.accept(configs));
                 }
             } catch (Exception e) {
-                Logger.e(TAG, "Error executing database write operation", e);
-                operation.onError(e);
-            } finally {
-                if (db != null && db.inTransaction()) {
-                    db.endTransaction();
+                Logger.e(TAG, "Error getting all server configs", e);
+                if (onError != null) {
+                    mainThreadHandler.post(() -> onError.accept(e));
                 }
             }
         });
     }
 
-    /**
-     * Execute a database read operation synchronously
-     * @param operation Database operation to execute
-     */
-    public void executeReadSync(final DatabaseOperation operation) {
-        SQLiteDatabase db = null;
+    public void saveMovie(Movie movie, java.util.function.Consumer<Void> onSuccess, java.util.function.Consumer<Exception> onError) {
+        diskExecutor.execute(() -> {
+            try {
+                movieDao.insert(movie); // Assuming insert handles conflicts via @Insert strategy
+                if (onSuccess != null) {
+                    mainThreadHandler.post(() -> onSuccess.accept(null));
+                }
+                if (cacheEnabled) { // Example of cache invalidation
+                    clearCache(); // Or more specific cache clearing for movies
+                }
+            } catch (Exception e) {
+                Logger.e(TAG, "Error saving movie", e);
+                if (onError != null) {
+                    mainThreadHandler.post(() -> onError.accept(e));
+                }
+            }
+        });
+    }
+
+    @Nullable
+    public Movie getMovieByVideoUrlSync(String videoUrl) {
+        String cacheKey = "movie_" + videoUrl;
+        if (cacheEnabled) {
+            CacheEntry entry = cache.get(cacheKey);
+            if (entry != null && !entry.isExpired()) {
+                Logger.d(TAG, "Cache hit for key: " + cacheKey);
+                return (Movie) entry.getValue();
+            }
+        }
+
         try {
-            db = dbHelper.getReadableDatabase();
-            operation.execute(db);
+            // This assumes getMovieByVideoUrlSync is called from a background thread
+            // or Room is configured with allowMainThreadQueries (which we are avoiding for now).
+            Movie movie = movieDao.getMovieByVideoUrl(videoUrl);
+            if (movie != null && cacheEnabled) {
+                cache.put(cacheKey, new CacheEntry(movie, System.currentTimeMillis() + cacheTtlMs));
+            }
+            return movie;
         } catch (Exception e) {
-            Logger.e(TAG, "Error executing database read operation", e);
-            operation.onError(e);
+            Logger.e(TAG, "Error getting movie by video URL sync", e);
+            return null;
         }
     }
 
-    /**
-     * Execute a database write operation synchronously
-     * @param operation Database operation to execute
-     */
-    public void executeWriteSync(final DatabaseOperation operation) {
-        SQLiteDatabase db = null;
-        try {
-            db = dbHelper.getWritableDatabase();
-            db.beginTransaction();
-            operation.execute(db);
-            db.setTransactionSuccessful();
-            // Invalidate cache after writes
-            if (cacheEnabled) {
-                clearCache();
-            }
-        } catch (Exception e) {
-            Logger.e(TAG, "Error executing database write operation", e);
-            operation.onError(e);
-        } finally {
-            if (db != null && db.inTransaction()) {
-                db.endTransaction();
-            }
-        }
-    }
-
-    /**
-     * Get the MovieDbHelper instance
-     * @return MovieDbHelper instance
-     */
-    @NonNull
-    public MovieDbHelper getDbHelper() {
-        return dbHelper;
-    }
 
     /**
      * Get a cached value or load it from database if not found
+     * The CacheLoader.load() method will be executed on the calling thread.
+     * If DB operations are involved in loader.load(), ensure this method is called from a background thread.
      *
      * @param key    Cache key
      * @param loader Loader function to execute if value not cached
@@ -258,24 +239,11 @@ public class DatabaseManager {
     }
 
     /**
-     * Reset the singleton instance (for testing purposes)
+     * Reset the singleton instance (for testing purposes) - Removed as Hilt manages lifecycle
      */
-    public static synchronized void reset() {
-        if (instance != null) {
-            instance.clearCache();
-            instance = null;
-        }
-    }
+    // public static synchronized void reset() { ... }
 
-    /**
-     * Interface for database operations
-     */
-    public interface DatabaseOperation {
-        void execute(SQLiteDatabase db);
-        default void onError(Exception e) {
-            // Default implementation does nothing
-        }
-    }
+    // DatabaseOperation interface is removed.
 
     /**
      * Interface for loading cache values
