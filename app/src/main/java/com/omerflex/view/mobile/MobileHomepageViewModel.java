@@ -19,9 +19,14 @@ import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import javax.inject.Inject;
 import dagger.hilt.android.lifecycle.HiltViewModel;
+import androidx.annotation.Nullable; // For processCookieFixResult
+import android.util.Log; // For logging
 
 @HiltViewModel
 public class MobileHomepageViewModel extends ViewModel {
+
+    public static final int REQUEST_CODE_FIX_COOKIE = 1001;
+    private Movie moviePendingCookieFix;
 
     private final ServerConfigRepository serverConfigRepository;
     private final MovieRepository movieRepository;
@@ -89,12 +94,18 @@ public class MobileHomepageViewModel extends ViewModel {
                 server.fetch(movie, movie.getState(), new ServerInterface.ActivityCallback<Movie>() {
                     @Override
                     public void onSuccess(Movie result, String title) {
+                        if (result != null && result.getState() == Movie.COOKIE_STATE) {
+                            Log.d("MobileHomepageVM", "handleMovieClickAction onSuccess but COOKE_STATE for: " + result.getTitle());
+                            MobileHomepageViewModel.this.moviePendingCookieFix = result; // movie is the original parameter, result is what server.fetch returns
+                        }
                         _movieActionOutcome.postValue(Resource.success(result));
                     }
 
                     @Override
                     public void onInvalidCookie(Movie result, String title) {
                         result.setState(Movie.COOKIE_STATE);
+                        Log.d("MobileHomepageVM", "handleMovieClickAction onInvalidCookie for: " + result.getTitle());
+                        MobileHomepageViewModel.this.moviePendingCookieFix = result; // result is the movie object in this callback
                         _movieActionOutcome.postValue(Resource.error("Invalid cookie for " + title, result));
                     }
 
@@ -130,5 +141,38 @@ public class MobileHomepageViewModel extends ViewModel {
             return errorResult;
         }
         return movieRepository.searchMovies(serverId, query);
+    }
+
+    public void processCookieFixResult(int resultCode, @Nullable Movie originalMovieFromIntent) {
+        Movie movieToRetry = null;
+        if (this.moviePendingCookieFix != null) {
+            movieToRetry = this.moviePendingCookieFix;
+            Log.d("MobileHomepageVM", "processCookieFixResult: Using moviePendingCookieFix: " + movieToRetry.getTitle());
+        } else if (originalMovieFromIntent != null) {
+            // Fallback if moviePendingCookieFix wasn't set or was cleared,
+            // ensure this movie is actually the one we intended to fix.
+            // This might require comparing some ID or URL if available.
+            movieToRetry = originalMovieFromIntent;
+            Log.d("MobileHomepageVM", "processCookieFixResult: Using originalMovieFromIntent: " + movieToRetry.getTitle());
+        }
+
+        this.moviePendingCookieFix = null; // Clear it after retrieving
+
+        if (movieToRetry == null) {
+            Log.e("MobileHomepageVM", "processCookieFixResult: No movie was identified for cookie fix retry.");
+            _movieActionOutcome.postValue(Resource.error("No movie was identified for cookie fix retry.", null));
+            return;
+        }
+
+        if (resultCode == android.app.Activity.RESULT_OK) {
+            Log.d("MobileHomepageVM", "processCookieFixResult: RESULT_OK, retrying action for: " + movieToRetry.getTitle());
+            _movieActionOutcome.postValue(Resource.loading(movieToRetry)); // Indicate retry
+            // Retry the original action
+            handleMovieClickAction(movieToRetry);
+        } else {
+            Log.d("MobileHomepageVM", "processCookieFixResult: RESULT_CANCELLED or failed for: " + movieToRetry.getTitle());
+            // If user cancelled browser or it failed, post error for the original movie
+            _movieActionOutcome.postValue(Resource.error("Cookie fix was cancelled or failed.", movieToRetry));
+        }
     }
 }

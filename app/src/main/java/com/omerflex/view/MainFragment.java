@@ -81,6 +81,7 @@ public class MainFragment extends BrowseSupportFragment {
     // MovieDbHelper dbHelper; // Removed for Hilt
     private MainFragmentViewModel viewModel; // Added for ViewModel
     private Map<String, ArrayObjectAdapter> serverRowAdapterMap = new HashMap<>(); // Added
+    private List<ListRow> iptvChannelRows = new ArrayList<>(); // Added for IPTV channel rows
 
     Fragment fragment;
     // ServerManager serverManager; // To be refactored or Injected
@@ -251,7 +252,12 @@ public class MainFragment extends BrowseSupportFragment {
                     if (resultMovie != null) {
                         Log.d(TAG, "Movie action success: " + resultMovie.getTitle() + " state: " + resultMovie.getState());
                         if (resultMovie.getState() == Movie.COOKIE_STATE) {
-                            Util.openBrowserIntent(resultMovie, fragment, true, true); // Pass fragment
+                            // Util.openBrowserIntent(resultMovie, fragment, true, true); // Old call
+                            // Assuming Util.openBrowserIntent is updated to take Activity and requestCode
+                            if (getActivity() != null) {
+                                Log.d(TAG, "Action outcome: COOKIE_STATE, opening browser for cookie fix (TV).");
+                                Util.openBrowserIntent(getActivity(), resultMovie, MainFragmentViewModel.REQUEST_CODE_FIX_COOKIE);
+                            }
                         } else if (resultMovie.getState() == Movie.VIDEO_STATE && resultMovie.getVideoUrl() != null && !resultMovie.getVideoUrl().isEmpty()) {
                             Util.openExoPlayer(resultMovie, activity, resultMovie.getStudio().equals(Movie.SERVER_IPTV));
                             viewModel.markAsWatched(resultMovie);
@@ -274,9 +280,52 @@ public class MainFragment extends BrowseSupportFragment {
                     Log.e(TAG, "Movie action error: " + resource.message);
                     Toast.makeText(activity, resource.message, Toast.LENGTH_LONG).show();
                     if (resource.data != null && resource.data.getState() == Movie.COOKIE_STATE) {
-                        Util.openBrowserIntent(resource.data, fragment, true, true); // Pass fragment
+                        // Util.openBrowserIntent(resource.data, fragment, true, true); // Old call
+                        if (getActivity() != null) {
+                            Log.d(TAG, "Action outcome: ERROR but with COOKIE_STATE, opening browser for cookie fix (TV).");
+                            Util.openBrowserIntent(getActivity(), resource.data, MainFragmentViewModel.REQUEST_CODE_FIX_COOKIE);
+                        }
                     }
                     break;
+            }
+        });
+
+        viewModel.getIptvPlaylistChannels().observe(getViewLifecycleOwner(), resource -> {
+            if (rowsAdapter == null) return; // Ensure rowsAdapter is initialized
+
+            // 1. Clear previous IPTV channel rows
+            for (ListRow row : iptvChannelRows) {
+                if (rowsAdapter.indexOf(row) >= 0) { // Check if row still exists
+                   rowsAdapter.remove(row);
+                }
+            }
+            iptvChannelRows.clear();
+            // Note: totalHeadersCounter should be managed if these headers are dynamically added/removed often.
+            // For simplicity, we might need a different way to generate unique header IDs if IPTV rows are mixed with server rows.
+
+            if (resource.status == Resource.Status.LOADING) {
+                // Optional: Add a single "Loading Channels..." row or use a Toast
+                if (getActivity() != null) Toast.makeText(getActivity(), "Loading IPTV Channels...", Toast.LENGTH_SHORT).show();
+            } else if (resource.status == Resource.Status.SUCCESS && resource.data != null) {
+                int groupCounter = 0; // Counter for IPTV group header IDs to avoid conflicts with server rows
+                for (Map.Entry<String, List<Movie>> entry : resource.data.entrySet()) {
+                    String groupName = entry.getKey();
+                    List<Movie> channels = entry.getValue();
+                    if (channels == null || channels.isEmpty()) continue;
+
+                    // Using a potentially large, offset ID for IPTV headers to minimize collision with server row header IDs
+                    // A more robust solution would be a dedicated ID management or different adapter sections.
+                    HeaderItem header = new HeaderItem(1000 + groupCounter++, groupName);
+                    ArrayObjectAdapter channelAdapter = new ArrayObjectAdapter(new CardPresenter());
+                    channelAdapter.addAll(0, channels);
+
+                    ListRow listRow = new ListRow(header, channelAdapter);
+                    rowsAdapter.add(listRow); // Add to the main rows adapter
+                    iptvChannelRows.add(listRow);
+                }
+            } else if (resource.status == Resource.Status.ERROR) {
+                if (getActivity() != null) Toast.makeText(getActivity(), "Error loading IPTV channels: " + resource.message, Toast.LENGTH_LONG).show();
+                // Optional: Add an error row or display message in UI
             }
         });
     }
@@ -571,21 +620,29 @@ public class MainFragment extends BrowseSupportFragment {
 //    }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.d(TAG, "onActivityResult: " + requestCode + ", " + resultCode + ", " + data);
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data); // Important for Fragment lifecycle
+        Log.d(TAG, "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
 
-        // mainViewControl.onActivityResult(requestCode, resultCode, data, clickedMovieAdapter, clickedMovieIndex); // Removed
-        // updateService.handleOnActivityResult(requestCode, resultCode, data); // Removed for now
-
-        // TODO: Implement necessary onActivityResult logic, possibly interacting with ViewModel
-        // For example, if BrowserActivity for cookie returns, you might want to retry an action:
-        // if (requestCode == DetailsActivity.REQUEST_CODE_BROWSER_LOGIN && resultCode == Activity.RESULT_OK) {
-        //     Movie movieToRetry = ... // retrieve the movie that needed the cookie
-        //     if (movieToRetry != null) {
-        //         viewModel.handleMovieClickAction(movieToRetry);
-        //     }
-        // }
+        if (requestCode == MainFragmentViewModel.REQUEST_CODE_FIX_COOKIE) {
+            Movie movieFromBrowser = null;
+            if (data != null && data.hasExtra(com.omerflex.view.DetailsActivity.MOVIE)) {
+                movieFromBrowser = data.getParcelableExtra(com.omerflex.view.DetailsActivity.MOVIE);
+                 if (movieFromBrowser != null) {
+                    Log.d(TAG, "onActivityResult: Received movie from BrowserActivity: " + movieFromBrowser.getTitle());
+                } else {
+                    Log.d(TAG, "onActivityResult: movieFromBrowser is null despite data.hasExtra being true.");
+                }
+            } else {
+                 Log.d(TAG, "onActivityResult: No movie data in intent from BrowserActivity for REQUEST_CODE_FIX_COOKIE.");
+            }
+            if (viewModel != null) { // viewModel should be initialized
+                viewModel.processCookieFixResult(resultCode, movieFromBrowser);
+            } else {
+                Log.e(TAG, "onActivityResult: viewModel is null, cannot process cookie fix result.");
+            }
+        }
+        // Other onActivityResult logic if any...
 //
 //        if (resultCode != Activity.RESULT_OK || data == null) {
 //            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
@@ -1134,11 +1191,14 @@ public class MainFragment extends BrowseSupportFragment {
                        movie.getState() == Movie.GROUP_OF_GROUP_STATE ||
                        movie.getState() == Movie.GROUP_STATE ||
                        movie.getState() == Movie.ITEM_STATE ||
-                       movie.getState() == Movie.RESOLUTION_STATE ||
-                       (movie.getStudio().equals(Movie.SERVER_IPTV) && movie.getState() == Movie.PLAYLIST_STATE)) {
+                       movie.getState() == Movie.RESOLUTION_STATE) {
                  Log.d(TAG, "Complex action / data fetch needed for: " + movie.getTitle());
                 viewModel.handleMovieClickAction(movie);
-            } else {
+            } else if (movie.getStudio().equals(Movie.SERVER_IPTV) && movie.getState() == Movie.PLAYLIST_STATE) {
+                Log.d(TAG, "IPTV Playlist item clicked: " + movie.getTitle());
+                viewModel.loadIptvPlaylist(movie);
+            }
+            else {
                 Log.d(TAG, "Defaulting to details intent for: " + movie.getTitle());
                 Util.openVideoDetailsIntent(movie, activity); // For TV, DetailsActivity is usually VideoDetailsActivity
             }

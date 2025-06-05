@@ -313,11 +313,17 @@ public class MobileHomepageActivity extends AppCompatActivity {
                     break;
                 case SUCCESS:
                     Movie resultMovie = resource.data;
+                    Movie resultMovie = resource.data;
                     if (resultMovie != null) {
                         Log.d(TAG, "Movie action success: " + resultMovie.getTitle() + " with state: " + resultMovie.getState());
                         if (resultMovie.getState() == Movie.COOKIE_STATE) {
-                            Log.d(TAG, "Action outcome: COOKIE_STATE, opening browser.");
-                            Util.openBrowserIntent(resultMovie, activity, true, true);
+                            Log.d(TAG, "Action outcome: COOKIE_STATE, opening browser for cookie fix.");
+                            // Assuming Util.openBrowserIntent can take requestCode and starts for result.
+                            // The boolean flags (true, true) might be for shouldParse and isUserAgent which might need to be re-evaluated
+                            // in the context of starting for result for a cookie fix.
+                            // For now, using the existing signature pattern and adding requestCode.
+                            // Util.openBrowserIntent(resultMovie, activity, true, true); // Old call
+                            Util.openBrowserIntent(MobileHomepageActivity.this, resultMovie, MobileHomepageViewModel.REQUEST_CODE_FIX_COOKIE); // New call
                         } else if (resultMovie.getState() == Movie.VIDEO_STATE && resultMovie.getVideoUrl() != null && !resultMovie.getVideoUrl().isEmpty()) {
                             Log.d(TAG, "Action outcome: VIDEO_STATE, playing video.");
                             Util.openExoPlayer(resultMovie, activity, resultMovie.getStudio().equals(Movie.SERVER_IPTV));
@@ -338,9 +344,11 @@ public class MobileHomepageActivity extends AppCompatActivity {
                 case ERROR:
                     Log.e(TAG, "Movie action error: " + resource.message);
                     Toast.makeText(activity, resource.message, Toast.LENGTH_LONG).show();
-                    // If error includes movie data (e.g. for retrying cookie state), handle it
+                    // If error includes movie data AND it's a cookie state error, try to fix cookie.
                     if (resource.data != null && resource.data.getState() == Movie.COOKIE_STATE) {
-                        Util.openBrowserIntent(resource.data, activity, true, true);
+                        Log.d(TAG, "Action outcome: ERROR but with COOKIE_STATE, opening browser for cookie fix.");
+                        // Util.openBrowserIntent(resource.data, activity, true, true); // Old call
+                        Util.openBrowserIntent(MobileHomepageActivity.this, resource.data, MobileHomepageViewModel.REQUEST_CODE_FIX_COOKIE); // New call
                     }
                     break;
             }
@@ -582,26 +590,29 @@ public class MobileHomepageActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        Log.d(TAG, "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
-        // mainViewControl.onActivityResult(requestCode, resultCode, data, clickedHorizontalMovieAdapter, clickedMovieIndex); // Removed
-
-        // TODO: Re-implement onActivityResult logic based on ViewModel.
-        // This is crucial for handling results from BrowserActivity (for cookies) or other activities.
-        // Example:
-        // if (requestCode == DetailsActivity.REQUEST_CODE_BROWSER_LOGIN && resultCode == RESULT_OK && data != null) {
-        //     Movie returnedMovie = data.getParcelableExtra(DetailsActivity.MOVIE);
-        //     boolean success = data.getBooleanExtra("success", false);
-        //     if (returnedMovie != null && success) {
-        //         // Potentially re-trigger the action that required the cookie, or refresh data.
-        //         viewModel.handleMovieClickAction(returnedMovie); // Or a more specific method
-        //     } else if (returnedMovie != null) {
-        //          Toast.makeText(this, "Cookie fetch might have failed for " + returnedMovie.getTitle(), Toast.LENGTH_LONG).show();
-        //     }
-        // }
-        // For other request codes like REQUEST_CODE_EXOPLAYER, update UI or history as needed,
-        // though much of this might be handled by direct LiveData observation now.
-
         super.onActivityResult(requestCode, resultCode, data);
+        Log.d(TAG, "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
+
+        if (requestCode == MobileHomepageViewModel.REQUEST_CODE_FIX_COOKIE) {
+            Movie movieFromBrowser = null;
+            // Assuming BrowserActivity returns the original movie as an extra
+            // The key "movie_object" is used by MobileMovieDetailActivityViewModel.MOVIE_ARG_KEY
+            // and DetailsActivity.MOVIE. Using DetailsActivity.MOVIE for consistency.
+            if (data != null && data.hasExtra(com.omerflex.view.DetailsActivity.MOVIE)) {
+                movieFromBrowser = data.getParcelableExtra(com.omerflex.view.DetailsActivity.MOVIE);
+                if (movieFromBrowser != null) {
+                    Log.d(TAG, "onActivityResult: Received movie from BrowserActivity: " + movieFromBrowser.getTitle());
+                } else {
+                    Log.d(TAG, "onActivityResult: movieFromBrowser is null despite data.hasExtra being true.");
+                }
+            } else {
+                Log.d(TAG, "onActivityResult: No movie data in intent from BrowserActivity for REQUEST_CODE_FIX_COOKIE.");
+            }
+            viewModel.processCookieFixResult(resultCode, movieFromBrowser);
+        }
+        // Potentially other onActivityResult logic for other request codes
+        // For example, if you start an external player for result and want to update UI based on playback position.
+        // else if (requestCode == SOME_OTHER_REQUEST_CODE) { ... }
 
 
 //        if (resultCode != Activity.RESULT_OK || data == null) {

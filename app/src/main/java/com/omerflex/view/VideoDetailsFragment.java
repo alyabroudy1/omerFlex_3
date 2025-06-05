@@ -16,7 +16,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider; // Added
 import androidx.leanback.app.DetailsSupportFragment;
+import dagger.hilt.android.AndroidEntryPoint; // Added
+import com.omerflex.utils.Resource; // Added
 import androidx.leanback.app.DetailsSupportFragmentBackgroundController;
 import androidx.leanback.widget.Action;
 import androidx.leanback.widget.ArrayObjectAdapter;
@@ -94,13 +97,13 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     // ********
     private ProgressDialog mProgressDialog;
 
-    public MovieDbHelper dbHelper;
-    Handler movieHandler;
+    // public MovieDbHelper dbHelper; // Removed
+    private VideoDetailsViewModel viewModel; // Added
+    Handler movieHandler; // Keep for now
 
-
-    AbstractServer server;
+    // AbstractServer server; // Removed
     DetailsDescriptionPresenter detailsDescriptionPresenter;
-    ArrayObjectAdapter listRowAdapter;
+    ArrayObjectAdapter listRowAdapter; // Adapter for related items/episodes row
     FullWidthDetailsOverviewRowPresenter detailsPresenter;
 
 
@@ -109,90 +112,57 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     Activity activity;
     private boolean isInitialized = false;
 
-    ServerConfig config;
-    DetailsViewControl detailsViewControl;
+    // ServerConfig config; // Removed
+    // DetailsViewControl detailsViewControl; // Removed
 
     // ********
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate DetailsFragment");
-        start();
         super.onCreate(savedInstanceState);
-    }
+        setRetainInstance(true); // Consider if still needed with ViewModel
 
-    public void start() {
-        if (isInitialized) {
-            return;
-        }
-        setRetainInstance(true);
         activity = getActivity();
         if (activity == null) {
+            Log.e(TAG, "Activity is null in onCreate");
             return;
         }
-        Intent currentIntent = activity.getIntent();
+        fragment = this;
 
-        if (currentIntent == null) {
-            return;
-        }
+        viewModel = new ViewModelProvider(this).get(VideoDetailsViewModel.class);
 
-        mSelectedMovie = Util.recieveSelectedMovie(getActivity().getIntent());
-        Log.d(TAG, "start: mainMovie:"+ mSelectedMovie.getMainMovie());
-        listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
-
-        // default value in case of activity result
-        clickedMovieAdapter = listRowAdapter;
-//            mSelectedMovie.setMainMovie(mSelectedMovieMainMovie);
-
-        //very important to initialize all required
-        initializeThings();
-
-        // todo clarify
-        if (mSelectedMovie.getMovieHistory() == null && mSelectedMovie.getMainMovie() != null) {
-            mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mSelectedMovie.getMainMovie().getVideoUrl())));
-        }
-        setupRowsAndServer();
-
-        isInitialized = true;
+        initializeCoreUI();
+        observeViewModel(); // Setup observers
+        setupEventListeners(); // Setup static listeners
     }
 
+    // Removed start() method, logic moved to onCreate/onActivityCreated
 
     @Override
-    public void onStart() {
-        //   Log.d(TAG, "onStart::: " + mSelectedMovie.getStudio());
-        //fetch server and load description and bg image
-//        server = ServerManager.determineServer(mSelectedMovie, listRowAdapter, getActivity(), this);
-        start();
-        super.onStart();
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        if (!isInitialized) {
+            prepareBackgroundManager();
+            // Data loading is now triggered by ViewModel, UI updates via observers
+            isInitialized = true;
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        //Objects.requireNonNull(getView()).requestFocus();
+        //Objects.requireNonNull(getView()).requestFocus(); // If needed for focus management
     }
 
-    private void initializeThings() {
-        dbHelper = MovieDbHelper.getInstance(getActivity());
-        movieHandler = new Handler();
+    private void initializeCoreUI() {
+        // movieHandler = new Handler(); // Initialize if still needed
 
         mDetailsBackground = new DetailsSupportFragmentBackgroundController(this);
         detailsDescriptionPresenter = new DetailsDescriptionPresenter();
 
-
-
-//        String movieJson = Objects.requireNonNull(getActivity()).getIntent().getStringExtra(DetailsActivity.MOVIE_SUBLIST);
-//        Gson gson = new Gson();
-//        Type type = new TypeToken<List<Movie>>() {
-//        }.getType();
-//        List<Movie> movieSublist = gson.fromJson(movieJson, type);
-//        Log.d(TAG, "onCreate: subList:" + movieSublist);
-//        if (movieSublist != null) {
-//            mSelectedMovie.setSubList(movieSublist);
-//        }
-
-//        https://www.laroza.now/play.php?vid=4109d062a
-//        https://www.laroza.now/video.php?vid=4109d062a
+        listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
+        clickedMovieAdapter = listRowAdapter; // Default, can be updated on click
 
         mProgressDialog = new ProgressDialog(getContext());
         mProgressDialog.setTitle("جاري التحميل...");
@@ -200,69 +170,113 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         mProgressDialog.setIndeterminate(true);
         mProgressDialog.setCancelable(true);
 
-//        server = ServerManager.determineServer(mSelectedMovie, listRowAdapter, getActivity(), fragment);
-        server = ServerConfigManager.getServer(mSelectedMovie.getStudio());
-        if (server == null) {
-            Log.d(TAG, "initializeThings: unknown server: " + mSelectedMovie.getStudio() + ", state: " + mSelectedMovie.getState());
-            return;
-        }
-
         mPresenterSelector = new ClassPresenterSelector();
         mAdapter = new ArrayObjectAdapter(mPresenterSelector);
-
-        setupDetailsOverviewRow();
-        setupDetailsOverviewRowPresenter();
-        setupRelatedMovieListRow();
         setAdapter(mAdapter);
-        initializeBackground(mSelectedMovie);
-
-        detailsViewControl = new DetailsViewControl(getActivity(), fragment, dbHelper) {
-            @Override
-            protected void updateCurrentMovie(Movie movie) {
-                updateCurrentMovieView(movie);
-            }
-
-            @Override
-            protected <T> void updateMovieListOfMovieAdapter(ArrayList<Movie> movies, T clickedAdapter) {
-                if (clickedAdapter instanceof ArrayObjectAdapter) {
-                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
-                    extendMovieListOfHorizontalMovieAdapter(movies, adapter);
-                }
-            }
-
-            @Override
-            protected <T> T generateCategory(String title, ArrayList<Movie> movies, boolean isDefaultHeader) {
-                return null;
-            }
-
-            @Override
-            protected <T> void updateClickedMovieItem(T clickedAdapter, int clickedMovieIndex, Movie resultMovie) {
-                Log.d(TAG, "updateClickedMovieItem: "+ clickedAdapter);
-                if (clickedAdapter instanceof ArrayObjectAdapter) {
-                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedAdapter;
-                    Log.d(TAG, "updateClickedMovieItem: "+ adapter.size()+ ", index: "+clickedMovieIndex);
-                    updateRelatedMovieItem(adapter, clickedMovieIndex, resultMovie);
-                }
-            }
-
-            @Override
-            protected void openDetailsActivity(Movie movie, Activity activity) {
-                Util.openVideoDetailsIntent(movie, activity);
-            }
-
-            @Override
-            protected <T> void removeRow(T rowsAdapter, int i) {
-                if (rowsAdapter instanceof ArrayObjectAdapter){
-                    try {
-                        ((ArrayObjectAdapter) rowsAdapter).remove(i);
-                    } catch (Exception exception) {
-                        Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
-                    }
-                }
-            }
-        };
-        setOnItemViewClickedListener(new ItemViewClickedListener());
     }
+
+    // Removed initializeThings()
+    // Removed setupRowsAndServer()
+
+    private void observeViewModel() {
+        viewModel.movieDetails.observe(getViewLifecycleOwner(), resource -> {
+            if (resource == null) {
+                Log.e(TAG, "movieDetails resource is null");
+                Toast.makeText(activity, "Error loading details.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            switch (resource.status) {
+                case LOADING:
+                    showProgressDialog(false); // Show loading dialog
+                    Log.d(TAG, "Loading movie details..." + (resource.data != null ? resource.data.getTitle() : ""));
+                    // Optionally update UI with partial data if resource.data (the initial movie) is not null
+                    if (resource.data != null) {
+                        mSelectedMovie = resource.data; // Update mSelectedMovie for methods that might still use it
+                        // Don't fully setup rows yet, wait for SUCCESS, or show basic info
+                        if (row == null && mAdapter != null) { // Basic setup if no row exists
+                            row = new DetailsOverviewRow(mSelectedMovie);
+                            mAdapter.add(0,row);
+                        } else if (row != null) {
+                            row.setItem(mSelectedMovie); // Update item if row exists
+                        }
+                         if (mAdapter != null && row != null && mAdapter.indexOf(row) >=0) mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), 1);
+
+                    }
+                    break;
+                case SUCCESS:
+                    hideProgressDialog(true, null);
+                    if (resource.data != null) {
+                        mSelectedMovie = resource.data;
+                        Log.d(TAG, "Successfully loaded movie details for: " + mSelectedMovie.getTitle());
+
+                        setupDetailsOverviewRow(mSelectedMovie); // Setup with full data
+                        setupDetailsOverviewRowPresenter();      // Setup actions for the new data
+                        setupRelatedMovieListRow(mSelectedMovie);    // Setup related items
+                        initializeBackground(mSelectedMovie);      // Update background
+
+                        // Ensure adapter is notified of all changes
+                        if (mAdapter != null) mAdapter.notifyChanged();
+
+                    } else {
+                        Log.e(TAG, "Movie details success but data is null.");
+                        Toast.makeText(activity, "Could not load movie details.", Toast.LENGTH_LONG).show();
+                    }
+                    break;
+                case ERROR:
+                    hideProgressDialog(true, resource.message);
+                    Log.e(TAG, "Error loading movie details: " + resource.message);
+                    // Show basic info if available
+                    if (mSelectedMovie != null) setupDetailsOverviewRow(mSelectedMovie);
+                    break;
+            }
+        });
+
+        viewModel.getMovieActionOutcome().observe(getViewLifecycleOwner(), resource -> {
+            if (resource == null) return;
+            switch (resource.status) {
+                case LOADING:
+                    showProgressDialog(false); // Or a more subtle loading indicator
+                    break;
+                case SUCCESS:
+                    hideProgressDialog(true, null);
+                    Movie resultMovie = resource.data;
+                    if (resultMovie != null) {
+                        Log.d(TAG, "Movie action success: " + resultMovie.getTitle() + " state: " + resultMovie.getState());
+                        if (resultMovie.getState() == Movie.COOKIE_STATE) {
+                            Util.openBrowserIntent(resultMovie, fragment, true, true);
+                        } else if (resultMovie.getState() == Movie.VIDEO_STATE && resultMovie.getVideoUrl() != null && !resultMovie.getVideoUrl().isEmpty()) {
+                            Util.openExoPlayer(resultMovie, activity, resultMovie.getStudio().equals(Movie.SERVER_IPTV));
+                            viewModel.markAsWatched(resultMovie);
+                        } else if (resultMovie.getState() == Movie.BROWSER_STATE && resultMovie.getVideoUrl() != null && !resultMovie.getVideoUrl().isEmpty()) {
+                            Util.openBrowserIntent(resultMovie, fragment, false, false);
+                        } else {
+                            // Default action if not explicitly handled (e.g. resolved link, but not VIDEO_STATE)
+                            // This could be opening details or trying to play if it has a URL
+                             if (resultMovie.getVideoUrl() != null && !resultMovie.getVideoUrl().isEmpty()) {
+                                Log.d(TAG, "Action success, attempting to play resolved link for: " + resultMovie.getTitle());
+                                Util.openExoPlayer(resultMovie, activity, resultMovie.getStudio().equals(Movie.SERVER_IPTV));
+                                viewModel.markAsWatched(resultMovie);
+                            } else {
+                                Log.d(TAG, "Action success, no direct play URL, opening details for: " + resultMovie.getTitle());
+                                Util.openVideoDetailsIntent(resultMovie, activity);
+                            }
+                        }
+                    }
+                    break;
+                case ERROR:
+                    hideProgressDialog(true, resource.message);
+                    Log.e(TAG, "Movie action error: " + resource.message);
+                    Toast.makeText(activity, resource.message, Toast.LENGTH_LONG).show();
+                    if (resource.data != null && resource.data.getState() == Movie.COOKIE_STATE) {
+                        Util.openBrowserIntent(resource.data, fragment, true, true);
+                    }
+                    break;
+            }
+        });
+    }
+
+
     private void updateRelatedMovieItem(ArrayObjectAdapter adapter, int clickedMovieIndex, Movie resultMovie) {
         if (adapter == null || resultMovie == null) {
             Log.d(TAG, "updateRelatedMovieItem: undefined adapter or movie");

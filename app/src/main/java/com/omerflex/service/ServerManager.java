@@ -11,10 +11,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
+import com.omerflex.OmerFlexApplication; // Added for Application instance
+import com.omerflex.service.concurrent.ThreadPoolManager; // Added for ThreadPoolManager
 import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.service.network.HttpClientManager; // Added for HttpClientManager
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.concurrent.Executor; // Added for ThreadPoolManager
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -37,14 +41,36 @@ public class ServerManager {
     Fragment fragment;
     MovieDbHelper dbHelper;
     UpdateService updateService;
+    private HttpClientManager httpClientManager;
+    private ThreadPoolManager threadPoolManager; // Added field
     //    private static ServerManager instance;
 //
 
     public ServerManager(Activity activity, Fragment fragment, UpdateService updateService) {
         this.activity = activity;
         this.fragment = fragment;
-        this.dbHelper = MovieDbHelper.getInstance(activity);
+        this.dbHelper = MovieDbHelper.getInstance(activity); // This should later be replaced by DatabaseManager/DAOs
         this.updateService = updateService;
+
+        // Initialize HttpClientManager
+        if (activity != null) {
+            this.httpClientManager = OmerFlexApplication.getInstance().getHttpClientManager();
+            this.threadPoolManager = OmerFlexApplication.getInstance().getThreadPoolManager();
+            Log.d(TAG, "ServerManager: HttpClientManager & ThreadPoolManager initialized via Activity context.");
+        } else if (fragment != null && fragment.getContext() != null) {
+             this.httpClientManager = OmerFlexApplication.getInstance().getHttpClientManager();
+             this.threadPoolManager = OmerFlexApplication.getInstance().getThreadPoolManager();
+             Log.d(TAG, "ServerManager: HttpClientManager & ThreadPoolManager initialized via Fragment context.");
+        } else {
+            Log.w(TAG, "ServerManager: Context not available, HttpClientManager & ThreadPoolManager could not be initialized.");
+        }
+        // Ensure threadPoolManager is initialized, even if context was initially null,
+        // if it's critical for other operations and can be fetched later.
+        // However, constructor is the best place.
+        if (this.threadPoolManager == null) {
+             Log.e(TAG, "ThreadPoolManager is still null after constructor attempts.");
+        }
+
 //        this.servers = new ArrayList<>();
 //        if (servers == null){
 //            ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -91,9 +117,40 @@ public class ServerManager {
      */
     public void updateServers() {
         Log.d(TAG, "updateServers: ");
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.submit(() -> {
-            OkHttpClient client = new OkHttpClient();
+
+        if (this.threadPoolManager == null) {
+            Log.e(TAG, "ThreadPoolManager not initialized in ServerManager. Attempting re-init.");
+            // Attempt to re-initialize if context is available (e.g. activity)
+            // This is a fallback, ideally it's set in constructor.
+            if (this.activity != null || (this.fragment != null && this.fragment.getContext() != null)) {
+                 this.threadPoolManager = OmerFlexApplication.getInstance().getThreadPoolManager();
+                 if (this.threadPoolManager == null) {
+                    Log.e(TAG, "ThreadPoolManager re-init failed. Cannot update servers.");
+                    return;
+                 }
+                 Log.i(TAG, "ThreadPoolManager re-initialized in updateServers.");
+            } else {
+                 Log.e(TAG, "Context not available for ThreadPoolManager re-init. Cannot update servers.");
+                 return;
+            }
+        }
+
+        Executor executor = this.threadPoolManager.getNetworkExecutor(); // Use ThreadPoolManager
+
+        executor.execute(() -> { // Changed from submit to execute as Executor doesn't have submit
+            if (this.httpClientManager == null) {
+                Log.e(TAG, "HttpClientManager not initialized in ServerManager. Cannot update servers.");
+                 // Attempt to re-initialize if context is available from activity (might be risky if activity is not valid)
+                if (this.activity != null) {
+                     this.httpClientManager = OmerFlexApplication.getInstance().getHttpClientManager();
+                     Log.i(TAG, "updateServers: Re-attempted HttpClientManager initialization inside executor.");
+                }
+                if (this.httpClientManager == null) { // Still null
+                    Log.e(TAG, "HttpClientManager is still null inside executor. Aborting updateServers task.");
+                    return;
+                }
+            }
+            OkHttpClient client = this.httpClientManager.getDefaultClient();
             Request request = new Request.Builder()
                     .url(remoteServersConfigUrl)
                     .build();
@@ -110,19 +167,18 @@ public class ServerManager {
 
                             // Convert the JSON object to a ServerConfig object
                             ServerConfigDTO serverConfigDTO = gson.fromJson(serverObject, ServerConfigDTO.class);
-//                            Log.d(TAG, "updateServerConfig: serverConfig:"+serverConfig);
-
                             updateServerConfig(serverConfigDTO);
-//                                Log.d(TAG, "initializeServers: result:"+servers.size());
                         }
-
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e(TAG, "IOException during server update: " + e.getMessage(), e);
+                // e.printStackTrace(); // Avoid raw printStackTrace in production code
+            } catch (Exception e) { // Catch broader exceptions during parsing or logic
+                 Log.e(TAG, "Exception during server update: " + e.getMessage(), e);
             }
         });
-        executor.shutdown();
+        // executor.shutdown(); // REMOVE THIS LINE - ThreadPoolManager manages its own lifecycle
     }
 
     private void updateServerConfig(ServerConfigDTO githubServerConfigDTO) {

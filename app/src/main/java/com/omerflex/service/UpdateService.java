@@ -24,9 +24,13 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
+import androidx.work.Data; // Added for WorkManager
+import androidx.work.OneTimeWorkRequest; // Added for WorkManager
+import androidx.work.WorkManager; // Added for WorkManager
 
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
+// import com.omerflex.OmerFlexApplication; // Not strictly needed if using fragment.getContext().getApplicationContext()
 
 import java.io.File;
 import java.text.ParseException;
@@ -46,16 +50,22 @@ public class UpdateService {
     private static final int REQUEST_CODE_STORAGE_PERMISSION = 101;
     private boolean permissionRequested = false;
     private static String APK_URL = "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/omerFlex.apk";
-    private static String APK_NAME = "omerFlex";
+    private static String APK_NAME = "omerFlex"; // This will be updated with version in toBeUpdated()
 
-    private long downloadId;
-    private BroadcastReceiver downloadCompleteReceiver;
+    // private long downloadId; // Removed
+    // private BroadcastReceiver downloadCompleteReceiver; // Removed
     Fragment fragment;
     Activity activity;
 
     public UpdateService(Fragment fragment) {
         this.fragment = fragment;
-        this.activity = fragment.getActivity();
+        if (fragment != null) {
+            this.activity = fragment.getActivity();
+        } else {
+            // Log error or handle fragment being null if it's critical for other parts not being refactored.
+            // For WorkManager, getApplicationContext from fragment.getContext() will be used.
+            Log.e(TAG, "UpdateService initialized with null fragment. Activity context will be null.");
+        }
     }
 
     public void checkForUpdates(ServerConfigDTO githubServerConfigDTO) {
@@ -108,129 +118,43 @@ public class UpdateService {
     }
 
     private void startDownload(String url) {
-        // Create a download request
-        Log.d(TAG, "startDownload: ");
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-        request.setTitle("App Update");
-        request.setDescription("Downloading the latest version...");
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, APK_NAME+".apk");
+        Log.d(TAG, "startDownload: Enqueuing UpdateWorker for URL: " + url + " with APK name: " + APK_NAME + ".apk");
 
-        // Enqueue the download
-        DownloadManager downloadManager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
-        if (downloadManager != null) {
-            downloadId = downloadManager.enqueue(request);
-            Log.d(TAG, "startDownload: downloadId: " + downloadId);
-        } else {
-            Toast.makeText(activity, "DownloadManager is not available.", Toast.LENGTH_SHORT).show();
+        if (fragment == null || fragment.getContext() == null) {
+            Log.e(TAG, "Fragment context is null, cannot enqueue UpdateWorker.");
+            if (activity != null) { // Fallback to activity context if available, though less ideal for WorkManager init
+                 Toast.makeText(activity, "Update service error: context not available.", Toast.LENGTH_LONG).show();
+            }
             return;
         }
 
-        // Register a BroadcastReceiver to listen for download completion
-        downloadCompleteReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                Log.d(TAG, "onReceive: " + id);
-                if (id == downloadId) {
-                    installUpdate();
-                }
+        Data inputData = new Data.Builder()
+                .putString(UpdateWorker.KEY_APK_URL, url)
+                .putString(UpdateWorker.KEY_APK_NAME, APK_NAME + ".apk") // APK_NAME is updated in toBeUpdated()
+                .build();
+
+        OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(UpdateWorker.class)
+                .setInputData(inputData)
+                .addTag("apk_update_download") // Optional tag
+                .build();
+
+        try {
+            WorkManager.getInstance(fragment.getContext().getApplicationContext()).enqueue(workRequest);
+            Log.i(TAG, "UpdateWorker enqueued for " + APK_NAME + ".apk from " + url);
+            if (activity != null) {
+                Toast.makeText(activity, "Update download started in background...", Toast.LENGTH_LONG).show();
             }
-        };
-        // Register the receiver with the appropriate flag for Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            activity.registerReceiver(
-                    downloadCompleteReceiver,
-                    new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                    Context.RECEIVER_EXPORTED
-            );
-        } else {
-            activity.registerReceiver(
-                    downloadCompleteReceiver,
-                    new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-            );
-        }
-    }
-
-    private void installUpdate() {
-        Uri apkUri = getDownloadedApkUri();
-        if (apkUri == null) return; // Exit if no files match the criteria
-        Log.d(TAG, "installUpdate: uri: " + apkUri.toString());
-
-        // Check if the app has permission to install packages
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (!activity.getPackageManager().canRequestPackageInstalls()) {
-                // Request permission to install packages
-                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
-                intent.setData(Uri.parse("package:" + activity.getPackageName()));
-                // note: the fragment not the activity
-                fragment.startActivityForResult(intent, REQUEST_CODE_INSTALL_PERMISSION);
-                return;
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to enqueue UpdateWorker", e);
+            if (activity != null) {
+                Toast.makeText(activity, "Failed to start update download.", Toast.LENGTH_LONG).show();
             }
         }
-
-        // If permission is already granted, proceed with installation
-        proceedWithInstallation(apkUri);
     }
 
-    @Nullable
-    private Uri getDownloadedApkUri() {
-        // Get the download directory
-        File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        // Filter files to only those with the name pattern
-        File[] apkFiles = downloadDir.listFiles((dir, name) -> name.startsWith(APK_NAME) && name.endsWith(".apk"));
-
-        if (apkFiles == null || apkFiles.length == 0) {
-            Toast.makeText(activity, "APK file not found.", Toast.LENGTH_SHORT).show();
-            return null;
-        }
-
-        // Find the most recent file
-        File latestApkFile = Arrays.stream(apkFiles)
-                .max(Comparator.comparingLong(File::lastModified))
-                .orElse(null);
-
-        if (latestApkFile == null) {
-            Toast.makeText(activity, "No valid APK file found.", Toast.LENGTH_SHORT).show();
-            return null;
-        }
-
-        Log.d(TAG, "installUpdate: Latest APK file: " + latestApkFile.getName());
-
-        // Create a content URI using FileProvider for the latest APK file
-        Uri apkUri = FileProvider.getUriForFile(activity, activity.getApplicationContext().getPackageName() + ".provider", latestApkFile);
-        return apkUri;
-    }
-
-    private void proceedWithInstallation(Uri apkUri) {
-        // Start the installation
-        Intent installIntent = new Intent(Intent.ACTION_VIEW);
-        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-        installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        activity.startActivity(installIntent);
-//    dbHelper.saveServerConfig(ServerConfigManager.getConfig(Movie.SERVER_APP));
-    }
-
-    public void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d(TAG, "onActivityResult: " + requestCode);
-        if (requestCode != REQUEST_CODE_INSTALL_PERMISSION) {
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity.getPackageManager().canRequestPackageInstalls()) {
-            Log.d(TAG, "onActivityResult: installUpdate");
-            Uri apkUri = getDownloadedApkUri();
-            proceedWithInstallation(apkUri);
-        } else {
-            Toast.makeText(activity, "Install permission denied.", Toast.LENGTH_SHORT).show();
-        }
-
-    }
-
-    public void handleOnDestroy() {
-        if (downloadCompleteReceiver != null) {
-            activity.unregisterReceiver(downloadCompleteReceiver); // Unregister the receiver
-        }
-    }
+    // Removed installUpdate(), proceedWithInstallation(), getDownloadedApkUri(),
+    // handleOnActivityResult(), and handleOnDestroy() as their responsibilities shift.
+    // UI components will observe the Worker's output (KEY_DOWNLOADED_APK_URI) and handle installation.
 
     ///------------
 

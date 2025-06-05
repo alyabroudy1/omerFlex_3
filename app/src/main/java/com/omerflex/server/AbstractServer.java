@@ -62,11 +62,18 @@ public abstract class AbstractServer implements ServerInterface {
         this.context = context;
 
         if (context != null) {
-            OmerFlexApplication app = OmerFlexApplication.getInstance();
+            // Ensure application context is used if possible to avoid leaks,
+            // though for singletons from Application class, it might be okay.
+            OmerFlexApplication app = OmerFlexApplication.getInstance(); // Assuming getInstance() provides the Application instance
             if (app != null) {
-                threadPoolManager = app.getThreadPoolManager();
-                httpClientManager = app.getHttpClientManager();
+                this.threadPoolManager = app.getThreadPoolManager();
+                this.httpClientManager = app.getHttpClientManager();
+                Logger.d(TAG, "HttpClientManager initialized in AbstractServer for: " + this.getClass().getSimpleName());
+            } else {
+                Logger.e(TAG, "OmerFlexApplication.getInstance() returned null in AbstractServer.initialize for: " + this.getClass().getSimpleName());
             }
+        } else {
+            Logger.w(TAG, "Context is null in AbstractServer.initialize for: " + this.getClass().getSimpleName());
         }
     }
 
@@ -373,70 +380,101 @@ public abstract class AbstractServer implements ServerInterface {
     }
 
     protected Document getSearchRequestDoc(String url) {
-        final int MAX_REDIRECTS = 5;
-        ServerConfig config = getConfig();
-        Document doc = null;
-        int redirectCount = 0;
-        String currentUrl = url;
-        boolean isDomainUpdated = false;
+        ServerConfig config = getConfig(); // Relies on getConfig() being available
+        if (config == null) {
+            Logger.w(TAG, "getSearchRequestDoc: ServerConfig is null for serverId: " + getServerId());
+            // Attempt to load config if null, or handle error
+            // For now, assume getConfig() provides a valid or default config if possible
+            // If still null, we cannot proceed.
+            return null;
+        }
+
+        if (this.httpClientManager == null) {
+             Logger.e(TAG, "getSearchRequestDoc: HttpClientManager is not initialized in AbstractServer for " + getServerId() + "!");
+             // Attempt to initialize it here if context is available
+             if (this.context != null) {
+                OmerFlexApplication app = OmerFlexApplication.getInstance();
+                if (app != null) {
+                    this.httpClientManager = app.getHttpClientManager();
+                    Logger.i(TAG, "getSearchRequestDoc: Re-initialized HttpClientManager.");
+                }
+             }
+             if (this.httpClientManager == null) {
+                Logger.e(TAG, "getSearchRequestDoc: Failed to initialize HttpClientManager. Cannot proceed for " + getServerId());
+                return null; // Cannot make the call
+             }
+        }
+
+        String currentUrl = url; // Keep initial URL for error reporting if needed
         String initialHost = extractDomain(url);
 
-        try {
-            while (redirectCount < MAX_REDIRECTS) {
-                Logger.d(TAG, "Processing URL: " + currentUrl + ", follow: " + isDomainUpdated);
+        okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder().url(currentUrl);
 
-                Connection.Response response = Jsoup.connect(currentUrl)
-                        .headers(config.getHeaders())
-                        .cookies(config.getMappedCookies())
-                        .followRedirects(false)
-                        .ignoreHttpErrors(true)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute();
-
-                int statusCode = response.statusCode();
-                Logger.i(TAG, "HTTP Status: " + statusCode + " for " + currentUrl);
-
-                if (statusCode == HttpURLConnection.HTTP_OK) {
-                    doc = response.parse();
-                    return doc;
-                } else if (isRedirect(statusCode)) {
-                    String newLocation = response.header("Location");
-                    if (newLocation == null || newLocation.isEmpty()) {
-                        Logger.w(TAG, "Redirect without Location header: " + currentUrl);
-                        doc = response.parse();
-                        return doc;
-                    }
-                    currentUrl = resolveRedirectUrl(currentUrl, newLocation);
-                    Logger.d(TAG, "Redirecting to: " + currentUrl);
-                    isDomainUpdated = checkForDomainUpdate(currentUrl, initialHost);
-                    redirectCount++;
-                } else {
-                    Logger.e(TAG, "Unexpected status " + response.statusCode() + " for " + currentUrl);
-                    return statusCode == HttpURLConnection.HTTP_NOT_FOUND ? null : response.parse();
-                }
+        if (config.getHeaders() != null) {
+            for (Map.Entry<String, String> entry : config.getHeaders().entrySet()) {
+                requestBuilder.addHeader(entry.getKey(), entry.getValue());
             }
-            Logger.w(TAG, "Too many redirects (" + MAX_REDIRECTS + ") for: " + url);
+        }
+        String cookieString = config.getStringCookies();
+        if (cookieString != null && !cookieString.isEmpty()) {
+            requestBuilder.addHeader("Cookie", cookieString);
+        }
+
+        // Use a client that automatically follows redirects from HttpClientManager
+        okhttp3.OkHttpClient client = httpClientManager.getDefaultClient().newBuilder()
+                                .followRedirects(true)
+                                .followSslRedirects(true)
+                                .build(); // Build a new client instance with redirect handling enabled
+
+        okhttp3.Response response = null; // Declare response outside try to use in catch
+        try {
+            response = client.newCall(requestBuilder.build()).execute();
+            int statusCode = response.code();
+            String finalUrl = response.request().url().toString(); // URL after redirects
+            Logger.i(TAG, "HTTP Status: " + statusCode + " for " + finalUrl + " (Initial: " + url + ")");
+
+            checkForDomainUpdate(finalUrl, initialHost); // Check if domain changed
+
+            if (response.isSuccessful()) {
+                if (response.body() != null) {
+                    String responseBody = response.body().string();
+                    Document doc = Jsoup.parse(responseBody, finalUrl);
+
+                    // The existing handleSecurityCheck can be called by the methods using getSearchRequestDoc
+                    // e.g., in search() or fetchSeriesAction() after this method returns the doc.
+                    // if (doc != null && doc.title() != null && doc.title().contains("Just a moment")) {
+                    //    Logger.w(TAG, "Detected 'Just a moment...' page for " + finalUrl);
+                    // }
+                    return doc;
+                } else {
+                    Logger.w(TAG, "Response body is null for " + finalUrl);
+                    return null;
+                }
+            } else {
+                Logger.e(TAG, "Unexpected status " + statusCode + " for " + finalUrl);
+                // Optionally parse error body if it can contain useful info, otherwise return empty/null
+                // String errorBody = response.body() != null ? response.body().string() : "";
+                // Document errorDoc = Jsoup.parse(errorBody, finalUrl);
+                // return errorDoc; // Or null if error pages aren't useful Jsoup docs
+                return null;
+            }
         } catch (IOException e) {
-            Logger.e(TAG, "Network error for " + currentUrl + ": " + e.getMessage());
+            String attemptedUrl = currentUrl;
+            if (response != null) { // If response exists, the error might have occurred after redirects
+                attemptedUrl = response.request().url().toString();
+            }
+            Logger.e(TAG, "Network error for " + url + " (final attempted: " + attemptedUrl + ") : " + e.getMessage(), e);
         } catch (Exception e) {
-            Logger.e(TAG, "Unexpected error processing " + currentUrl + ": " + e.getMessage());
+            Logger.e(TAG, "Unexpected error processing " + url + ": " + e.getMessage(), e);
+        } finally {
+            if (response != null) {
+                response.close(); // Ensure response body is closed
+            }
         }
         return null;
     }
 
-    private boolean isRedirect(int statusCode) {
-        return statusCode >= HttpURLConnection.HTTP_MOVED_PERM
-                && statusCode < HttpURLConnection.HTTP_BAD_REQUEST;
-    }
-
-    private String resolveRedirectUrl(String baseUrl, String location) throws MalformedURLException {
-        if (location.startsWith("http")) {
-            return location;
-        }
-        URL base = new URL(baseUrl);
-        return new URL(base, location).toString();
-    }
+    // isRedirect and resolveRedirectUrl are no longer needed as OkHttp handles redirects.
 
     private String extractDomain(String url) {
         try {
