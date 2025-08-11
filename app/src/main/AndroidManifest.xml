@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
 
 
     <uses-feature
@@ -18,6 +19,9 @@
     <uses-feature
         android:name="android.software.leanback"
         android:required="true" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
 
     <application
         android:name=".OmerFlexApplication"
@@ -32,6 +36,17 @@
         android:theme="@style/Theme.OmarFlex"
         android:usesCleartextTraffic="true"
         tools:ignore="GoogleAppIndexingWarning">
+
+        <receiver
+            android:name=".server.CallBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <!-- This action specifies that your receiver listens for new outgoing calls -->
+                <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".view.mobile.MobileMovieDetailActivity"
             android:exported="false"

@@ -11,6 +11,7 @@ import com.omerflex.server.AkwamServer;
 import com.omerflex.server.ArabSeedServer;
 import com.omerflex.server.CimaNowServer;
 import com.omerflex.server.FaselHdServer;
+import com.omerflex.server.ImdbServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.KooraServer;
 import com.omerflex.server.LarozaServer;
@@ -194,6 +195,8 @@ public class ServerConfigManager {
                 return new KooraServer();
             case Movie.SERVER_LAROZA:
                 return new LarozaServer();
+            case Movie.SERVER_IMDB:
+                return new ImdbServer();
         }
         return null;
     }

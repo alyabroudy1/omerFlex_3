@@ -36,8 +36,11 @@ import androidx.leanback.widget.RowPresenter;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.database.FirebaseDatabase;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieRepository;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.UpdateService;
@@ -88,6 +91,8 @@ public class MainFragment extends BrowseSupportFragment {
 
     UpdateService updateService;
 
+    private MovieRepository movieRepository;
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate");
@@ -131,6 +136,37 @@ public class MainFragment extends BrowseSupportFragment {
         serverManager.updateServers();
         rowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
         iptvList = new ArrayList<>();
+
+
+
+// Initialize MovieRepository
+        movieRepository = new MovieRepository();
+
+        Movie movie = new Movie();
+        movie.setVideoUrl("https://example.com/video1.mp4"); // Unique ID
+        movie.setTitle("Sample Movie");
+        movie.setDescription("A sample movie description");
+        movie.setBgImageUrl("https://example.com/bg.jpg");
+        movie.setCardImageUrl("https://example.com/card.jpg");
+        movie.setStudio("Sample Studio");
+        movie.setRate("PG-13");
+        movie.setState(Movie.ITEM_STATE);
+        movie.setCategories(new ArrayList<>());
+        movie.setIsHistory(0);
+        movie.setPlayedTime(0L);
+        movie.setCreatedAt("2025-07-01");
+        // Set other fields as needed
+
+        movieRepository.saveMovie(movie);
+
+        movieRepository.getMovieByUrl("https://example.com/video1.mp4", mov -> {
+            if (mov != null) {
+                Log.d("Movie", "Fetched movie: " + mov.getTitle());
+            } else {
+                Log.d("Movie", "Movie not found.");
+            }
+        });
+
     }
 
     @Override

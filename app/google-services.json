@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "922693193685",
+    "firebase_url": "https://omarflex-628ed-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "omarflex-628ed",
+    "storage_bucket": "omarflex-628ed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:922693193685:android:a3c4ea006097ca07dd375c",
+        "android_client_info": {
+          "package_name": "com.omerflex"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABcWoiuq-phS7AFY4MIv3Nw7Bif1CFaRg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

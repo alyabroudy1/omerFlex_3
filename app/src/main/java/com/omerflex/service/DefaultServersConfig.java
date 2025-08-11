@@ -117,6 +117,17 @@ public class DefaultServersConfig {
 
         ServerConfigManager.addConfig(omarConfig, dbHelper);
 
+
+        // ### Imdb ###
+        ServerConfig imdbConfig = new ServerConfig();
+        imdbConfig.setName(Movie.SERVER_IMDB);
+        imdbConfig.setActive(true);
+        imdbConfig.setUrl("https://api.themoviedb.org/3/");
+        imdbConfig.setReferer("https://api.themoviedb.org/3/");
+//        ServerConfigManager.addConfig(imdbConfig);
+
+        ServerConfigManager.addConfig(imdbConfig, dbHelper);
+
         //        ### Koora ###
 //        ServerConfig kooraConfig = new ServerConfig();
 //        kooraConfig.setActive(false);

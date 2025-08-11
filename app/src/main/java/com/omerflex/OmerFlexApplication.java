@@ -1,14 +1,19 @@
 package com.omerflex;
 
+import android.app.ActivityManager;
 import android.app.Application;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.StrictMode;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.multidex.MultiDex;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.database.FirebaseDatabase;
 import com.omerflex.service.concurrent.ThreadPoolManager;
 import com.omerflex.service.database.DatabaseManager;
 import com.omerflex.service.logging.ErrorHandler;
@@ -45,6 +50,40 @@ public class OmerFlexApplication extends Application {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        // Initialize Firebase
+        Log.d(TAG, "onCreate: initializing FirebaseApp");
+        FirebaseApp app = FirebaseApp.initializeApp(this);
+        if (app == null) {
+            Log.e(TAG, "onCreate: FirebaseApp.initializeApp returned null!");
+        } else {
+            Log.d(TAG, "onCreate: FirebaseApp initialized");
+        }
+
+
+
+
+        int permissionStatus = ContextCompat.checkSelfPermission(
+                getApplicationContext(),
+                android.Manifest.permission.PROCESS_OUTGOING_CALLS
+        );
+
+        // Compare the status with PERMISSION_GRANTED
+        Log.d(TAG, "onCreate: Permission xxx :" + (permissionStatus == PackageManager.PERMISSION_GRANTED));
+
+
+
+        try {
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                Log.e(TAG, "No Firebase apps found!");
+            } else {
+                FirebaseDatabase database = FirebaseDatabase.getInstance();
+                Log.d(TAG, "FirebaseDatabase instance retrieved successfully");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting FirebaseDatabase instance", e);
+        }
+
+
         contextReference = new WeakReference<>(getApplicationContext());
 
         // Initialize logging system first - this is critical
@@ -58,8 +97,23 @@ public class OmerFlexApplication extends Application {
             enableStrictMode();
         }
 
+
         Logger.i(TAG, "Application initialized. Other components will be lazily initialized on demand.");
     }
+
+    private boolean isDefaultProcess() {
+        int pid = android.os.Process.myPid();
+        ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if (am != null) {
+            for (ActivityManager.RunningAppProcessInfo processInfo : am.getRunningAppProcesses()) {
+                if (processInfo.pid == pid) {
+                    return getPackageName().equals(processInfo.processName);
+                }
+            }
+        }
+        return false;
+    }
+
 
     /**
      * Initialize application components in a lazy manner

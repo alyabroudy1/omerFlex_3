@@ -1966,4 +1966,13 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         //Log.d("dbHelper", "getAllHistoryMovies: return:" + movieArrayList.size());
         return movieArrayList;
     }
+
+    public ArrayList<Movie> getHomepageMovies() {
+        return getAllHistoryMovies(false);
+    }
+
+    public boolean isLocalUpdateNeeded(int localUpdatePeriod) {
+        // todo: implement
+        return true;
+    }
 }
