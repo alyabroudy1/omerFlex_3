@@ -1,0 +1,206 @@
+package com.omerflex.view.viewConroller;
+
+import android.app.Activity;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.widget.Toast;
+
+import androidx.fragment.app.Fragment;
+import androidx.leanback.widget.ArrayObjectAdapter;
+import androidx.leanback.widget.HeaderItem;
+import androidx.leanback.widget.ListRow;
+import androidx.leanback.widget.OnItemViewClickedListener;
+import androidx.leanback.widget.Presenter;
+import androidx.leanback.widget.Row;
+import androidx.leanback.widget.RowPresenter;
+
+import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieRepository;
+import com.omerflex.server.AbstractServer;
+import com.omerflex.server.ServerInterface;
+import com.omerflex.server.Util;
+import com.omerflex.service.ServerConfigManager;
+import com.omerflex.view.CardPresenter;
+import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class MovieItemViewClickedListener implements OnItemViewClickedListener{
+
+    private static final String TAG = "MovieClickedListener";
+    Fragment mFragment;
+    ArrayObjectAdapter mRowsAdapter;
+    private final MovieRepository movieRepository = MovieRepository.getInstance();
+    // A single, shared executor service for all background tasks
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+    public MovieItemViewClickedListener(Fragment fragment, ArrayObjectAdapter mRowsAdapter) {
+        this.mFragment = fragment;
+        this.mRowsAdapter = mRowsAdapter;
+    }
+
+    @Override
+    public void onItemClicked(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder, Row row) {
+        if (!(item instanceof Movie)) {
+            Log.d(TAG, "onItemClicked: ");
+            return;
+        }
+        Movie movie = (Movie) item;
+        if (movie.getStudio() == null) {
+            Log.d(TAG, "handleMovieItemClick: Unknown movie or studio, returning.");
+            Toast.makeText(mFragment.getActivity(), "Unknown movie or server: " + movie.getStudio(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Submit the heavy lifting to a background thread
+        executorService.submit(() -> processMovieClick(movie, (ListRow) row));
+    }
+
+    /**
+     * Handles the actual click processing logic on a background thread.
+     */
+    private void processMovieClick(Movie movie, ListRow clickedRow) {
+        // set mSelectedMovie in the repository
+        // very important to monitor the selected movie in the repository
+        movieRepository.setSelectedMovie(movie);
+
+        // Use a switch statement for cleaner state handling
+        switch (movie.getState()) {
+            case Movie.COOKIE_STATE:
+                handleCookieState(movie);
+                break;
+            case Movie.VIDEO_STATE:
+                handleVideoState(movie);
+                break;
+            case Movie.BROWSER_STATE:
+                handleBrowserState(movie);
+                break;
+            case Movie.NEXT_PAGE_STATE:
+                handleNextPageState(movie, clickedRow);
+                break;
+            case Movie.IPTV_PLAY_LIST_STATE:
+                handleIptvPlayListState(movie);
+                break;
+            default:
+                // The default case handles all other states,
+                // including opening the details activity or next page states
+                openDetailsActivity(movie);
+                break;
+        }
+    }
+
+    private void handleIptvPlayListState(Movie movie) {
+        Log.d(TAG, "handleIptvPlayListState: list size: "+ mRowsAdapter.size());
+        // remove iptv created rows first
+        removeIpTvRows();
+        // fetch iptv movies
+        for (int i = 0; i < 350; i++) {
+            movieRepository.getHomepageMovies(movieList -> {
+                if (movieList != null) {
+                    Log.d("Movie", "Fetched movie33: " + movieList.toString());
+                    HeaderItem header = new HeaderItem(Movie.IPTV_PLAY_LIST_STATE, "iptv Movies ");
+                    addMovieRow(header, movieList);
+                } else {
+                    Log.d("Movie", "movieList not found.");
+                }
+            });
+        }
+    }
+
+    private void removeIpTvRows() {
+        // loop over listRows of the mRowsAdapter and delete rows of header id = Movie.IPTV_PLAY_LIST_STATE
+        for (int i = 0; i < mRowsAdapter.size(); i++) {
+            ListRow row = (ListRow) mRowsAdapter.get(i);
+            Log.d(TAG, "removeIpTvRows: " + row.getHeaderItem().getId() + ", " + row.getHeaderItem().getName());
+            if (row.getHeaderItem().getId() == Movie.IPTV_PLAY_LIST_STATE) {
+                Log.d(TAG, "removeIpTvRows: removing row: " + row.getHeaderItem().getName());
+                mRowsAdapter.remove(row);
+            }
+        }
+    }
+
+    public void addMovieRow(HeaderItem header, List<Movie> movies) {
+        ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
+        listRowAdapter.addAll(0, movies);
+        mRowsAdapter.add(new ListRow(header, listRowAdapter));
+    }
+
+
+    private void handleCookieState(Movie movie) {
+        Log.d(TAG, "handleMovieItemClick: renewing Cookie");
+        // Implement renewCookie logic here or call a service
+        renewCookie(movie);
+    }
+
+    private void handleVideoState(Movie movie) {
+        Log.d(TAG, "handleMovieItemClick: VIDEO_STATE");
+        Util.openExoPlayer(movie, mFragment.getActivity(), true);
+    }
+
+    private void handleBrowserState(Movie movie) {
+        Log.d(TAG, "handleMovieItemClick: BROWSER_STATE");
+        Util.openBrowserIntent(movie, mFragment, false, false, false);
+    }
+
+    private void renewCookie(Movie movie) {
+        Log.d(TAG, "renewCookie: ");
+        movie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
+        if (mFragment != null) {
+            Util.openBrowserIntent(movie, mFragment, true, true, true);
+            return;
+        }
+        Util.openBrowserIntent(movie, mFragment.getActivity(), true, true, true);
+    }
+
+    protected void openDetailsActivity(Movie movie) {
+        Log.d(TAG, "openDetailsActivity");
+        Util.openVideoDetailsIntent(movie, mFragment);
+    }
+
+    /**
+     * Refactored method to handle the next page state for a movie click.
+     * This method now uses the class's shared ExecutorService and consolidates callback logic.
+     * @param movie The movie that was clicked.
+     * @param clickedRow The row that contains the clicked movie.
+     */
+    private void handleNextPageState(Movie movie, ListRow clickedRow) {
+        // Use a more robust check to ensure we don't fetch multiple times.
+        if (movie.getFetch() == Movie.NO_FETCH_MOVIE_AT_START) {
+            Log.d(TAG, "handleNextPageState: This Next page is already fetched...");
+            return;
+        }
+
+        // Call the MovieRepository to fetch the next page.
+        movieRepository.fetchNextPage(movie.getVideoUrl(), movieList -> {
+                if (movieList != null) {
+                    Log.d("Movie", "fetchNextPage movie33: " + movieList.toString());
+                    updateAdapterOnMainThread(movieList, clickedRow, movie);
+                } else {
+                    Log.d("Movie", "fetchNextPage movieList not found.");
+                }
+        });
+    }
+
+    /**
+     * Helper method to update the adapter on the main thread and set a flag on the movie.
+     * This avoids code duplication in the callback methods.
+     * @param result The list of new movies to add.
+     * @param clickedRow The row adapter to update.
+     * @param movie The movie to update with a "clicked" flag.
+     */
+    private void updateAdapterOnMainThread(List<Movie> result, ListRow clickedRow, Movie movie) {
+        if (result.isEmpty()) {
+            Log.d(TAG, "onSuccess: empty result");
+            return;
+        }
+        new Handler(Looper.getMainLooper()).post(() -> {
+            ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedRow.getAdapter();
+            adapter.addAll(adapter.size(), result);
+            movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START); // Flag that it's already clicked
+        });
+    }
+}
