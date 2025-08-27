@@ -208,7 +208,7 @@ public class UpdateService {
         installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
         installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         activity.startActivity(installIntent);
-//    dbHelper.saveServerConfig(ServerConfigManager.getConfig(Movie.SERVER_APP));
+//    dbHelper.saveServerConfig(ServerConfigRepository.getConfig(Movie.SERVER_APP));
     }
 
     public void handleOnActivityResult(int requestCode, int resultCode, Intent data) {

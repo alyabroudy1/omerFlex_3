@@ -45,7 +45,7 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 
 import org.jsoup.Connection;
@@ -284,12 +284,12 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
 
 
 //        server = ServerManager.determineServer(movie, listRowAdapter, BrowserActivity.this, null);
-        server = ServerConfigManager.getServer(movie.getStudio());
+        server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
         if (server == null){
             Toast.makeText(activity, "undefined server", Toast.LENGTH_SHORT).show();
             return;
         }
-        config = ServerConfigManager.getConfig(server.getServerId());
+        config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
         //   simpleWebView.setWebViewClient(new CustomWebViewClient());
         //   webView.setWebChromeClient(new ChromeClient());
         //   webView.setWebViewClient(new CustomWebViewClient(this));
@@ -880,7 +880,7 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
             // parse the JSON string to get the element
             // Element element = Json.parse(elementJson);
 //            if (elementJson.startsWith("<html>")){
-            ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+            ServerConfig config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
             if (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) {
                 Log.d(TAG, "myMethod: html contents: " + elementJson);
       //todo          server.handleJSWebResult(activity, movie, elementJson);
@@ -947,7 +947,7 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
 //                        config.setReferer(movieReferer);
 //                        config.setUrl(movieReferer);
 //
-//                        ServerConfigManager.updateConfig(config);
+//                        ServerConfigRepository.updateConfig(config);
 //                        // Print the extracted URL
 //                        Log.d(TAG, "Extracted URL: " + movieReferer);
 //                    } catch (Exception e) {
@@ -956,7 +956,7 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
 //
 //
 //                    Log.d(TAG, "myMethod: xxx result:" + elementJson);
-//                    ServerConfigManager.updateConfig(config, dbHelper);
+//                    ServerConfigRepository.updateConfig(config, dbHelper);
 //                    dbHelper.saveHeadersAndCookies(server, movie.getStudio())
                     finish();
                     return;
@@ -989,7 +989,7 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
                             config.setReferer(movieReferer);
                             config.setUrl(movieReferer);
 
-                            ServerConfigManager.updateConfig(config, dbHelper);
+                            ServerConfigRepository.getInstance().updateConfig(config);
                         }
 //                        dbHelper.saveHeadersAndCookies(server, server.getServerId());
                         finish();
@@ -1344,7 +1344,7 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
                         //todo handle setting StringCookies to manage mapped Cookies
                         config.setStringCookies(cookie);
 
-                        ServerConfigManager.updateConfig(config, dbHelper);
+                        ServerConfigRepository.getInstance().updateConfig(config);
                         cookieFound = true;
 //                        Log.d(TAG, "shouldInterceptRequest: response: headers:" + request.getRequestHeaders().toString());
                         //  setResult(RESULT_OK);

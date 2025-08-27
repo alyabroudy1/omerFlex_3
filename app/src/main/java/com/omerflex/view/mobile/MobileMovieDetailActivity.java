@@ -23,7 +23,7 @@ import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
@@ -75,7 +75,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
 
         mSelectedMovie = Util.recieveSelectedMovie(getIntent());
 //        server = ServerManager.determineServer(mSelectedMovie, null, activity, null);
-        server = ServerConfigManager.getServer(mSelectedMovie.getStudio());
+        server = ServerConfigRepository.getInstance().getServer(mSelectedMovie.getStudio());
 
         initializeView(mSelectedMovie);
 
@@ -168,7 +168,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
 
     private void fetchCookie(Movie result) {
         result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
-        Util.openBrowserIntent(result, activity, true, true, true);
+        Util.openBrowserIntent(result, activity, true, true, true, 11);
     }
 
     private void evaluateWatchButton() {
@@ -457,7 +457,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                         @Override
                         public void onInvalidCookie(Movie result, String title) {
                             movie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
-                            Util.openBrowserIntent(movie, activity, false, true, true);
+                            Util.openBrowserIntent(movie, activity, false, true, true, 11);
                         }
 
                         @Override

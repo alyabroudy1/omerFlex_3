@@ -7,7 +7,7 @@ import android.webkit.MimeTypeMap;
 import android.webkit.WebResourceRequest;
 
 import com.omerflex.entity.Movie;
-import com.omerflex.server.LarozaServer;
+//import com.omerflex.server.LarozaServer;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;

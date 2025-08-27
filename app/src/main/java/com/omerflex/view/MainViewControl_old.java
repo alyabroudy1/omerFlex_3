@@ -10,19 +10,17 @@ import androidx.fragment.app.Fragment;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.IptvServer;
-import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public abstract class MainViewControl extends SearchViewControl {
-    public MainViewControl(Activity activity, Fragment fragment, MovieDbHelper dbHelper) {
+public abstract class MainViewControl_old extends SearchViewControl {
+    public MainViewControl_old(Activity activity, Fragment fragment, MovieDbHelper dbHelper) {
         super(activity, fragment, dbHelper);
     }
 
@@ -34,10 +32,10 @@ public abstract class MainViewControl extends SearchViewControl {
 //            executor2.submit(() -> {
         try {
 
-            if (server instanceof IptvServer) {
-                // return as it is loaded with loadOmarServerResult to manage orders
-                return;
-            }
+//            if (server instanceof IptvServer) {
+//                // return as it is loaded with loadOmarServerResult to manage orders
+//                return;
+//            }
 
 //            if (
 //                    server instanceof KooraServer //||
@@ -51,11 +49,11 @@ public abstract class MainViewControl extends SearchViewControl {
 //            ) {
 //                return;
 //            }
-
-            if (server instanceof OmarServer) {
-                loadOmarServerResult(finalQuery, server);
-                return;
-            }
+//
+//            if (server instanceof OmarServer) {
+//                loadOmarServerResult(finalQuery, server);
+//                return;
+//            }
             T serverAdapter = generateCategory(server.getLabel(), new ArrayList<>(), true);
 
             ExecutorService executor2 = Executors.newSingleThreadExecutor();
@@ -71,12 +69,12 @@ public abstract class MainViewControl extends SearchViewControl {
                             updateMovieListOfMovieAdapter(result, serverAdapter);
 //                                    loadMoviesRow(server, serverAdapter, result);
                             if (server.shouldUpdateDomainOnSearchResult()){
-                                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
-                                ServerConfigManager.updateConfig(config, dbHelper);
+                                ServerConfig config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
+                                ServerConfigRepository.getInstance().updateConfig(config);
                                 Log.d(TAG, "onSuccess: updateDomain on search result");
 //                                Movie sampleMovie = result.get(0);
 //                                if (sampleMovie != null && sampleMovie.getVideoUrl() != null) {
-//                                    ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+//                                    ServerConfig config = ServerConfigRepository.getConfig(server.getServerId());
 //                                    if (null != config) {
 //                                        updateDomain(sampleMovie.getVideoUrl(), config, dbHelper);
 //                                    }
@@ -90,8 +88,8 @@ public abstract class MainViewControl extends SearchViewControl {
 //                                    loadMoviesRow(server, serverAdapter, result);
                             updateMovieListOfMovieAdapter(result, serverAdapter);
                             if (server.shouldUpdateDomainOnSearchResult()){
-                                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
-                                ServerConfigManager.updateConfig(config, dbHelper);
+                                ServerConfig config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
+                                ServerConfigRepository.getInstance().updateConfig(config);
                                 Log.d(TAG, "onInvalidCookie: updateDomain on search result");
                             }
                         }
@@ -134,7 +132,7 @@ public abstract class MainViewControl extends SearchViewControl {
 
     private void loadIptvServerHomepageResult() {
         Log.d(TAG, "loadIptvServerHomepageResult: ");
-        AbstractServer server = ServerConfigManager.getServer(Movie.SERVER_IPTV);
+        AbstractServer server = ServerConfigRepository.getInstance().getServer(Movie.SERVER_IPTV);
         if (server == null){
             Log.d(TAG, "loadIptvServerHomepageResult: undefined iptv server");
             return;
@@ -149,7 +147,7 @@ public abstract class MainViewControl extends SearchViewControl {
         if (!equal) {
             config.setUrl(newDomain);
             config.setReferer(newDomain + "/");
-//            ServerConfigManager.updateConfig(config);
+//            ServerConfigRepository.updateConfig(config);
 
 //            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 //            Log.d(TAG, "addServerConfigsToDB: ");
@@ -160,7 +158,7 @@ public abstract class MainViewControl extends SearchViewControl {
 //                date = new Date();
 //            }
 //            dbHelper.saveServerConfigAsCookieDTO(config, date);
-            ServerConfigManager.updateConfig(config, dbHelper);
+            ServerConfigRepository.getInstance().updateConfig(config);
         }
     }
 

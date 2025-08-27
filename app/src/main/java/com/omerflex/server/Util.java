@@ -226,7 +226,7 @@ public class Util {
         Objects.requireNonNull(fragment).startActivity(exoIntent);
     }
 
-    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult, boolean isCookieFetch) {
+    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult, boolean isCookieFetch, int clickedRowId) {
         Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class), withSubList);
         exoIntent.putExtra("isCookieFetch", isCookieFetch);
         if (openForResult) {
@@ -238,7 +238,8 @@ public class Util {
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 
-    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult, boolean isCookieFetch) {
+    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult, boolean isCookieFetch, int clickedRowId) {
+        //todo to implement clickedRowId
         Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), BrowserActivity.class), withSubList);
         exoIntent.putExtra("isCookieFetch", isCookieFetch);
         if (openForResult) {
@@ -379,6 +380,12 @@ public class Util {
         Log.d(TAG, "openVideoDetailsIntent: Util");
         Intent exoIntent = generateIntent(movie, new Intent(activity, DetailsActivity.class), false);
         Objects.requireNonNull(activity).startActivity(exoIntent);
+    }
+
+    public static void openVideoDetailsIntent(Movie movie, Fragment fragment) {
+        Log.d(TAG, "openVideoDetailsIntent: Util");
+        Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), DetailsActivity.class), false);
+        Objects.requireNonNull(fragment).startActivity(exoIntent);
     }
 
     public static HashMap<String, String> convertJsonToHashMap(String jsonString) throws JSONException {

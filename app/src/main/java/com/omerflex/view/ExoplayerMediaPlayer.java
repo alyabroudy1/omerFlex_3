@@ -3,19 +3,13 @@ package com.omerflex.view;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
-
-import com.omerflex.OmerFlexApplication;
-import com.omerflex.service.concurrent.ThreadPoolManager;
-import com.omerflex.service.database.DatabaseManager;
-import com.omerflex.service.logging.ErrorHandler;
-import com.omerflex.service.logging.Logger;
-import com.omerflex.service.network.HttpClientManager;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
@@ -46,12 +40,12 @@ import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.service.database.MovieDbHelper;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -63,441 +57,619 @@ import javax.net.ssl.X509TrustManager;
 @androidx.media3.common.util.UnstableApi
 public class ExoplayerMediaPlayer extends AppCompatActivity {
 
-    private ExoPlayer player;
-    private static final String TAG = "ExoplayerMediaPlayer";
+    @Nullable private static ExoPlayer player;
+    static String TAG = "Exoplayer";
 
-    private MovieDbHelper dbHelper;
-    private PlayerView playerView;
+    MovieDbHelper dbHelper;
+    PlayerView playerView;
     private long backPressedTime;
-    private Movie movie;
+    Movie movie;
 
-    // Managers from OmerFlexApplication
-    private ThreadPoolManager threadPoolManager;
-    private HttpClientManager httpClientManager;
-    private DatabaseManager databaseManager;
+    // url of video which we are loading.
 
-    // Player configuration
-    public static final long MAX_SEEK_DURATION_MS = 60000; // 60 seconds
-    private static final long MAX_VIDEO_DURATION = 7200000; // 2 hours in ms
-    public static final long SEEK_DURATION_MS = 15000; // 15 seconds
-    public static final int CONNECTION_TIMEOUT = 60000; // 60 seconds
-    private static final float MIN_SEEK_DISTANCE = 100; // 100 pixels
-    private float initialTouchX;
-    private long lastSeekTime;
+    LeanbackPlayerAdapter leanbackPlayerAdapter;
+
+    //ontouch
+    public long MAX_SEEK_DURATION_MS = 2000; // 20 seconds
+    private static final long MAX_VIDEO_DURATION = 7200; // 2 hours
+    public long videoDuration; // The duration of the video in milliseconds
+    public static long SEEK_DURATION_MS = 1000;
+    public static long CONNECTION_TIMEOUT = 5000;
+    private static final float MIN_SEEK_DISTANCE = 100; //  pixels
+    public static float initialX = 0;
+    private Map<String, String> headers;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Logger.d(TAG, "onCreate: Starting ExoplayerMediaPlayer");
 
-        // Initialize managers from OmerFlexApplication
-        OmerFlexApplication app = OmerFlexApplication.getInstance();
-        threadPoolManager = app.getThreadPoolManager();
-        httpClientManager = app.getHttpClientManager();
-        databaseManager = app.getDatabaseManager();
-
-        // Set up full screen mode
+        // remove title
+        // Hide the status bar.
+        // Hide status bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         this.getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-        try {
-            getSupportActionBar().hide();
-            setContentView(R.layout.activity_exoplayer);
-            playerView = findViewById(R.id.player_view);
+        getSupportActionBar().hide();
+        setContentView(R.layout.activity_exoplayer);
+        //  setContentView(R.layout.activity_main);
+        playerView = findViewById(R.id.player_view);
 
-            Logger.d(TAG, "onCreate: Setting up player view");
 
-            // Use DatabaseManager from OmerFlexApplication
-            dbHelper = databaseManager.getDbHelper();
+//        player = new ExoPlayer.Builder(getApplicationContext()).build();
+       // player.setPlayWhenReady(true);
+        //leanbackPlayerAdapter = new LeanbackPlayerAdapter(this, player, 0);
+        dbHelper = MovieDbHelper.getInstance(this);
+         movie = com.omerflex.server.Util.recieveSelectedMovie(getIntent());
 
-            // Get movie from intent
-            movie = com.omerflex.server.Util.recieveSelectedMovie(getIntent());
-            if (movie == null) {
-                ErrorHandler.handleError(this, ErrorHandler.GENERAL_ERROR, 
-                        "No movie data found in intent", null);
-                finish();
-                return;
+        leanbackPlayerAdapter = new LeanbackPlayerAdapter(this.getApplicationContext(), player, 16);
+
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+//                if (webView.canGoBack()) {
+//                    webView.stopLoading(); // Stop loading the page
+//                    webView.goBack();      // Navigate back in WebView's history
+//                } else {
+//                    // If there's no history, close the activity
+//                    finish();
+//                }
+                handleBackPressed();
             }
+        };
 
-            Logger.d(TAG, "onCreate: Preparing to play movie: " + movie.getTitle());
+        // Add the callback to the back pressed dispatcher
+        getOnBackPressedDispatcher().addCallback(this, callback);
 
-            // Initialize player with optimized buffer settings
-            DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(
-                            DefaultLoadControl.DEFAULT_MIN_BUFFER_MS * 2,
-                            DefaultLoadControl.DEFAULT_MAX_BUFFER_MS * 2,
-                            DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
-                            DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS)
-                    .build();
 
-            player = new ExoPlayer.Builder(getApplicationContext())
-                    .setLoadControl(loadControl)
-                    .build();
+        // increase audio buffer
+        DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                        DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                        DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS)
+                .build();
 
-            // Set up audio focus for better playback
-            player.setAudioAttributes(new AudioAttributes.Builder()
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                    .setUsage(C.USAGE_MEDIA)
-                    .build(), true);
 
-            // Initialize leanback player adapter if needed
-            LeanbackPlayerAdapter leanbackPlayerAdapter =
-                    new LeanbackPlayerAdapter(this.getApplicationContext(), player, 16);
+        player = new ExoPlayer.Builder(getApplicationContext())
+                .setLoadControl(loadControl)
+                .build();
 
-            // Configure SSL to accept all certificates (security consideration)
-            setupSSL();
 
-            // Set up player view
-            playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
-            player.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT);
-            playerView.setPlayer(player);
-            playerView.setKeepScreenOn(true);
-            playerView.setControllerAutoShow(false);
+        // give audio focus for iptv live videos
+        player.setAudioAttributes(new AudioAttributes.Builder()
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .setUsage(C.USAGE_MEDIA)
+                .build(), true);
 
-            // Prepare and play the media
-            MediaSource mediaSource = buildMediaSource(movie);
-            player.prepare(mediaSource);
-            Logger.d(TAG, "onCreate: Player prepared with media source");
-            player.play();
 
-            // Set up touch listener for seek gestures
-            setupTouchListener();
 
-            // Add listeners for player events
-            setupPlayerListeners();
-
-            // Set up back button handling
-            setupBackButtonHandling();
-
-        } catch (Exception e) {
-            ErrorHandler.handleError(this, ErrorHandler.GENERAL_ERROR,
-                    "Error initializing ExoplayerMediaPlayer", e);
-        }
-    }
-
-    private void setupSSL() {
-        try {
-            TrustManager[] trustAllCerts = new TrustManager[]{
+        //Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts = new TrustManager[] {
                 new X509TrustManager() {
-                    public X509Certificate[] getAcceptedIssuers() {
+
+                    public X509Certificate[] getAcceptedIssuers()
+                    {
+                        Log.d(TAG, "getAcceptedIssuers: ");
                         return new X509Certificate[0];
+//                        return null;
                     }
-
-                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                        // Trust all clients
+                    public void checkClientTrusted(X509Certificate[] certs, String authType)
+                    {
+                        Log.d(TAG, "checkClientTrusted: ");
+                        //
                     }
-
-                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                        // Trust all servers
+                    public void checkServerTrusted(X509Certificate[] certs, String authType)
+                    {
+                        Log.d(TAG, "checkServerTrusted: "+ movie.getVideoUrl());
+                        //
                     }
                 }
-            };
+        };
 
+//Install the all-trusting trust manager
+        try {
             SSLContext sc = SSLContext.getInstance("TLS");
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
         } catch (KeyManagementException | NoSuchAlgorithmException e) {
-            Logger.e(TAG, "Error setting up SSL", e);
+            Log.d(TAG, "onCreate: error: "+e.getMessage());
+            e.printStackTrace();
         }
-    }
 
-    private void setupTouchListener() {
-        playerView.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    initialTouchX = event.getX();
-                    lastSeekTime = System.currentTimeMillis();
+        playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
+        player.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT);
+        playerView.setPlayer(player);
+
+
+// Set the media source to be played.
+     //   player.setMediaSource(createMediaSource(movie));
+
+//        DefaultHttpDataSourceFactory httpDataSourceFactory = new DefaultHttpDataSourceFactory();
+//
+//        DataSource.Factory dataSourceFactory = () -> {
+//            HttpDataSource dataSource = httpDataSourceFactory.createDataSource();
+//            // Set a custom authentication request header.
+//            String[] parts = movie.getVideoUrl().split("\\|");
+//            for (String part : parts) {
+//                if (part.contains("=")) {
+//                    String[] keyValue = part.split("=");
+//                    String key = keyValue[0];
+//                    String value = keyValue[1];
+//                    dataSource.setRequestProperty(key, value);
+//                }
+//            }
+//            movie.setVideoUrl(movie.getVideoUrl().substring(0, movie.getVideoUrl().indexOf('|')));
+//            Log.d("TAG", "dataSource:exoplayer "+movie.getVideoUrl());
+//            return dataSource;
+//        };
+//        MediaSource mediaSource = new HlsMediaSource.Factory(dataSourceFactory)
+//                .createMediaSource(Uri.parse(movie.getVideoUrl()));
+
+//
+//        MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory)
+//                .createMediaSource(Uri.parse(movie.getVideoUrl()));
+//        player.setMediaSource(mediaSource);
+
+
+//hier        player.setMediaItem(createMediaSource(movie));
+//
+//// Prepare the player.
+//        player.prepare();
+        MediaSource mediaSource = buildMediaSource(movie);
+
+        player.prepare(mediaSource);
+        Log.d(TAG, "onCreate: player.prepare(mediaSource) ");
+
+        playerView.setControllerAutoShow(false);
+
+
+        // Set the touch listener for the view that displays the ExoPlayer
+        playerView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Log.d(TAG, "onTouch: ");
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    // Save the initial x position of the touch event
+                    ExoplayerMediaPlayer.initialX = event.getX();
+                    Log.d("player", "onTouch:"+initialX+" ACTION_DOWN");
+
                     return true;
+                } else if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    Log.d("player", "onTouch:"+initialX+" ACTION_MOVE "+event.getX());
 
-                case MotionEvent.ACTION_MOVE:
-                    float deltaX = event.getX() - initialTouchX;
-                    // Only seek if we've moved far enough and enough time has passed since last seek
-                    if (Math.abs(deltaX) > MIN_SEEK_DISTANCE &&
-                            (System.currentTimeMillis() - lastSeekTime) > 500) {
+                    // Update the current x position of the touch event
+                    float currentX = event.getX();
 
-                        long seekAmount = (long) (deltaX > 0 ? SEEK_DURATION_MS : -SEEK_DURATION_MS);
-                        long newPosition = player.getCurrentPosition() + seekAmount;
-
-                        // Constrain position to valid range
-                        newPosition = Math.max(0, Math.min(newPosition, player.getDuration()));
-
-                        player.seekTo(newPosition);
-                        initialTouchX = event.getX(); // Reset for next move
-                        lastSeekTime = System.currentTimeMillis();
-
-                        // Show a toast with the seek information
-                        String direction = seekAmount > 0 ? "forward" : "backward";
-                        Toast.makeText(this, "Seeking " + direction + " " +
-                                        Math.abs(seekAmount / 1000) + " seconds",
-                                Toast.LENGTH_SHORT).show();
+                    // Do something with the deltaX value, such as updating a visual indication of the seek position
+                    if (Math.abs(event.getX()) > initialX + MIN_SEEK_DISTANCE) {
+                        // Seek forward or backward by 15 seconds if the touch moved a certain distance
+                        player.seekTo(player.getCurrentPosition() + SEEK_DURATION_MS);
+                    }
+                    if (Math.abs(event.getX()) < initialX - MIN_SEEK_DISTANCE) {
+                        // Seek forward or backward by 15 seconds if the touch moved a certain distance
+                        player.seekTo(player.getCurrentPosition() - SEEK_DURATION_MS);
                     }
                     return true;
-
-                case MotionEvent.ACTION_UP:
-                    // Show/hide controller on tap
-                    if (Math.abs(event.getX() - initialTouchX) < MIN_SEEK_DISTANCE) {
-                        if (!playerView.isControllerFullyVisible()) {
-                            playerView.showController();
-                        } else {
-                            playerView.hideController();
-                        }
+                }else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    // Calculate the difference between the initial and final x position of the touch event
+                    Log.d("player", "onTouch:"+event.getX()+" ACTION_UP "+initialX);
+                    ExoplayerMediaPlayer.initialX = 0;
+                    if (!playerView.isControllerFullyVisible()){
+                        playerView.showController();
                     }
                     return true;
+                }
+                return true;
             }
-            return false;
         });
-    }
 
-    private void setupPlayerListeners() {
-        // Listen for audio sink errors
-        player.addAnalyticsListener(new AnalyticsListener() {
+        player.addAnalyticsListener(new AnalyticsListener(){
             @Override
             public void onAudioSinkError(EventTime eventTime, Exception audioSinkError) {
-                Logger.e(TAG, "Audio sink error", audioSinkError);
-                try {
-                    // Try to rebuild and replay
-                    MediaSource mediaSource = buildMediaSource(movie);
-                    player.prepare(mediaSource);
-                    player.play();
-                } catch (Exception e) {
-                    ErrorHandler.handleError(ExoplayerMediaPlayer.this,
-                            ErrorHandler.PLAYBACK_ERROR,
-                            "Error rebuilding media source after audio sink error", e);
-                }
+                Log.d(TAG, "onAudioSinkError: "+audioSinkError.getMessage());
+//                AnalyticsListener.super.onAudioSinkError(eventTime, audioSinkError);
+                MediaSource mediaSource = buildMediaSource(movie);
+                player.prepare(mediaSource);
+                player.play();
             }
         });
-
-        // Listen for player errors and state changes
         player.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(PlaybackException error) {
-                Logger.e(TAG, "Player error: " + error.getMessage() +
-                        ", code: " + error.errorCode, error);
+//            public void onPlayerError(ExoPlaybackException error) {
+                Log.d("TAG", "onPlayerError: xxxx:"+error.getMessage()+", "+error.errorCode+", "+ error.toString()+", "+movie.getVideoUrl());
 
-                int errorCode = error.errorCode;
-                String studio = movie.getStudio();
-
-                // Special handling for IPTV/Omar servers
-                if (errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
-                    if (studio.equals(Movie.SERVER_OMAR) || studio.equals(Movie.SERVER_IPTV)) {
-                        try {
-                            MediaSource mediaSource = buildMediaSource(movie);
-                            player.prepare(mediaSource);
-                            player.play();
-                            return;
-                        } catch (Exception e) {
-                            ErrorHandler.handleError(ExoplayerMediaPlayer.this,
-                                    ErrorHandler.PLAYBACK_ERROR,
-                                    "Error rebuilding media after parse error", e);
-                        }
+                int c = error.errorCode;
+                if (c == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ){
+                    String studio = movie.getStudio();
+                    if (studio.equals(Movie.SERVER_OMAR) || studio.equals(Movie.SERVER_IPTV)){
+                        MediaSource mediaSource = buildMediaSource(movie);
+                        player.prepare(mediaSource);
+                        player.play();
+                        return;
                     }
                 }
 
-                // Check if we should delete the movie from database due to playback issues
-                boolean shouldDelete = errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
-                        || errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
-                        || errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
-                        || errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
-                        || errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED;
 
-                if (error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED) {
-                    shouldDelete = error.getCause() != null &&
-                            error.getCause().getMessage() != null &&
-                            error.getCause().getMessage().contains("verified");
+                boolean deleteCond = c == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
+                        || c == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
+                        || c == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+                        || c == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+                        || c == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED;
+                       // || c == PlaybackException.;
+                if (error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED){
+                    deleteCond = error.getCause() != null && error.getCause().getMessage() != null && error.getCause().getMessage().contains("verified");
                 }
-
-                if (shouldDelete) {
-                    Logger.i(TAG, "Deleting movie due to playback error: " + movie.getTitle());
-                    try {
-                        dbHelper.deleteMovie(movie);
-                    } catch (Exception e) {
-                        ErrorHandler.handleError(ExoplayerMediaPlayer.this,
-                                ErrorHandler.DATABASE_ERROR,
-                                "Error deleting movie after playback failure", e);
-                    }
+                if (deleteCond){
+                    Log.d("TAG", "onPlayerError: movie deleted: "+movie.toString());
+                    dbHelper.deleteMovie(movie);
                 }
-
-                Toast.makeText(ExoplayerMediaPlayer.this,
-                        "Failed to play video", Toast.LENGTH_SHORT).show();
+                Toast.makeText(ExoplayerMediaPlayer.this, "فشل في تشغيل الرابط", Toast.LENGTH_SHORT).show();
+                Player.Listener.super.onPlayerError(error);
             }
 
             @Override
             public void onPlaybackStateChanged(int playbackState) {
-                Logger.d(TAG, "Playback state changed: " + playbackState);
-
-                String studio = movie.getStudio();
-                if (!studio.equals(Movie.SERVER_IPTV) && !studio.equals(Movie.SERVER_OMAR)) {
+                Log.d(TAG, "onPlaybackStateChanged: xxxx:"+playbackState);
+               String studio = movie.getStudio();
+                if (!studio.equals(Movie.SERVER_IPTV)
+                && !studio.equals(Movie.SERVER_OMAR)){
                     return;
                 }
-
-                // For certain servers, automatically restart playback when it ends
-                if (playbackState == Player.STATE_ENDED) {
-                    Logger.i(TAG, "Playback ended, restarting for IPTV/Omar server");
-                    try {
-                        MediaSource mediaSource = buildMediaSource(movie);
-                        player.prepare(mediaSource);
-                        player.play();
-                    } catch (Exception e) {
-                        ErrorHandler.handleError(ExoplayerMediaPlayer.this,
-                                ErrorHandler.PLAYBACK_ERROR,
-                                "Error restarting playback after end", e);
-                    }
+                if (playbackState == Player.STATE_READY){
+                    Log.d(TAG, "onPlaybackStateChanged: xxxx: STATE_READY");
+//                    player.play();
+                    return;
+//                    dbHelper.addMovieToHistory(movie, false);
+//                    if (player != null && player.getCurrentPosition() == 0){
+//                      //  player.seekTo(movie.getPlayedTime());
+//                    }
                 }
+                if (playbackState == Player.STATE_ENDED){
+                    Log.d(TAG, "onPlaybackStateChanged: xxxx: STATE_ENDED");
+                    MediaSource mediaSource = buildMediaSource(movie);
+                    player.prepare(mediaSource);
+                    player.play();
+                    return;
+//                    dbHelper.addMovieToHistory(movie, false);
+//                    if (player != null && player.getCurrentPosition() == 0){
+//                      //  player.seekTo(movie.getPlayedTime());
+//                    }
+                }
+                Player.Listener.super.onPlaybackStateChanged(playbackState);
             }
         });
+
+        //  player.play()
+        playerView.setKeepScreenOn(true);
+        player.play();
+        //   player.play();
+
     }
 
-    private void setupBackButtonHandling() {
-        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                try {
-                    handleBackPressed();
-                } catch (Exception e) {
-                    ErrorHandler.handleError(ExoplayerMediaPlayer.this,
-                            ErrorHandler.GENERAL_ERROR,
-                            "Error handling back button press", e);
-                }
-            }
-        };
-
-        getOnBackPressedDispatcher().addCallback(this, callback);
-    }
 
     public void handleBackPressed() {
-        Logger.d(TAG, "handleBackPressed: Back button pressed");
-
-        try {
-            // Check if waiting time between the second click of back button is less than 1.5 seconds
-            if (backPressedTime + 1500 > System.currentTimeMillis()) {
-                Logger.i(TAG, "handleBackPressed: Second back press detected, finishing activity");
-
-                // Release player resources and finish
-                releasePlayerResources();
-                finish();
-            } else {
-                // If controller is visible, hide it; otherwise show exit message
-                if (playerView != null && playerView.isControllerFullyVisible()) {
-                    Logger.d(TAG, "handleBackPressed: Hiding player controller");
-                    playerView.hideController();
-                } else {
-                    Logger.d(TAG, "handleBackPressed: Showing exit message");
-                    Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
-                }
+        //super.onBackPressed();
+        Log.d("TAG", "onBackPressed: 1");
+        //check if waiting time between the second click of back button is greater less than 2 seconds so we finish the app
+        if (backPressedTime + 1500 > System.currentTimeMillis()) {
+            Log.d("TAG", "onBackPressed: 2 +");
+            if (player != null){
+                Log.d("TAG", "onBackPressed: 2 player released");
+                //    movie.setPlayedTime(String.valueOf(player.getCurrentPosition()));
+               // movie.save(dbHelper);
+                player.stop();
+                player.release();
             }
-
-            // Update timestamp for back press
-            backPressedTime = System.currentTimeMillis();
-        } catch (Exception e) {
-            ErrorHandler.handleError(this, ErrorHandler.GENERAL_ERROR, 
-                    "Error handling back button press", e);
-            // Ensure we still update the timestamp even if there's an error
-            backPressedTime = System.currentTimeMillis();
+            finish();
+        } else {
+            Log.d("TAG", "onBackPressed: 3");
+            if (playerView.isControllerFullyVisible())
+                playerView.hideController();
+            else
+                Toast.makeText(this, "Press back 2 time to exit", Toast.LENGTH_SHORT).show();
         }
+        backPressedTime = System.currentTimeMillis();
+//        super.onBackPressed();
     }
 
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        assert player != null;
+       // movie.setPlayedTime(String.valueOf(player.getCurrentPosition()));
+       // movie.save(dbHelper);
+        player.pause();
+        playerView.setKeepScreenOn(false);
+    }
+
+    public  List<String> splitString(String headers) {
+        List<String> headerList = new ArrayList<>();
+        String[] headerParts = headers.split("&");
+        for (String headerPart : headerParts) {
+            String[] keyValuePair = headerPart.split("=");
+            if (keyValuePair.length == 2) {
+                String key = keyValuePair[0];
+                String value = keyValuePair[1];
+            }
+        }
+        return headerList;
+    }
+
+    private MediaSource buildMediaSource_old(Movie movie) {
+        if (Objects.equals(movie.getStudio(), Movie.SERVER_OLD_AKWAM) && !movie.getVideoUrl().contains("https")){
+            movie.setVideoUrl(movie.getVideoUrl().replace("http", "https"));
+        }
+        String url = movie.getVideoUrl();
+        DataSource.Factory dataSourceFactory = new DefaultHttpDataSource.Factory();
+        if (url.contains("||")){
+            String[] splitString = url.split("\\|\\|");
+            url = splitString[0];
+            dataSourceFactory = () -> {
+                DataSource.Factory  httpDataSourceFactory = new DefaultHttpDataSource.Factory();
+                // HttpDataSource dataSource = httpDataSourceFactory.createDataSource();
+                DataSource dataSource = httpDataSourceFactory.createDataSource();
+                if (splitString.length == 2){
+                    Log.d("TAG", "buildMediaSource: extracted headers ssss: "+splitString[1]);
+                    String[] headerParts = splitString[1].split("&");
+                    for (String headerPart : headerParts) {
+                        String[] keyValuePair = headerPart.split("=");
+                        if (keyValuePair.length == 2) {
+                            String key = keyValuePair[0];
+                            String value = keyValuePair[1];
+                            Log.d(TAG, "buildMediaSource: "+ key+", "+value);
+                            // Set a custom authentication request header.
+                            ((HttpDataSource) dataSource).setRequestProperty(key, value);
+                        }
+                    }
+                }
+
+                return dataSource;
+            };
+        } 
+        else if (url.contains("|")){
+            String[] splitString = url.split("\\|");
+            url = splitString[0];
+            dataSourceFactory = () -> {
+                DataSource.Factory  httpDataSourceFactory = new DefaultHttpDataSource.Factory();
+                // HttpDataSource dataSource = httpDataSourceFactory.createDataSource();
+                DataSource dataSource = httpDataSourceFactory.createDataSource();
+                if (splitString.length == 2){
+                    Log.d("TAG", "buildMediaSource: extracted headers ssss: "+splitString[1]);
+                    String[] headerParts = splitString[1].split("&");
+                    for (String headerPart : headerParts) {
+                        String[] keyValuePair = headerPart.split("=");
+                        if (keyValuePair.length == 2) {
+                            String key = keyValuePair[0];
+                            String value = keyValuePair[1];
+                            // Set a custom authentication request header.
+
+                            ((HttpDataSource) dataSource).setRequestProperty(key, value);
+                        }
+                    }
+                }
+
+                return dataSource;
+            };
+        }
+        Log.d(TAG, "buildMediaSource: "+url);
+        Uri uri = Uri.parse(url);
+
+
+        MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(MediaItem.fromUri(uri));
+
+//        acceptAllSSLCertificate(dataSourceFactory);
+        int type = Util.inferContentType(uri);
+
+        Log.d("TAG", "buildMediaSource: play: "+type+", "+ uri);
+        if (movie.getVideoUrl().contains("m3u")){
+            return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+        }
+        switch (type) {
+            case C.CONTENT_TYPE_SS:
+// Create a SmoothStreaming media source pointing to a manifest uri.
+                mediaSource = new SsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+                return mediaSource;
+//            case C.CONTENT_TYPE_DASH:
+//// Create a dash media source pointing to a dash manifest uri.
+//                mediaSource = new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+//                return mediaSource;
+            case C.CONTENT_TYPE_HLS:
+// Create a HLS media source pointing to a playlist uri.
+                HlsMediaSource hlsMediaSource = new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
+                return hlsMediaSource;
+        }
+
+        return mediaSource;
+//        if (movie.getVideoUrl().contains("m3u")){
+//            HlsMediaSource.Factory factory = new HlsMediaSource.Factory(
+//                    new DefaultHttpDataSourceFactory(Util.getUserAgent(this, "exoplayer-codelab")));
+//            HlsMediaSource mediaSource = factory.createMediaSource(uri);
+//            return mediaSource;
+//        }
+
+
+//      DataSource.Factory dataSourceFactory =
+//                new DefaultDataSourceFactory(this, "exoplayer-codelab");
+//        return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
+    }
+
+//    private void acceptAllSSLCertificate(DataSource.Factory dataSourceFactory) {
+//        try {
+//            // Set up SSL context to trust all certificates
+//            SSLContext sslContext = SSLContext.getInstance("TLS");
+//            TrustManager[] trustManagers = new TrustManager[]{
+//                    new X509TrustManager() {
+//                        @Override
+//                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+//                            // Do nothing
+//                        }
+//
+//                        @Override
+//                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+//                            // Do nothing
+//                        }
+//
+//                        @Override
+//                        public X509Certificate[] getAcceptedIssuers() {
+//                            return new X509Certificate[0];
+//                        }
+//                    }
+//            };
+//
+//            sslContext.init(null, trustManagers, new java.security.SecureRandom());
+//
+//            // Use the custom SSL context
+//            dataSourceFactory.setSslSocketFactory(sslContext.getSocketFactory());
+//        } catch (NoSuchAlgorithmException | KeyManagementException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
     private MediaSource buildMediaSource(Movie movie) {
-        // Ensure HTTPS for Akwam server
         updateMovieUrlToHttps(movie);
 
-        // Parse URL and headers
         String url = movie.getVideoUrl();
+        // Split the URL to get the clean URL and headers part
         String[] parts = url.split("\\|", 2);
         String cleanUrl = parts[0];
         Map<String, String> headers = new HashMap<>();
 
         if (parts.length == 2) {
             headers = com.omerflex.server.Util.extractHeaders(parts[1]);
-            Logger.d(TAG, "Headers extracted from URL: " + headers);
+            Log.d("TAG", "buildMediaSource: h:" + parts[1]);
         }
-
-        // Create data source factory with headers
         DataSource.Factory dataSourceFactory = createDataSourceFactory(cleanUrl, headers);
+
+        Log.d("TAG", "buildMediaSource: cleanUrl:" + cleanUrl);
         Uri uri = Uri.parse(cleanUrl);
 
-        // Create appropriate media source based on content type
-        return createMediaSource(dataSourceFactory, uri, movie);
+        MediaSource mediaSource = createMediaSource(dataSourceFactory, uri, movie);
+        Log.d(TAG, "buildMediaSource: mediaSource: "+mediaSource.toString());
+        Log.d("TAG", "buildMediaSource: done: " + Util.inferContentType(uri) + ", " + uri);
+        return mediaSource;
     }
 
     private void updateMovieUrlToHttps(Movie movie) {
-        if (Objects.equals(movie.getStudio(), Movie.SERVER_OLD_AKWAM) &&
-                !movie.getVideoUrl().contains("https")) {
+        if (Objects.equals(movie.getStudio(), Movie.SERVER_OLD_AKWAM) && !movie.getVideoUrl().contains("https")) {
             movie.setVideoUrl(movie.getVideoUrl().replace("http", "https"));
         }
     }
 
     private DataSource.Factory createDataSourceFactory(String url, Map<String, String> headers) {
+        Log.d(TAG, "createDataSourceFactory: h:"+headers);
         if (headers.isEmpty()) {
-            return new DefaultHttpDataSource.Factory()
-                    .setAllowCrossProtocolRedirects(true)
-                    .setConnectTimeoutMs(CONNECTION_TIMEOUT)
-                    .setReadTimeoutMs(CONNECTION_TIMEOUT);
+            return new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+                    .setConnectTimeoutMs(60000)
+                    .setReadTimeoutMs(60000);
         }
+            return () -> {
+                DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
+                        .setAllowCrossProtocolRedirects(true)
+                        .setConnectTimeoutMs(60000)
+                        .setReadTimeoutMs(60000);
+                DataSource dataSource = httpDataSourceFactory.createDataSource();
+                Log.d(TAG, "createDataSourceFactory:setRequestHeaders: "+dataSource.toString());
+                    setRequestHeaders(dataSource, headers);
 
-        return () -> {
-            DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
-                    .setAllowCrossProtocolRedirects(true)
-                    .setConnectTimeoutMs(CONNECTION_TIMEOUT)
-                    .setReadTimeoutMs(CONNECTION_TIMEOUT);
-
-            DataSource dataSource = httpDataSourceFactory.createDataSource();
-            setRequestHeaders(dataSource, headers);
-            return dataSource;
-        };
+                return dataSource;
+            };
     }
 
     private void setRequestHeaders(DataSource dataSource, Map<String, String> headers) {
+        Log.d("TAG", "buildMediaSource: extracted headers: " + headers);
+
         for (Map.Entry<String, String> entry : headers.entrySet()) {
             ((HttpDataSource) dataSource).setRequestProperty(entry.getKey(), entry.getValue());
         }
+        Log.d(TAG, "buildMediaSource: extracted headers: done");
     }
 
     private MediaSource createMediaSource(DataSource.Factory dataSourceFactory, Uri uri, Movie movie) {
-        // Check for HLS specific case
+        int type = Util.inferContentType(uri);
+        Log.d(TAG, "createMediaSource: type: "+type);
+
         if (movie.getVideoUrl().contains("m3u")) {
             return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
         }
-
-        // Determine content type and create appropriate source
-        int type = Util.inferContentType(uri);
+        Log.d(TAG, "createMediaSource: type "+ type);
         switch (type) {
             case C.CONTENT_TYPE_SS:
-                return new SsMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(MediaItem.fromUri(uri));
+                return new SsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             case C.CONTENT_TYPE_DASH:
-                return new DashMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(MediaItem.fromUri(uri));
+//                // Configure DRM for PlayReady
+//                MediaItem.DrmConfiguration drmConfig = new MediaItem.DrmConfiguration.Builder(C.PLAYREADY_UUID)
+////                        .setLicenseUri("YOUR_PLAYREADY_LICENSE_SERVER_URL") // Replace with actual license URL
+////                        .setForceDefaultLicenseUri(true)
+//                        .setMultiSession(true)
+//                        .build();
+//                MediaItem mediaItem = new MediaItem.Builder()
+//                        .setUri(uri)
+//                        .setDrmConfiguration(drmConfig)
+//                        .build();
+//                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             case C.CONTENT_TYPE_HLS:
-                return new HlsMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(MediaItem.fromUri(uri));
+                return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
             default:
-                return new ProgressiveMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(MediaItem.fromUri(uri));
+                return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri));
         }
+    }
+
+    private MediaItem createMediaSource_old(Movie movie) {
+        // Uri videoUri = Uri.parse("https://media.geeksforgeeks.org/wp-content/uploads/20201217163353/Screenrecorder-2020-12-17-16-32-03-350.mp4");
+        // Build the media item.
+        if (Objects.equals(movie.getStudio(), Movie.SERVER_OLD_AKWAM) && !movie.getVideoUrl().contains("https")){
+            movie.setVideoUrl(movie.getVideoUrl().replace("http", "https"));
+        }
+        MediaItem mediaItem = MediaItem.fromUri(movie.getVideoUrl());
+        Log.d("Exoplayer", "createMediaSource: "+movie.getVideoUrl()+ "[ "+Uri.parse(movie.getVideoUrl())+" ]");
+// Set the media item to be played.
+    /*    player.setMediaItem(mediaItem);
+// Prepare the player.
+        player.prepare();
+// Start the playback.
+        player.play();
+
+     */
+/*
+        // Create a data source factory.
+        DataSource.Factory dataSourceFactory = new DefaultHttpDataSourceFactory();
+// Create a SmoothStreaming media source pointing to a manifest uri.
+        MediaSource mediaSource =
+                new SsMediaSource.Factory(dataSourceFactory)
+                        .createMediaSource(MediaItem.fromUri(videoUri));
+
+ */
+        return mediaItem;
+
     }
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            if (!playerView.isControllerFullyVisible()) {
-                if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_CENTER ||
-                        event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
-                    playerView.showController();
-                    return true;
-                } else if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    player.seekTo(Math.min(player.getCurrentPosition() + SEEK_DURATION_MS,
-                            player.getDuration()));
-                    return true;
-                } else if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_LEFT) {
-                    player.seekTo(Math.max(0, player.getCurrentPosition() - SEEK_DURATION_MS));
-                    return true;
-                } else if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-                    if (playerView.isControllerFullyVisible()) {
-                        playerView.hideController();
-                        return true;
-                    }
+        // See whether the player view wants to handle media or DPAD keys events.
+        Log.d("Exoplayer", "dispatchKeyEvent: "+event.toString());
+
+        if (!playerView.isControllerFullyVisible()) {
+            if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_CENTER || event.getKeyCode() == KeyEvent.KEYCODE_ENTER)
+            {
+                playerView.showController();
+            }
+            else if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT)
+            {
+                playerView.hideController();
+
+                Objects.requireNonNull(player).seekTo(player.getCurrentPosition() + 15000);
+            }else if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_LEFT){
+                Objects.requireNonNull(player).seekTo(player.getCurrentPosition() - 15000);
+            }
+            else if (event.getKeyCode() == KeyEvent.KEYCODE_BACK){
+                if (playerView.isControllerFullyVisible()){
+                    playerView.hideController();
                 }
             }
         }
@@ -505,90 +677,45 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         return playerView.dispatchKeyEvent(event) || super.dispatchKeyEvent(event);
     }
 
-    private void releasePlayerResources() {
-        if (player != null) {
-            try {
-                player.stop();
-                player.release();
-                player = null;
-            } catch (Exception e) {
-                ErrorHandler.handleError(this, ErrorHandler.PLAYBACK_ERROR,
-                        "Error releasing player resources", e);
-            }
-        }
-    }
-
-    @Override
-    protected void onUserLeaveHint() {
-        Logger.d(TAG, "onUserLeaveHint: User leaving app");
-        try {
-            super.onUserLeaveHint();
-
-            if (player != null) {
-                player.pause();
-            }
-
-            if (playerView != null) {
-                playerView.setKeepScreenOn(false);
-            }
-        } catch (Exception e) {
-            ErrorHandler.handleError(this, ErrorHandler.GENERAL_ERROR,
-                    "Error handling user leave hint", e);
-        }
-    }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Logger.d(TAG, "onDestroy called");
-
-        if (isFinishing()) {
-            releasePlayerResources();
+        Log.d("TAG", "onDestroy: yess ");
+        if (isFinishing()){
+            if (player != null) {
+                // movie.setPlayedTime(String.valueOf(player.getCurrentPosition()));
+                //movie.save(dbHelper);
+                player.release();
+                player = null;
+            }
         }
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        Logger.d(TAG, "onStop called");
 
+        Log.d("TAG", "onStop: yess ");
         if (player != null) {
-            try {
-                long playtime = player.getCurrentPosition();
-                Logger.d(TAG, "Saving play time: " + (playtime / 60000) + " minutes");
-
-                movie.setPlayedTime(playtime);
-                dbHelper.updateMoviePlayTime(movie, playtime);
-
-                // Pause if not finishing
-                if (!isFinishing()) {
-                    player.pause();
-                    playerView.setKeepScreenOn(false);
-                }
-            } catch (Exception e) {
-                ErrorHandler.handleError(this, ErrorHandler.DATABASE_ERROR,
-                        "Error saving playback position", e);
+            long playtime = player.getCurrentPosition();
+            Log.d(TAG, "onStop: playtime:"+playtime  / 60000);
+            movie.setPlayedTime(playtime);
+             dbHelper.updateMoviePlayTime(movie, playtime);
+            // Check if the activity is still running
+            if (!isFinishing()) {
+                player.pause();
+                playerView.setKeepScreenOn(false);
             }
         }
     }
 
     @Override
     protected void onResume() {
-        Logger.d(TAG, "onResume called");
-        try {
-            super.onResume();
-
-            if (playerView != null) {
-                playerView.setKeepScreenOn(true);
-            }
-
-            if (player != null && !player.isPlaying()) {
-                player.play();
-            }
-        } catch (Exception e) {
-            ErrorHandler.handleError(this, ErrorHandler.GENERAL_ERROR, 
-                    "Error resuming activity", e);
-        }
+        super.onResume();
+        playerView.setKeepScreenOn(true);
+        Log.d("TAG", "onResume: yess");
     }
+
 }

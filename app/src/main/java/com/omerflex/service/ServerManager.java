@@ -191,7 +191,7 @@ public class ServerManager {
                 }
             } catch (ParseException e) {
                 e.printStackTrace();
-                Log.d(TAG, "initializeServerCookies: error:" + e.getMessage());
+                Log.d(TAG, "initializeServerCookies: error:"+e.getMessage());
             }
 
 

@@ -13,29 +13,27 @@ import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.ListRow;
 
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.ServerConfig;
+import com.omerflex.entity.MovieRepository;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.server.AkwamServer;
-import com.omerflex.server.ArabSeedServer;
-import com.omerflex.server.CimaNowServer;
-import com.omerflex.server.FaselHdServer;
-import com.omerflex.server.IptvServer;
-import com.omerflex.server.KooraServer;
-import com.omerflex.server.LarozaServer;
-import com.omerflex.server.MyCimaServer;
-import com.omerflex.server.OldAkwamServer;
-import com.omerflex.server.OmarServer;
+//import com.omerflex.server.AkwamServer;
+//import com.omerflex.server.ArabSeedServer;
+//import com.omerflex.server.CimaNowServer;
+//import com.omerflex.server.FaselHdServer;
+//import com.omerflex.server.IptvServer;
+//import com.omerflex.server.KooraServer;
+//import com.omerflex.server.MyCimaServer;
+//import com.omerflex.server.OldAkwamServer;
+//import com.omerflex.server.OmarServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.service.M3U8ContentFetcher;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -46,12 +44,14 @@ public abstract class SearchViewControl {
     protected final Activity activity;
     protected final Fragment fragment;
     protected MovieDbHelper dbHelper;
+    protected MovieRepository movieRepository;
     Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public SearchViewControl(Activity activity, Fragment fragment, MovieDbHelper dbHelper) {
         this.activity = activity;
         this.fragment = fragment;
         this.dbHelper = dbHelper;
+        movieRepository = MovieRepository.getInstance(activity);
 //        Looper.prepare(); // to run Toasts
     }
 
@@ -74,10 +74,10 @@ public abstract class SearchViewControl {
 //                Toast.makeText(activity, "Unknown Server", Toast.LENGTH_SHORT).show();
                 return;
             }
-            AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+            AbstractServer server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
             Log.d(TAG, "handleMovieItemClick: movie: " + movie);
             if (server == null) {
-                Log.d(TAG, "handleMovieItemClick: Unknown Server");
+                Log.d(TAG, "handleMovieItemClick: Unknown Server: "+ movie.getStudio());
 //                Toast.makeText(activity, "Unknown Server", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -113,7 +113,7 @@ public abstract class SearchViewControl {
             if (movie.getState() == Movie.BROWSER_STATE) {
                 Log.d(TAG, "handleMovieItemClick: BROWSER_STATE");
                 //todo: add info to say if next already clicked, and handle the rest
-                Util.openBrowserIntent(movie, activity, false, false, false);
+                Util.openBrowserIntent(movie, activity, false, false, false, 11);
                 return;
             }
 
@@ -138,7 +138,7 @@ public abstract class SearchViewControl {
             ExecutorService executor = Executors.newSingleThreadExecutor();
             executor.submit(() -> {
 //                            AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
-                AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+                AbstractServer server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
                 if (server == null) {
                     Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE run: unknown server:" + movie.getStudio());
                     return;
@@ -220,10 +220,10 @@ public abstract class SearchViewControl {
         Log.d(TAG, "renewCookie: ");
         movie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
         if (fragment != null) {
-            Util.openBrowserIntent(movie, fragment, true, true, true);
+            Util.openBrowserIntent(movie, fragment, true, true, true, 11);
             return;
         }
-        Util.openBrowserIntent(movie, activity, true, true, true);
+        Util.openBrowserIntent(movie, activity, true, true, true,11);
     }
 
     protected abstract void openDetailsActivity(Movie movie, Activity activity);
@@ -308,7 +308,7 @@ public abstract class SearchViewControl {
         try {
 //           showProgressDialog();
 //        todo
-//            IptvServer iptvServer = (IptvServer) ServerConfigManager.getServer(Movie.SERVER_IPTV);
+//            IptvServer iptvServer = (IptvServer) ServerConfigRepository.getServer(Movie.SERVER_IPTV);
 //            if (iptvServer == null) {
 //                return;
 //            }
@@ -406,37 +406,37 @@ public abstract class SearchViewControl {
 
 
             Log.d(TAG, "loadHomepageRaws a " + finalQuery);
-            for (Map.Entry<String, AbstractServer> entry : ServerConfigManager.getServers(dbHelper).entrySet()) {
-                AbstractServer server = entry.getValue();
-                ServerConfig config = ServerConfigManager.getConfig(entry.getKey());
-
-                Log.d(TAG, "loadHomepageRaws config: " + config);
-//                if (config == null || !config.isActive()){
-                if (config == null) {
-                    return;
-                }
-//                if (server == null || server.getConfig() == null|| !server.getConfig().isActive()){
+//            for (Map.Entry<String, AbstractServer> entry : ServerConfigRepository.getServers(dbHelper).entrySet()) {
+//                AbstractServer server = entry.getValue();
+//                ServerConfig config = ServerConfigRepository.getConfig(entry.getKey());
+//
+//                Log.d(TAG, "loadHomepageRaws config: " + config);
+////                if (config == null || !config.isActive()){
+//                if (config == null) {
+//                    return;
+//                }
+////                if (server == null || server.getConfig() == null|| !server.getConfig().isActive()){
+////                    continue;
+////                }
+//                Log.d(TAG, "loadCategoriesInBackground: " + server.getServerId());
+//                if (
+//                        server instanceof OldAkwamServer ||
+//                                server instanceof AkwamServer ||
+//                                server instanceof ArabSeedServer ||
+//                                server instanceof CimaNowServer ||
+//                                server instanceof LarozaServer ||
+//                                server instanceof FaselHdServer ||
+//                                server instanceof OmarServer ||
+//                                server instanceof IptvServer ||
+//                                server instanceof MyCimaServer ||
+//                                server instanceof KooraServer
+////                        (server instanceof KooraServer && !query.isEmpty())
+//                ) {
 //                    continue;
 //                }
-                Log.d(TAG, "loadCategoriesInBackground: " + server.getServerId());
-                if (
-                        server instanceof OldAkwamServer ||
-                                server instanceof AkwamServer ||
-                                server instanceof ArabSeedServer ||
-                                server instanceof CimaNowServer ||
-                                server instanceof LarozaServer ||
-                                server instanceof FaselHdServer ||
-                                server instanceof OmarServer ||
-                                server instanceof IptvServer ||
-                                server instanceof MyCimaServer ||
-                                server instanceof KooraServer
-//                        (server instanceof KooraServer && !query.isEmpty())
-                ) {
-                    continue;
-                }
-
-                loadServerRow(server, finalQuery);
-            }
+//
+//                loadServerRow(server, finalQuery);
+//            }
 
             loadHomepageHistoryRows();
         });
@@ -448,15 +448,15 @@ public abstract class SearchViewControl {
     }
 
     protected <T> void loadServerRow(AbstractServer server, String finalQuery) {
-        if (server instanceof OmarServer) {
-            loadOmarServerResult(finalQuery, server);
-            return;
-        }
-
-        if (server instanceof IptvServer) {
-            loadIptvServerResult(finalQuery, server);
-            return;
-        }
+//        if (server instanceof OmarServer) {
+//            loadOmarServerResult(finalQuery, server);
+//            return;
+//        }
+//
+//        if (server instanceof IptvServer) {
+//            loadIptvServerResult(finalQuery, server);
+//            return;
+//        }
 
         // Update the RecyclerView on the main thread
         ArrayList<Movie> movies = server.search(finalQuery, new SearchCallback());
@@ -560,9 +560,7 @@ public abstract class SearchViewControl {
 //                Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER but empty result movie");
 //                return;
 //            }
-            Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
-//            Util.openExternalVideoPlayer(resultMovie, activity);
-            Util.openExoPlayer(resultMovie, activity, true);
+
             // todo: handle dbHelper
 //            updateRelatedMovieItem(clickedHorizontalMovieAdapter, clickedMovieIndex, resultMovie);
             updateClickedMovieItem(clickedAdapter, clickedMovieIndex, resultMovie);

@@ -1,7 +1,6 @@
 package com.omerflex.view;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -11,9 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.SystemClock;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -49,7 +46,7 @@ import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
 import com.omerflex.service.HtmlPageService;
 import com.omerflex.service.LinkFilterService;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 
 import org.jsoup.Connection;
@@ -62,7 +59,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -165,12 +161,12 @@ public class BrowserActivity extends AppCompatActivity {
 
         movie = Util.recieveSelectedMovie(getIntent());
 
-        server = ServerConfigManager.getServer(movie.getStudio());
+        server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
         if (server == null) {
             Toast.makeText(activity, "undefined server", Toast.LENGTH_SHORT).show();
             return;
         }
-        config = ServerConfigManager.getConfig(server.getServerId());
+        config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
 
         configureWebview(webView);
     }
@@ -376,7 +372,7 @@ public class BrowserActivity extends AppCompatActivity {
         public void myMethod(String elementJson) {
             Log.d(TAG, "myMethod: xxxx");
 
-            ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+            ServerConfig config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
             // Parse the JSON string
             Type movieListType = new TypeToken<List<Movie>>() {
             }.getType();
@@ -422,10 +418,7 @@ public class BrowserActivity extends AppCompatActivity {
                     // config being updated in the server and here saved to db
                     // this case is only for akwam and old_akwam servers
                     Log.d(TAG, "processOnOtherMovieStates: update config");
-                    ServerConfigManager.updateConfig(
-                            config,
-                            dbHelper
-                    );
+                    ServerConfigRepository.getInstance().updateConfig(config);
                     setResult(
                             Activity.RESULT_OK,
                             Util.generateIntentResult(movieFetchProcess.movie)
@@ -753,7 +746,7 @@ public class BrowserActivity extends AppCompatActivity {
             }
             config.setStringCookies(cookies);
             config.setHeaders(headers);
-            ServerConfigManager.updateConfig(config, dbHelper);
+            ServerConfigRepository.getInstance().updateConfig(config);
         }
         @Override
         public void onLoadResource(WebView view, String url) {

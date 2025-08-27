@@ -8,7 +8,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 
 import androidx.core.content.ContextCompat;
 import androidx.leanback.widget.BaseCardView;
@@ -21,7 +20,7 @@ import com.bumptech.glide.load.model.LazyHeaders;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 
 import java.util.Map;
 
@@ -58,7 +57,7 @@ public class CardPresenter extends Presenter {
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent) {
-        Log.d(TAG, "onCreateViewHolder");
+//        Log.d(TAG, "onCreateViewHolder");
 
         sDefaultBackgroundColor = ContextCompat.getColor(parent.getContext(), R.color.default_background);
         sSelectedBackgroundColor = ContextCompat.getColor(parent.getContext(), R.color.selected_background);
@@ -111,7 +110,7 @@ public class CardPresenter extends Presenter {
             return;
         }
 
-        Log.d(TAG, "onBindViewHolder: " + movie.getCardImageUrl());
+//        Log.d(TAG, "onBindViewHolder: " + movie.getCardImageUrl());
 
         cardView.setTitleText(movie.getTitle());
         // Updated to use the year from the movie object.
@@ -148,12 +147,12 @@ public class CardPresenter extends Presenter {
         // Ensure URL is not null or empty, use a fallback if needed
         String imageUrl = movie.getCardImageUrl();
         if (imageUrl == null || imageUrl.isEmpty()) {
-            Log.e(TAG, "loadMovieImage: movie.getCardImageUrl() is NULL or EMPTY!");
+//            Log.e(TAG, "loadMovieImage: movie.getCardImageUrl() is NULL or EMPTY!");
             Glide.with(cardView.getContext()).load(defaultImage).into(cardView.getMainImageView());
             return;
         }
 
-        ServerConfig config = ServerConfigManager.getConfig(movie.getStudio());
+        ServerConfig config = ServerConfigRepository.getInstance().getConfig(movie.getStudio());
         // Check if there are any headers to add
         boolean hasHeaders = config != null && config.getHeaders() != null && !config.getHeaders().isEmpty();
 
@@ -184,7 +183,7 @@ public class CardPresenter extends Presenter {
                     .fitCenter()
                     .error(defaultImage)
                     .into(cardView.getMainImageView());
-            Log.d(TAG, "loadMovieImage: no headers needed.");
+//            Log.d(TAG, "loadMovieImage: no headers needed.");
         }
     }
 }

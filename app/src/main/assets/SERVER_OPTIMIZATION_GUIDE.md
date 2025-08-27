@@ -108,7 +108,7 @@ protected boolean shouldExecuteAsynchronously(int action) {
 public class MyCustomServer extends AbstractServer {
 
     public MyCustomServer() {
-        initialize(ServerConfigManager.getContext());
+        initialize(ServerConfigRepository.getContext());
     }
     
     @Override

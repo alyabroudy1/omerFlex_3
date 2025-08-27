@@ -283,7 +283,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //        Log.d(TAG, "loadSearchResultRaws ");
 //        ExecutorService executor = Executors.newSingleThreadExecutor();
 //        executor.submit(() -> {
-//            for (AbstractServer server : ServerConfigManager.getServers(dbHelper)) {
+//            for (AbstractServer server : ServerConfigRepository.getServers(dbHelper)) {
 //                if (server == null) {
 //                    Log.d(TAG, "loadSearchResultRaws: unknown server");
 //                    continue;
@@ -743,7 +743,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //            ExecutorService executor = Executors.newSingleThreadExecutor();
 //            executor.submit(() -> {
 ////                            AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
-//                AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+//                AbstractServer server = ServerConfigRepository.getServer(movie.getStudio());
 //                if (server == null) {
 //                    Log.d(TAG, "handleItemClicked NEXT_PAGE_STATE run: unknown server:" + movie.getStudio());
 //                    return;
@@ -878,7 +878,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //////
 //////                            executor.submit(() -> {
 ////////                                AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
-//////                                AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+//////                                AbstractServer server = ServerConfigRepository.getServer(movie.getStudio());
 //////                                if (server == null) {
 //////                                    Log.d(TAG, "onItemClicked: NEXT_PAGE_STATE unknown server: " + movie.getStudio());
 //////                                    return;
@@ -927,7 +927,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //////
 ////                    else {
 //////                        AbstractServer server = ServerManager.determineServer(movie, null, getActivity(), fragment);
-////                        AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+////                        AbstractServer server = ServerConfigRepository.getServer(movie.getStudio());
 ////                        if (server == null) {
 ////                            Log.d(TAG, "onItemClicked: unknown server: " + movie.getStudio() + ", state: " + movie.getState());
 ////                            return;
@@ -1094,7 +1094,7 @@ public class SearchResultFragment extends BrowseSupportFragment {
 //        }
 //        ArrayObjectAdapter objectAdapter = getServerAdapter(clickedMovie.getStudio());
 ////        AbstractServer server = ServerManager.determineServer(clickedMovie, objectAdapter, getActivity(), fragment);
-//        AbstractServer server = ServerConfigManager.getServer(clickedMovie.getStudio());
+//        AbstractServer server = ServerConfigRepository.getServer(clickedMovie.getStudio());
 //        if (server == null) {
 //            Log.d(TAG, "onActivityResult: unknown server: " + clickedMovie.getStudio() + ", state: " + clickedMovie.getState());
 //            return;

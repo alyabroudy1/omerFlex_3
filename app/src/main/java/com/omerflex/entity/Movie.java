@@ -8,7 +8,6 @@ import android.os.Parcelable;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
-import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -41,6 +40,9 @@ public class Movie implements Parcelable {
     public static final String SERVER_LAROZA = "laroza";
     public final static String SERVER_WATAN_FLIX = "watanflix";
     public static final String SERVER_IMDB = "imdb";
+    public static final String KEY_CLICKED_ROW_ID = "clickedRowId";
+    public static final String KEY_CLICKED_MOVIE_INDEX = "clickedMovieIndex";
+    public static final String KEY_IS_COOKIE_FETCH = "isCookieFetch";
     public final static int GROUP_OF_GROUP_STATE = 0;
     public final static int GROUP_STATE = 1;
     public final static int ITEM_STATE = 2;
@@ -61,6 +63,7 @@ public class Movie implements Parcelable {
     public static final int FETCH_MOVIE_AT_START = 16;
     public static final int NO_FETCH_MOVIE_AT_START = 17;
     public static final int ACTION_WATCH_LOCALLY = 18;
+    public static final int IPTV_PLAY_LIST_STATE = 19;
     private static int count = 0;
     private String searchContext;
 
@@ -453,9 +456,9 @@ public class Movie implements Parcelable {
     }
 
 
-    public boolean save(MovieDbHelper dbHelper){
-        return dbHelper.saveMovie(this, true);
-    }
+//    public boolean save(MovieDbHelper dbHelper){
+//        return dbHelper.saveMovie(this, true);
+//    }
     public void setSearchContext(String searchContext) {
         this.searchContext = searchContext;
     }

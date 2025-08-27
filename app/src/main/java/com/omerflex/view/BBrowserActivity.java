@@ -45,8 +45,7 @@ import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
-import com.omerflex.service.ServerConfigManager;
-import com.omerflex.service.ServerManager;
+import com.omerflex.server.config.ServerConfigRepository;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -172,7 +171,7 @@ public class BBrowserActivity extends AppCompatActivity {
             }
         };
 
-        server = ServerConfigManager.getServer(movie.getStudio());
+        server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
 
 
 
@@ -325,6 +324,7 @@ public class BBrowserActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        super.onBackPressed();
         //check if waiting time between the second click of back button is greater less than 2 seconds so we finish the app
         if (backPressedTime + 2000 > System.currentTimeMillis()) {
             finish();

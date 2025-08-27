@@ -42,7 +42,7 @@ import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 
 import org.json.JSONArray;
@@ -253,7 +253,7 @@ public class BrowserActivity_old extends AppCompatActivity {
 //        });
 
 
-        server = ServerConfigManager.getServer(movie.getStudio());
+        server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
 
         //   simpleWebView.setWebViewClient(new CustomWebViewClient());
         //   webView.setWebChromeClient(new ChromeClient());

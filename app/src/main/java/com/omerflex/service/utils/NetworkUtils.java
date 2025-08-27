@@ -6,10 +6,9 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.Build;
+import android.util.Log;
 
 import com.omerflex.OmerFlexApplication;
-import com.omerflex.service.logging.Logger;
-
 /**
  * Utility class for network-related operations.
  */
@@ -27,21 +26,21 @@ public class NetworkUtils {
                 context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
         if (connectivityManager == null) {
-            Logger.w(TAG, "ConnectivityManager is null, assuming no network");
+            Log.w(TAG, "ConnectivityManager is null, assuming no network");
             return false;
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Network network = connectivityManager.getActiveNetwork();
             if (network == null) {
-                Logger.d(TAG, "No active network");
+                Log.d(TAG, "No active network");
                 return false;
             }
 
             NetworkCapabilities capabilities =
                     connectivityManager.getNetworkCapabilities(network);
             if (capabilities == null) {
-                Logger.d(TAG, "Active network has no capabilities");
+                Log.d(TAG, "Active network has no capabilities");
                 return false;
             }
 

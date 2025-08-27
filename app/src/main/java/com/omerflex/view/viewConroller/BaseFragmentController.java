@@ -3,19 +3,15 @@ package com.omerflex.view.viewConroller;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityOptionsCompat;
 import androidx.leanback.app.BackgroundManager;
 import androidx.leanback.app.BrowseSupportFragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.HeaderItem;
-import androidx.leanback.widget.ImageCardView;
 import androidx.leanback.widget.ListRow;
-import androidx.leanback.widget.OnItemViewClickedListener;
 import androidx.leanback.widget.OnItemViewSelectedListener;
 import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
@@ -25,13 +21,16 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.omerflex.entity.Movie;
+import com.omerflex.server.Util;
 import com.omerflex.view.CardPresenter;
-import com.omerflex.view.DetailsActivity;
+import com.omerflex.view.listener.MovieItemViewClickedListener;
 
+import com.omerflex.view.handler.ActivityResultHandler;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -51,6 +50,7 @@ public abstract class BaseFragmentController {
     protected final Handler mHandler = new Handler(Looper.myLooper());
     private Timer mBackgroundTimer;
     private String mBackgroundUri;
+    private ActivityResultHandler activityResultHandler;
     // A single, shared executor service for all background tasks
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -61,6 +61,7 @@ public abstract class BaseFragmentController {
         this.mDefaultBackground = defaultBackground;
         this.mBackgroundManager = BackgroundManager.getInstance(fragment.getActivity());
         this.mMetrics = new DisplayMetrics();
+        this.activityResultHandler = new ActivityResultHandler(fragment.getActivity());
         fragment.getActivity().getWindowManager().getDefaultDisplay().getMetrics(mMetrics);
         this.mBackgroundManager.attach(fragment.getActivity().getWindow());
         setupEventListeners();
@@ -109,13 +110,7 @@ public abstract class BaseFragmentController {
     }
 
     public void handleActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == 1) { // Our request code for DetailsActivity
-            if (resultCode == Activity.RESULT_OK) {
-                // Handle the result from DetailsActivity.
-                // For example, you could update a movie in the adapter.
-                Toast.makeText(mFragment.getActivity(), "Received result from DetailsActivity!", Toast.LENGTH_SHORT).show();
-            }
-        }
+        activityResultHandler.handleResult(requestCode, resultCode, data, mRowsAdapter);
     }
 
 

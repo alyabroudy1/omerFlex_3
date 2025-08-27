@@ -312,8 +312,8 @@ public class MobileSearchResultActivity extends AppCompatActivity {
 //
 //            query = getIntent().getStringExtra(DetailsActivity.QUERY);
 //            Log.d(TAG, "loadHomepageRaws a " + query);
-//            for (AbstractServer server : ServerConfigManager.getServers(dbHelper)) {
-//                ServerConfig config = ServerConfigManager.getConfig(server.getServerId());
+//            for (AbstractServer server : ServerConfigRepository.getServers(dbHelper)) {
+//                ServerConfig config = ServerConfigRepository.getConfig(server.getServerId());
 //
 //                Log.d(TAG, "loadHomepageRaws config: " + config);
 ////                if (config == null || !config.isActive()){
@@ -411,7 +411,7 @@ public class MobileSearchResultActivity extends AppCompatActivity {
 //            ExecutorService executor = Executors.newSingleThreadExecutor();
 //            executor.submit(() -> {
 ////                AbstractServer server = ServerManager.determineServer(movie, null, activity, null);
-//                AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+//                AbstractServer server = ServerConfigRepository.getServer(movie.getStudio());
 //
 //                if (server == null){
 //                    Toast.makeText(activity, "Unknown Server", Toast.LENGTH_SHORT).show();

@@ -14,7 +14,7 @@ import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
-import com.omerflex.service.ServerConfigManager;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.concurrent.ExecutorService;
@@ -39,7 +39,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
         if (condTrailer) {
             Log.d(TAG, "onActionClicked: Trailer: " + movie.getTitle());
 
-            Util.openBrowserIntent(movie, activity, true, false, false);
+            Util.openBrowserIntent(movie, activity, true, false, false, 11);
             return;
         }
         if (!condWatch1) {
@@ -80,7 +80,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
 //           Log.d(TAG, "run: condWatch2 sub: " + movie.getSubList());
             //todo : handle local watch
 //            dbHelper.addMainMovieToHistory(movie);
-            AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+            AbstractServer server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
 
             if (server == null){
                 Log.d(TAG, "handleActionClick: undefined server");
@@ -124,10 +124,10 @@ public abstract class DetailsViewControl extends SearchViewControl {
 //                            hideProgressDialog(false);
                             result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
                             if (fragment != null){
-                                Util.openBrowserIntent(result, fragment, false, true, true);
+                                Util.openBrowserIntent(result, fragment, false, true, true,11);
                                 return;
                             }
-                            Util.openBrowserIntent(result, activity, false, true, true);
+                            Util.openBrowserIntent(result, activity, false, true, true,11);
                         }
 
                         @Override
@@ -176,7 +176,7 @@ public abstract class DetailsViewControl extends SearchViewControl {
 
     public <T> void handleMovieItemClick(Movie movie, int position, T rowsAdapter, T clickedRow, int defaultHeadersCounter) {
         Log.d(TAG, "handleMovieItemClick: ");
-        AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+        AbstractServer server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
         if (server == null) {
             Log.d(TAG, "handleMovieItemClick: undefined server");
             return;
@@ -219,10 +219,10 @@ public abstract class DetailsViewControl extends SearchViewControl {
                 Log.d(TAG, "onInvalidCookie: " + result);
                 result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
                 if (fragment != null) {
-                    Util.openBrowserIntent(result, fragment, true, true, true);
+                    Util.openBrowserIntent(result, fragment, true, true, true,11);
                     return;
                 }
-                Util.openBrowserIntent(result, activity, false, true, true);
+                Util.openBrowserIntent(result, activity, false, true, true,11);
             }
 
             @Override

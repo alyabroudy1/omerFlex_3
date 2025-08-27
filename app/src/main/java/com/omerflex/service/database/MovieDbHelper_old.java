@@ -29,10 +29,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
-
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -40,25 +36,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MovieDbHelper extends SQLiteOpenHelper {
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+
+public class MovieDbHelper_old extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "MoviesHistory.db";
     static String TAG = "MovieDbHelper";
     private static final int DATABASE_VERSION = 5; // should be increased if changes applied to database structure or reinstall the app
 
     //to make this class singleton which means to be created only one time in the app
-    private static MovieDbHelper instance;
+    private static MovieDbHelper_old instance;
 
     //create instance of Sqlite database object
     private SQLiteDatabase db;
 
-    private MovieDbHelper(@Nullable Context context) {
+    private MovieDbHelper_old(@Nullable Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     //to make this class singleton which means to be created only one time in the app
-    public static synchronized MovieDbHelper getInstance(Context context) {
+    public static synchronized MovieDbHelper_old getInstance(Context context) {
         if (instance == null) {
-            instance = new MovieDbHelper(context.getApplicationContext());
+            instance = new MovieDbHelper_old(context.getApplicationContext());
         }
         return instance;
     }

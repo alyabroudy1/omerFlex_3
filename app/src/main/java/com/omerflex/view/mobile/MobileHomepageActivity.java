@@ -20,7 +20,7 @@ import com.omerflex.entity.Movie;
 import com.omerflex.server.Util;
 import com.omerflex.service.ServerManager;
 import com.omerflex.service.database.MovieDbHelper;
-import com.omerflex.view.MainViewControl;
+import com.omerflex.view.BrowseErrorActivity;
 import com.omerflex.view.mobile.entity.Category;
 import com.omerflex.view.mobile.view.CategoryAdapter;
 import com.omerflex.view.mobile.view.HorizontalMovieAdapter;
@@ -46,7 +46,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
 
     private Handler handler = new Handler();
     public MovieDbHelper dbHelper;
-    private MainViewControl mainViewControl;
+    private BrowseErrorActivity.MainViewControl mainViewControl;
 
 
     @Override
@@ -73,7 +73,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
         categoryAdapter = new CategoryAdapter(this, new MovieItemClickListener(this));
 
 
-        mainViewControl = new MainViewControl(activity, null, dbHelper) {
+        mainViewControl = new BrowseErrorActivity.MainViewControl(activity, null, dbHelper) {
             @Override
             protected <T> void removeRow(T rowsAdapter, int i) {
                 if (rowsAdapter instanceof CategoryAdapter) {
@@ -258,7 +258,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
 ////            });
 //
 //
-//            ArrayList<AbstractServer> serversList= ServerConfigManager.getServers(dbHelper);
+//            ArrayList<AbstractServer> serversList= ServerConfigRepository.getServers(dbHelper);
 ////            ArrayList<AbstractServer> serversList= new ArrayList<>();
 //
 //            Log.d(TAG, "loadHomepageRaws a "+serversList);
@@ -344,7 +344,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
 //            ExecutorService executor = Executors.newSingleThreadExecutor();
 //            executor.submit(() -> {
 ////                AbstractServer server = ServerManager.determineServer(movie, null, activity, null);
-////                AbstractServer server = ServerConfigManager.getServer(movie.getStudio());
+////                AbstractServer server = ServerConfigRepository.getServer(movie.getStudio());
 ////
 ////                if (movie.getState() == Movie.COOKIE_STATE){
 ////                    Log.d(TAG, "onMovieClick: COOKIE_STATE-0");

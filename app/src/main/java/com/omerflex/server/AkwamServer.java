@@ -4,13 +4,10 @@ import android.app.Activity;
 import android.util.Log;
 import android.webkit.WebView;
 
-import androidx.annotation.NonNull;
-
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
-import com.omerflex.service.ServerConfigManager;
-import com.omerflex.service.logging.Logger;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
@@ -19,102 +16,125 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+
+/**
+ * from SearchActivity or MainActivity -> item -> resolutions
+ * Or -> GroupOfItem -> item -> resolutions
+ * -> if security check -> web browser intent
+ * -> else to video intent
+ * group + item -> resolution
+ */
 public class AkwamServer extends AbstractServer {
 
-    static final String TAG = "Akwam";
+    static String TAG = "Akwam";
     public static final int REQUEST_CODE = 1;
-    public static final String WEBSITE_URL = "https://www.akwam.cc";
+    static boolean START_BROWSER_CODE = false;
+    public static String WEBSITE_URL = "https://www.akwam.cc";
 
     public AkwamServer() {
-        try {
-            initialize(ServerConfigManager.getContext());
-            if (context != null) {
-                ServerOptimizer.initialize(context);
-            }
-        } catch (Exception e) {
-            Logger.e(TAG, "Error initializing AkwamServer", e);
-        }
     }
 
+    /**
+     * produce movie from search result if isSeries than Group_State else Item_state
+     *
+     * @param query name to search for
+     * @return
+     */
     @Override
     public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
-        Logger.i(TAG, "search: " + query);
+        Log.i(TAG, "search: " + query);
         String searchContext = query;
+//        switch (query) {
+//            case "https://akwam.co/movies":
+//                break;
+//            case "مسلسلات":
+//                query = "https://akwam.co/series";
+//                break;
+//            case "كوميدي":
+//                query = "https://akwam.co/movies?section=0&category=20&rating=0&year=0&language=0&format=0&quality=0";
+//                break;
+//            case "رعب":
+//                query = "https://akwam.co/movies?section=0&category=22&rating=0&year=0&language=0&format=0&quality=0";
+//                break;
+//            default:
+//                query = "https://akwam.co/search?q=" + query;
+//        }
         String url = query;
         if (!query.contains("http")) {
             url = this.getSearchUrl(query);
+//            if (referer != null && !referer.isEmpty()) {
+//                if (referer.endsWith("/")) {
+//                    query = referer + "search?q=" + query;
+//                } else {
+//                    query = referer + "/search?q=" + query;
+//                }
+//            } else {
+//                query = WEBSITE_URL + "/search?q=" + query;
+//            }
+//            if (getConfig() != null && getConfig().getUrl() != null){
+//                query = getConfig().getUrl() + "/search?q=" + query;
+//            }else {
+//                query = WEBSITE_URL + "/search?q=" + query;
+//            }
         }
-        Logger.d(TAG, "search: " + url);
 
-        try {
-            Document doc = ServerOptimizer.getDocumentWithCache(url, getConfig());
-            if (doc == null) {
-                Logger.w(TAG, "Failed to get document for URL: " + url);
-                if (activityCallback != null) {
-                    activityCallback.onInvalidLink("Invalid link");
-                }
-                return null;
-            }
 
-            ArrayList<Movie> securityCheckResult = handleSearchSecurityCheck(doc, searchContext, url, activityCallback);
-            if (securityCheckResult != null) {
-                return securityCheckResult;
-            }
+        Log.d(TAG, "search: " + url);
 
-            ArrayList<Movie> movieList = fetchSearchMovies(searchContext, doc);
-            if (activityCallback != null) {
-                activityCallback.onSuccess(movieList, getLabel());
-            }
-            return movieList;
-        } catch (Exception e) {
-            Logger.e(TAG, "Error during search operation", e);
-            if (activityCallback != null) {
-                activityCallback.onInvalidLink("Error: " + e.getMessage());
-            }
+
+        Document doc = this.getRequestDoc(url);
+        if (doc == null) {
+            activityCallback.onInvalidLink("Invalid link");
             return null;
         }
-    }
 
-    private ArrayList<Movie> handleSearchSecurityCheck(Document doc, String searchContext, String url, ActivityCallback<ArrayList<Movie>> activityCallback) {
-        if (doc.title().contains("Just a moment")) {
-            Logger.i(TAG, "Detected security check, needs cookie authentication");
-            Movie m = createSecurityCheckMovie(searchContext, url);
-            ArrayList<Movie> movieList = new ArrayList<>();
+        ArrayList<Movie> movieList = new ArrayList<>();
+
+        if (doc.title().contains("moment")) {
+//            setCookieRefreshed(false);
+            //**** default
+            // String title = "ابحث في موقع فاصل ..";
+            String title = searchContext;
+            //int imageResourceId = R.drawable.default_image;
+            // String cardImageUrl = "android.resource://" + activity.getPackageName() + "/" + imageResourceId;
+            String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
+            String backgroundImageUrl = "http://commondatastorage.googleapis.com/android-tv/Sample%20videos/April%20Fool's%202013/Introducing%20Google%20Nose/bg.jpg";
+            Movie m = new Movie();
+            m.setTitle(title);
+            m.setDescription("نتائج البحث في الاسفل...");
+            m.setStudio(Movie.SERVER_AKWAM);
+            m.setVideoUrl(url);
+            //  m.setVideoUrl("https://www.google.com/");
+            m.setState(Movie.COOKIE_STATE);
+            // m.setState(Movie.RESULT_STATE);
+            m.setCardImageUrl(cardImageUrl);
+            m.setBackgroundImageUrl(backgroundImageUrl);
+            m.setRate("");
+            m.setSearchContext(searchContext);
             movieList.add(m);
-            if (activityCallback != null) {
-                activityCallback.onInvalidCookie(movieList, getLabel());
-            }
+
+            activityCallback.onInvalidCookie(movieList, getLabel());
             return movieList;
         }
-        return null;
-    }
 
-    private Movie createSecurityCheckMovie(String searchContext, String url) {
-        String title = searchContext;
-        String cardImageUrl = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
-        String backgroundImageUrl = "http://commondatastorage.googleapis.com/android-tv/Sample%20videos/April%20Fool's%202013/Introducing%20Google%20Nose/bg.jpg";
-        Movie m = new Movie();
-        m.setTitle(title);
-        m.setDescription("نتائج البحث في الاسفل...");
-        m.setStudio(Movie.SERVER_AKWAM);
-        m.setVideoUrl(url);
-        m.setState(Movie.COOKIE_STATE);
-        m.setCardImageUrl(cardImageUrl);
-        m.setBackgroundImageUrl(backgroundImageUrl);
-        m.setRate("");
-        m.setSearchContext(searchContext);
-        return m;
+        movieList = fetchSearchMovies(searchContext, doc);
+
+        activityCallback.onSuccess(movieList, getLabel());
+
+        return movieList;
     }
 
     @Override
     protected ArrayList<Movie> getSearchMovieList(Document doc) {
-        return fetchSearchMovies(doc.baseUri(), doc);
+        return null;
     }
 
     @Override
@@ -143,22 +163,21 @@ public class AkwamServer extends AbstractServer {
     public MovieFetchProcess fetchBrowseItem(Movie movie, ActivityCallback<Movie> activityCallback) {
         Movie clonedMovie = Movie.clone(movie);
         clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+        // to do nothing and wait till result returned to activity only the first fetch
+//        return startWebForResultActivity(clonedMovie);
         activityCallback.onInvalidCookie(clonedMovie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, clonedMovie);
     }
 
-    @Override
     protected MovieFetchProcess fetchSeriesAction(Movie movie, int action, ActivityCallback<Movie> activityCallback) {
-        Logger.d(TAG, "fetchSeriesAction: " + action);
         if (action == Movie.GROUP_OF_GROUP_STATE) {
             return fetchGroupOfGroup(movie, activityCallback);
         }
         return fetchGroup(movie, activityCallback);
     }
 
-    @Override
     protected MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback) {
-        Logger.d(TAG, "fetchItemAction: " + action);
+//        Log.d(TAG, "fetchItemAction: 55");
         switch (action) {
             case Movie.BROWSER_STATE:
                 return fetchBrowseItem(movie, activityCallback);
@@ -168,6 +187,8 @@ public class AkwamServer extends AbstractServer {
                 return fetchWatchLocally(movie, activityCallback);
             case Movie.RESOLUTION_STATE:
                 return fetchResolutions(movie, activityCallback);
+//            case Movie.VIDEO_STATE:
+//                return fetchVideo(movie);
             default:
                 return fetchItem(movie, activityCallback);
         }
@@ -175,6 +196,9 @@ public class AkwamServer extends AbstractServer {
 
     private MovieFetchProcess fetchWatchLocally(Movie movie, ActivityCallback<Movie> activityCallback) {
         if (movie.getState() == Movie.BROWSER_STATE) {
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
+//            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, clonedMovie);
             activityCallback.onInvalidCookie(movie, getLabel());
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_BROWSER_ACTIVITY_REQUIRE, movie);
         }
@@ -185,416 +209,724 @@ public class AkwamServer extends AbstractServer {
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_EXOPLAYER, movie);
     }
 
-    private ArrayList<Movie> fetchSearchMovies(String searchContext, @NonNull Document doc) {
+    private ArrayList<Movie> fetchSearchMovies(String searchContext, Document doc) {
         ArrayList<Movie> movieList = new ArrayList<>();
-        try {
-            Elements links = doc.getElementsByClass("entry-box");
-            for (Element link : links) {
-                try {
-                    Elements linkUrlElements = link.getElementsByClass("box");
-                    if (linkUrlElements.isEmpty()) {
-                        continue;
-                    }
-                    String linkUrl = linkUrlElements.attr("href");
-                    if (linkUrl.contains("/movie") || linkUrl.contains("/series") || linkUrl.contains("/episode")) {
-                        Movie movie = extractMovieFromElement(link, linkUrl, searchContext);
-                        if (movie != null) {
-                            movieList.add(movie);
-                        }
-                    }
-                } catch (Exception e) {
-                    Logger.e(TAG, "Error processing search result item", e);
-                }
-            }
+        Elements links = doc.getElementsByClass("entry-box");
 
-            Elements nextLinkNaviElements = doc.getElementsByAttribute("rel");
-            for (Element naviElem : nextLinkNaviElements) {
-                if ("next".equals(naviElem.attr("rel"))) {
-                    String videoUrl = naviElem.attr("href");
-                    Logger.d(TAG, "search: nextPage: " + videoUrl);
-                    Movie nextPage = createNextPageMovie(videoUrl, searchContext);
-                    movieList.add(nextPage);
-                    break;
-                }
+        for (Element link : links) {
+            Elements linkUrlElements = link.getElementsByClass("box");
+            if (linkUrlElements.size() == 0) {
+                continue;
             }
-        } catch (Exception e) {
-            Logger.e(TAG, "Error fetching search movies", e);
+            String linkUrl = linkUrlElements.attr("href");
+            if (
+                    linkUrl.contains("/movie") ||
+                            linkUrl.contains("/series") ||
+                            linkUrl.contains("/episode")
+            ) {
+                Movie a = new Movie();
+
+                String rate = "";
+                Elements rateElem = link.getElementsByClass("label rating");
+                if (rateElem.size() > 0) {
+                    rate = rateElem.text();
+                }
+
+
+                Elements titleElem = link.getElementsByAttribute("src");
+                String title = "";
+                String cardImageUrl = "";
+                String backgroundImageUrl = "";
+                if (titleElem.size() > 0) {
+                    title = titleElem.attr("alt");
+                    cardImageUrl = titleElem.attr("data-src");
+                    backgroundImageUrl = titleElem.attr("data-src");
+                }
+
+                String description = "";
+
+                String videoUrl = linkUrl;
+
+                int state = Movie.ITEM_STATE;
+
+                a.setTitle(title);
+                a.setVideoUrl(videoUrl);
+                Movie movie = new Movie();
+
+                if (isSeries(a)) {
+                    state = Movie.GROUP_STATE;
+                }
+                //Log.d(TAG, "search: isSeries:" + isSeries(a));
+
+                movie.setTitle(title);
+                movie.setDescription(description);
+                movie.setStudio(Movie.SERVER_AKWAM);
+                movie.setVideoUrl(videoUrl);
+                movie.setCardImageUrl(cardImageUrl);
+                movie.setBackgroundImageUrl(backgroundImageUrl);
+                movie.setState(state);
+                movie.setRate(rate);
+                movie.setSearchContext(searchContext);
+                movie.setMainMovie(movie);
+                movie.setMainMovieTitle(videoUrl);
+                movieList.add(movie);
+            }
+        }
+
+        Elements nextLinkNaviElements = doc.getElementsByAttribute("rel");
+        for (Element naviElem : nextLinkNaviElements) {
+            if (naviElem.attr("rel").equals("next")) {
+                String videoUrl = naviElem.attr("href");
+                Log.d(TAG, "search: nextPage: " + videoUrl);
+                Movie nextPage = new Movie();
+                nextPage.setTitle("التالي");
+                nextPage.setDescription("0");
+                nextPage.setStudio(Movie.SERVER_AKWAM);
+                nextPage.setVideoUrl(videoUrl);
+                nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
+                nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
+                nextPage.setState(Movie.NEXT_PAGE_STATE);
+                nextPage.setRate("");
+                nextPage.setSearchContext(searchContext);
+                nextPage.setMainMovie(nextPage);
+                nextPage.setMainMovieTitle(videoUrl);
+                movieList.add(nextPage);
+
+                break;
+            }
         }
         return movieList;
     }
 
-    private Movie extractMovieFromElement(Element link, String linkUrl, String searchContext) {
-        try {
-            String rate = "";
-            Elements rateElem = link.getElementsByClass("label rating");
-            if (!rateElem.isEmpty()) {
-                rate = rateElem.text();
-            }
-
-            Elements titleElem = link.getElementsByAttribute("src");
-            String title = "";
-            String cardImageUrl = "";
-            String backgroundImageUrl = "";
-            if (!titleElem.isEmpty()) {
-                title = titleElem.attr("alt");
-                cardImageUrl = titleElem.attr("data-src");
-                backgroundImageUrl = titleElem.attr("data-src");
-            }
-
-            Movie movie = new Movie();
-            movie.setTitle(title);
-            movie.setDescription("");
-            movie.setStudio(Movie.SERVER_AKWAM);
-            movie.setVideoUrl(linkUrl);
-            movie.setCardImageUrl(cardImageUrl);
-            movie.setBackgroundImageUrl(backgroundImageUrl);
-            movie.setState(isSeries(linkUrl) ? Movie.GROUP_STATE : Movie.ITEM_STATE);
-            movie.setRate(rate);
-            movie.setSearchContext(searchContext);
-            movie.setMainMovie(movie);
-            movie.setMainMovieTitle(linkUrl);
-            return movie;
-        } catch (Exception e) {
-            Logger.e(TAG, "Error extracting movie from element", e);
-            return null;
-        }
-    }
-
-    private Movie createNextPageMovie(String videoUrl, String searchContext) {
-        Movie nextPage = new Movie();
-        nextPage.setTitle("التالي");
-        nextPage.setDescription("0");
-        nextPage.setStudio(Movie.SERVER_AKWAM);
-        nextPage.setVideoUrl(videoUrl);
-        nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
-        nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
-        nextPage.setState(Movie.NEXT_PAGE_STATE);
-        nextPage.setRate("");
-        nextPage.setSearchContext(searchContext);
-        nextPage.setMainMovie(nextPage);
-        nextPage.setMainMovieTitle(videoUrl);
-        return nextPage;
-    }
+//    @Override
+//    public Movie fetch(Movie movie) {
+//        Log.i(TAG, "fetch: " + movie.getVideoUrl());
+//        switch (movie.getState()) {
+//            case Movie.GROUP_STATE:
+//                //Log.i(TAG, "onItemClick. GROUP_STATE" + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                return fetchGroup(movie);
+//            case Movie.ITEM_STATE:
+//                //Log.i(TAG, "onItemClick. ITEM_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                //movie.setDescription("sssssss");
+//                // return movie;
+//                return fetchItem(movie);
+//            case Movie.RESOLUTION_STATE:
+//                Log.i(TAG, "onItemClick. RESOLUTION_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                Movie clonedMovie = Movie.clone(movie);
+//                clonedMovie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
+//                return fetchResolutions(clonedMovie); // to do nothing and wait till result returned to activity only the first fetch
+//            case Movie.BROWSER_STATE:
+//                //Log.i(TAG, "onItemClick. BROWSER_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                startBrowser(movie.getVideoUrl());
+//                break;
+//            case Movie.VIDEO_STATE:
+//                Log.i(TAG, "onItemClick. VIDEO_STATE " + movie.getStudio() + ". url:" + movie.getVideoUrl());
+//                return movie;
+//            //startVideo(movie.getVideoUrl());
+//            default:
+//                return fetchResolutions(movie);
+//        }
+//        return movie;
+//    }
 
     @Override
     public int fetchNextAction(Movie movie) {
-        Logger.d(TAG, "fetchNextAction: " + movie);
+        Log.d(TAG, "fetchNextAction: " + movie);
         switch (movie.getState()) {
             case Movie.GROUP_STATE:
             case Movie.ITEM_STATE:
                 return VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY;
             case Movie.VIDEO_STATE:
                 return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
+//           case Movie.RESOLUTION_STATE:
+//               if (movie.getFetch() == 1 || movie.getFetch() == 0){
+//                   return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
+//               }
+//                break;
         }
         return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
     }
 
-    private MovieFetchProcess fetchCookie(Movie movie) {
-        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
-    }
+
 
     private MovieFetchProcess fetchGroupOfGroup(Movie movie, ActivityCallback<Movie> activityCallback) {
-        Logger.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
+        //Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
     private MovieFetchProcess fetchGroup(final Movie movie, ActivityCallback<Movie> activityCallback) {
-        Logger.i(TAG, "fetchGroup: " + movie.getVideoUrl());
-        try {
-            Document doc = ServerOptimizer.getDocumentWithCache(movie.getVideoUrl(), getConfig());
-            if (doc == null) {
-                Logger.w(TAG, "Failed to get document for URL: " + movie.getVideoUrl());
-                if (activityCallback != null) {
-                    activityCallback.onInvalidLink(movie);
-                }
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
-            }
+        Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
+        final String url = movie.getVideoUrl();
 
-            if (handleSecurityCheck(doc, movie, activityCallback)) {
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
-            }
-
-            extractDescription(doc, movie);
-            extractBackgroundAndTrailer(doc, movie);
-
-            Elements links = doc.select("a");
-            for (Element link : links) {
-                try {
-                    if (link.attr("href").contains("/episode") && link.getElementsByAttribute("src").hasAttr("alt")) {
-                        Movie episode = extractEpisodeMovie(link, movie);
-                        safeAddToSublist(movie, episode);
+        Observable.fromCallable(() -> getRequestDoc(url))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(doc -> {
+                    if (doc == null) {
+                        Log.d(TAG, "fetchGroup: error doc is null ");
+                        activityCallback.onInvalidLink(movie);
+                        return;
                     }
-                } catch (Exception e) {
-                    Logger.e(TAG, "Error processing episode", e);
-                }
-            }
 
-            if (activityCallback != null) {
-                activityCallback.onSuccess(movie, getLabel());
-            }
-            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
-        } catch (Exception e) {
-            Logger.e(TAG, "Error during fetchGroup operation", e);
-            if (activityCallback != null) {
-                activityCallback.onInvalidLink("Error: " + e.getMessage());
-            }
+                    if (doc.title().contains("Just a moment")) {
+                        activityCallback.onInvalidCookie(movie, getLabel());
+                        return;
+                    }
+
+                    Elements decDivs = doc.select("h2");
+                    String description = "";
+                    for (Element div : decDivs) {
+                        String desc = div.getElementsByTag("p").html();
+                        description = desc;
+                        if (null != description && !description.equals("")) {
+                            break;
+                        }
+                    }
+
+                    if (!description.equals("")) {
+                        movie.setDescription(description);
+                    }
+
+                    //backgroundImage and trailer
+                    Elements imageDivs = doc.getElementsByClass("row py-4");
+
+                    String bgImage = "";
+                    String ytLink = "";
+                    for (Element imageDiv : imageDivs) {
+                        Elements imageLinks = imageDiv.getElementsByAttribute("href");
+                        for (Element imagelink : imageLinks) {
+                            if (imagelink.attr("href").contains("/uploads/")) {
+                                bgImage = imagelink.attr("href");
+                            }
+                            if (imagelink.attr("href").contains("youtube")) {
+                                ytLink = imagelink.attr("href");
+                                break;
+                            }
+                        }
+                        if (!bgImage.equals("")) {
+                            break;
+                        }
+                    }
+                    movie.setBackgroundImageUrl(bgImage);
+                    movie.setTrailerUrl(ytLink);
+
+                    Elements links = doc.select("a");
+                    for (Element link : links) {
+                        // TODO: find better way to get the link
+                        if (
+                                link.attr("href").contains("/episode") &&
+                                        link.getElementsByAttribute("src").hasAttr("alt")
+                        ) {
+                            Movie episode = Movie.clone(movie);
+                            String title = link.getElementsByAttribute("src").attr("alt");
+                            String cardImageUrl = link.getElementsByAttribute("src").attr("src");
+                            String backgroundImageUrl = bgImage;
+
+                            String videoUrl = link.attr("href");
+
+                            episode.setTitle(title);
+                            episode.setDescription(description);
+                            episode.setVideoUrl(videoUrl);
+                            episode.setCardImageUrl(cardImageUrl);
+                            episode.setBackgroundImageUrl(backgroundImageUrl);
+                            episode.setState(Movie.ITEM_STATE);
+                            if (movie.getSubList() == null) {
+                                movie.setSubList(new ArrayList<>());
+                            }
+                            movie.addSubList(episode);
+                        }
+                    }
+                    activityCallback.onSuccess(movie, getLabel());
+                }, throwable -> {
+                    Log.e(TAG, "fetchGroup: error", throwable);
+                    activityCallback.onInvalidLink(movie);
+                });
+
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
+    }
+
+
+    private MovieFetchProcess fetchItem(final Movie movie, ActivityCallback<Movie> activityCallback) {
+        Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
+
+        String url = movie.getVideoUrl();
+
+        // page2 fetch goo- links
+        String p2Caption = "/link/";
+//                Document doc = Jsoup.connect(url)
+//                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+//                        .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
+//                        .followRedirects(true)
+//                        .ignoreHttpErrors(true)
+//                        .timeout(0)
+//                        .ignoreContentType(true)
+//                        .get();
+        Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .cookies(getMappedCookies())
+//                    .headers(getHeaders())
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+        if (doc == null) {
+            activityCallback.onInvalidLink(movie);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
         }
-    }
 
-    private void extractDescription(Document doc, Movie movie) {
-        Elements decDivs = doc.select("h2");
-        String description = "";
-        for (Element div : decDivs) {
-            String desc = div.getElementsByTag("p").html();
-            if (desc != null && !desc.isEmpty()) {
-                description = desc;
-                break;
-            }
+        if (doc.title().contains("Just a moment")) {
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+            activityCallback.onInvalidCookie(movie, getLabel());
         }
-        if (!description.isEmpty()) {
-            movie.setDescription(description);
-        }
-    }
 
-    private void extractBackgroundAndTrailer(Document doc, Movie movie) {
-        Elements imageDivs = doc.getElementsByClass("row py-4");
+
         String bgImage = "";
         String ytLink = "";
+        //backgroundImage and trailer
+        Elements imageDivs = doc.getElementsByClass("row py-4");
+
         for (Element imageDiv : imageDivs) {
             Elements imageLinks = imageDiv.getElementsByAttribute("href");
             for (Element imagelink : imageLinks) {
+                //Log.d(TAG, "run: bgimage divs : " + imagelink.attr("href"));
                 if (imagelink.attr("href").contains("/uploads/")) {
                     bgImage = imagelink.attr("href");
+                    //Log.d(TAG, "run: bgimage found : " + bgImage);
+                    //break;
                 }
                 if (imagelink.attr("href").contains("youtube")) {
                     ytLink = imagelink.attr("href");
+                    //Log.d(TAG, "run: youtube found : " + bgImage);
                     break;
                 }
             }
-            if (!bgImage.isEmpty()) {
+            if (!bgImage.equals("")) {
                 break;
             }
         }
         movie.setBackgroundImageUrl(bgImage);
         movie.setTrailerUrl(ytLink);
-    }
+        if (movie.getMainMovie() != null) {
+            movie.getMainMovie().setTrailerUrl(ytLink);
+            movie.getMainMovie().setBackgroundImageUrl(bgImage);
+        }
 
-    private Movie extractEpisodeMovie(Element link, Movie parentMovie) {
-        Movie episode = Movie.clone(parentMovie);
-        String title = link.getElementsByAttribute("src").attr("alt");
-        String cardImageUrl = link.getElementsByAttribute("src").attr("src");
-        String videoUrl = link.attr("href");
-        episode.setTitle(title);
-        episode.setVideoUrl(videoUrl);
-        episode.setCardImageUrl(cardImageUrl);
-        episode.setState(Movie.ITEM_STATE);
-        return episode;
-    }
+        //description
+        Elements decDivs = doc.select("h2");
+        String description = "";
+        if (movie.getDescription().length() < 2) {
+            for (Element div : decDivs) {
 
-    private MovieFetchProcess fetchItem(final Movie movie, ActivityCallback<Movie> activityCallback) {
-        Logger.i(TAG, "fetchItem: " + movie.getVideoUrl());
-        try {
-            Document doc = ServerOptimizer.getDocumentWithCache(movie.getVideoUrl(), getConfig());
-            if (doc == null) {
-                Logger.w(TAG, "Failed to get document for URL: " + movie.getVideoUrl());
-                if (activityCallback != null) {
-                    activityCallback.onInvalidLink(movie);
-                }
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
-            }
-
-            if (handleSecurityCheck(doc, movie, activityCallback)) {
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
-            }
-
-            extractBackgroundAndTrailer(doc, movie);
-            if (movie.getMainMovie() != null) {
-                movie.getMainMovie().setTrailerUrl(movie.getTrailerUrl());
-                movie.getMainMovie().setBackgroundImageUrl(movie.getBackgroundImageUrl());
-            }
-
-            extractDescription(doc, movie);
-
-            Elements divs = doc.getElementsByClass("tab-content quality");
-            for (Element div : divs) {
-                try {
-                    Movie resolution = extractResolutionMovie(div, movie);
-                    safeAddToSublist(movie, resolution);
-                } catch (Exception e) {
-                    Logger.e(TAG, "Error processing resolution", e);
+                String desc = div.getElementsByTag("p").html();
+                description = desc;
+                //Log.i("description", "found:" + description);
+                if (null != description && !description.equals("")) {
+                    break;
                 }
             }
-
-            if (activityCallback != null) {
-                activityCallback.onSuccess(movie, getLabel());
-            }
-            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
-        } catch (Exception e) {
-            Logger.e(TAG, "Error during fetchItem operation", e);
-            if (activityCallback != null) {
-                activityCallback.onInvalidLink("Error: " + e.getMessage());
-            }
-            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
+        } else {
+            description = movie.getDescription();
         }
-    }
+        if (movie.getDescription() == null || Objects.equals(movie.getDescription(), "")) {
+            movie.setDescription(description);
+        }
+        if (description == null || Objects.equals(description, "")) {
+            description = movie.getDescription();
+        }
 
-    private Movie extractResolutionMovie(Element div, Movie parentMovie) {
-        String p2Caption = "/link/";
-        Elements links = div.getElementsByAttribute("href");
-        String title = "";
-        String videoUrl = "";
-        for (Element link : links) {
-            if (link.attr("href").contains(p2Caption) || link.attr("href").contains("/download/")) {
-                videoUrl = link.attr("href");
-                title = link.text();
-                break;
+        //TODO: find better way to fetch links
+        Elements divs = doc.getElementsByClass("tab-content quality");
+        for (Element div : divs) {
+            Elements links = div.getElementsByAttribute("href");
+            String title = "";
+            String videoUrl = "";
+
+            for (Element link : links) {
+                if (link.attr("href").contains(p2Caption) || link.attr("href").contains("/download/")) {
+                    videoUrl = link.attr("href");
+                    title = link.text();
+                }
             }
-        }
-        if (videoUrl.isEmpty()) {
-            return null;
-        }
-        Movie resolution = Movie.clone(parentMovie);
-        resolution.setTitle(title);
-        resolution.setDescription(parentMovie.getDescription());
-        resolution.setVideoUrl(videoUrl);
-        resolution.setBackgroundImageUrl(parentMovie.getBackgroundImageUrl());
-        resolution.setState(Movie.RESOLUTION_STATE);
-        return resolution;
-    }
+            String backgroundImageUrl = bgImage;
 
-    private MovieFetchProcess fetchResolutions(final Movie movie, ActivityCallback<Movie> activityCallback) {
-        Logger.i(TAG, "fetchResolutions: " + movie.getVideoUrl());
-        try {
             Movie resolution = Movie.clone(movie);
-            String url = movie.getVideoUrl();
-            Logger.d(TAG, "fetchResolutions: URL = " + url);
-
-            if (!url.contains("/link")) {
-                Logger.d(TAG, "fetchResolutions: URL doesn't contain /link/ to akwam download page: " + url);
+            resolution.setTitle(title);
+            resolution.setDescription(description);
+            resolution.setVideoUrl(videoUrl);
+            resolution.setBackgroundImageUrl(backgroundImageUrl);
+            resolution.setState(Movie.RESOLUTION_STATE);
+            // resolution.setState(Movie.VIDEO_STATE);
+            if (movie.getSubList() == null) {
+                movie.setSubList(new ArrayList<>());
             }
-
-            Document doc = ServerOptimizer.getDocumentWithCache(url, getConfig());
-            if (doc == null) {
-                Logger.w(TAG, "Failed to get document for URL: " + url);
-                if (activityCallback != null) {
-                    activityCallback.onInvalidLink(movie);
-                }
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
-            }
-
-            if (handleSecurityCheck(doc, movie, activityCallback)) {
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
-            }
-
-            url = findDownloadUrl(doc, url);
-            Document doc2 = ServerOptimizer.getDocumentWithCache(url, getConfig());
-            Movie movie2 = Movie.clone(movie);
-            movie2.setVideoUrl(url);
-
-            if (doc2 == null) {
-                Logger.w(TAG, "Failed to get document for second URL: " + url);
-                if (activityCallback != null) {
-                    activityCallback.onInvalidLink(movie2);
-                }
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie2);
-            }
-
-            if (handleSecurityCheck(doc2, movie2, activityCallback)) {
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie2);
-            }
-
-            Elements divs = doc2.getElementsByClass("btn-loader");
-            if (!divs.isEmpty()) {
-                String videoUrl = extractDirectDownloadUrl(divs);
-                if (!videoUrl.isEmpty()) {
-                    videoUrl = videoUrl + "|referer=" + getConfig().getReferer();
-                    resolution.setVideoUrl(videoUrl);
-                    resolution.setState(Movie.VIDEO_STATE);
-                    resolution.setSubList(new ArrayList<>());
-                    if (activityCallback != null) {
-                        activityCallback.onSuccess(resolution, getLabel());
-                    }
-                    return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, resolution);
-                }
-            } else {
-                Movie newMovie = Movie.clone(movie);
-                newMovie.setVideoUrl(url);
-                Logger.d(TAG, "fetchResolutions: Security check needed, URL: " + url);
-                if (activityCallback != null) {
-                    activityCallback.onInvalidCookie(newMovie, getLabel());
-                }
-                return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, newMovie);
-            }
-            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
-        } catch (Exception e) {
-            Logger.e(TAG, "Error during fetchResolutions operation", e);
-            if (activityCallback != null) {
-                activityCallback.onInvalidLink("Error: " + e.getMessage());
-            }
-            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
+            movie.addSubList(resolution);
         }
+        activityCallback.onSuccess(movie, getLabel());
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
-    private String findDownloadUrl(Document doc, String originalUrl) {
-        String url = originalUrl;
+    /**
+     * fetch movie resolutions and start an external video intent
+     *
+     * @param movie Movie object to fetch its url
+     * @return
+     */
+    private MovieFetchProcess fetchResolutions(final Movie movie, ActivityCallback<Movie> activityCallback) {
+        Log.i(TAG, "fetchResolutions: " + movie.getVideoUrl());
+        Movie resolution = Movie.clone(movie);// the new movie to be returned*/
+        String url = movie.getVideoUrl();
+
+        Log.d(TAG, "fetchToWatchLocally 1-run: " + url);
+        if (!url.contains("/link")) {
+            Log.d(TAG, "fetchToWatchLocally: go page doesn't contain /link/ to akwam download page. url: " + url);
+            //return;
+        }
+
+        //Log.d(TAG, "fetchToWatchLocally run-2: " + url);
+        Document doc = getRequestDoc(url);
+//            Document doc = Jsoup.connect(url)
+//                    .cookies(getMappedCookies())
+//                    .headers(getHeaders())
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+        if (doc == null) {
+            activityCallback.onInvalidLink(movie);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
+        }
+
+        if (doc.title().contains("Just a moment")) {
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+            activityCallback.onInvalidCookie(movie, getLabel());
+        }
+
+        String oldUrl = url;
         String regex = "(?:a[kwamoc])?.*/[download]{1,6}";
+
         Pattern pattern = Pattern.compile(regex);
+
         Elements links = doc.getElementsByClass("download-link");
-        for (Element link : links) {
+        for (int i = 0; i < links.size(); i++) {
+            Element link = links.get(i);
             String pLink = link.attr("href");
             Matcher matcher = pattern.matcher(pLink);
             if (matcher.find()) {
-                Logger.d(TAG, "Found download URL in download-link: " + pLink);
+                //Log.d(TAG, "fetchToWatchLocally 2-run: matching1 " + pLink);
                 url = pLink;
                 break;
             }
         }
-        if (url.equals(originalUrl)) {
+        if (oldUrl.equals(url)) {
             links = doc.getElementsByTag("a");
-            for (Element link : links) {
+            //Log.d(TAG, "fetchToWatchLocally run-3: old-url:" + oldUrl);
+            for (int i = 0; i < links.size(); i++) {
+                Element link = links.get(i);
                 String pLink = link.attr("href");
                 Matcher matcher = pattern.matcher(pLink);
                 if (matcher.find()) {
-                    Logger.d(TAG, "Found download URL in anchor tag: " + pLink);
+                    Log.d(TAG, "fetchToWatchLocally 2-run: matching2 " + pLink);
                     url = pLink;
                     break;
                 }
             }
         }
-        return url;
-    }
 
-    private String extractDirectDownloadUrl(Elements divs) {
-        String regex = "(?:a[kwamoc])?.*/[download]{1,6}";
-        Pattern pattern = Pattern.compile(regex);
-        for (Element div : divs) {
-            Elements links = div.getElementsByAttribute("href");
-            for (Element link : links) {
-                String pLink = link.attr("href");
-                Matcher matcher = pattern.matcher(pLink);
-                if (matcher.find()) {
-                    Logger.i(TAG, "Found direct download URL: " + pLink);
-                    return pLink;
+        Log.d(TAG, "fetchToWatchLocally run-4: " + url);
+        //####
+        Document doc2 = getRequestDoc(url);
+//            Document doc2 = Jsoup.connect(url)
+//                    .cookies(getMappedCookies())
+//                    .headers(getHeaders())
+//                    .followRedirects(true)
+//                    .ignoreHttpErrors(true)
+//                    .timeout(0)
+//                    .get();
+
+        Movie movie2 = Movie.clone(movie);
+        movie2.setVideoUrl(url);
+        if (doc2 == null) {
+            activityCallback.onInvalidLink(movie2);
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie2);
+        }
+
+        if (doc2.title().contains("Just a moment")) {
+//            Movie clonedMovie = Movie.clone(movie);
+//            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
+//            return startWebForResultActivity(clonedMovie);
+            activityCallback.onInvalidCookie(movie2, getLabel());
+        }
+
+        //check if security caption
+        Elements divs = doc2.getElementsByClass("btn-loader");
+        Element form = doc2.getElementById("form");
+
+        Elements hs = doc2.getElementsByTag("h1");
+
+        boolean isCheck = divs.size() == 0;
+        Log.d("isCheck", "size:" + isCheck);
+
+        if (!isCheck) {
+            String videoCaption = "akwam.download";
+            String videoCaption2 = "akwam.link";
+            String videoCaption3 = "/download/";
+            for (Element div : divs) {
+                Elements links2 = div.getElementsByAttribute("href");
+                for (int i = 0; i < links2.size(); i++) {
+                    Element link = links2.get(i);
+                    String pLink = link.attr("href");
+                    Matcher matcher = pattern.matcher(pLink);
+                    if (matcher.find()) {
+                        Log.i(TAG, "akwam url3" +pLink);
+                        url = pLink;
+                    }
                 }
             }
+            Log.i(TAG, "FetchOneLink url3: " + url);
+
+            url = url + "|referer=" + getConfig().getReferer();
+            resolution.setVideoUrl(url);//####
+            resolution.setState(Movie.VIDEO_STATE);
+            if (resolution.getSubList() == null) {
+                resolution.setSubList(new ArrayList<>());
+            }
+//            movie.addSubList(resolution);
+            activityCallback.onSuccess(resolution, getLabel());
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, resolution);
+        } else {
+            Movie newMovie = Movie.clone(movie);
+            newMovie.setVideoUrl(url);
+            Log.d(TAG, "fetchResolutions: ischeck + url:" + url);
+            // Log.d(TAG, "fetchResolutions: ischeck + url:"+url + "body:"+ doc2.body());
+//            startWebForResultActivity(newMovie);
+            activityCallback.onInvalidCookie(newMovie, getLabel());
+            return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, newMovie);
         }
-        return "";
     }
 
-    public boolean isSeries(String url) {
-        return url.contains("/series") || url.contains("/movies");
+//    /**
+//     * exactly same as fetchResolutions() fetch movie resolutions and start Exoplayer video intent
+//     *
+//     * @param movie
+//     * @return
+//     */
+//    @Override
+//    public Movie fetchToWatchLocally(final Movie movie) {
+//        Log.d(TAG, "fetchToWatchLocally: " + movie.getVideoUrl());
+//        if (movie.getState() == Movie.VIDEO_STATE) {
+//            return movie;
+//        }
+//        Movie clonedMovie = Movie.clone(movie);
+//        clonedMovie.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
+//
+//        return fetchResolutions(clonedMovie); // to do nothing till result returned to the fragment/activity
+//    }
+
+//    @Override
+//    public void startVideo(String link) {
+//
+//        Intent intent = new Intent(Intent.ACTION_VIEW);
+//        String type = "video/*"; // It works for all video application
+//        link = link.replace("\"", "");
+//        Uri uri = Uri.parse(link);
+//        intent.setDataAndType(uri, type);
+//        activity.startActivity(intent);
+//        Log.i(TAG, "startVideo: " + link);
+////        AkwamController.START_BROWSER_CODE = true;
+////
+////        WebView simpleWebView = activity.findViewById(R.id.webView);
+////        simpleWebView.clearCache(true);
+////        simpleWebView.clearFormData();
+////        simpleWebView.clearHistory();
+////
+////        simpleWebView.setWebViewClient(new Browser_Home() {
+////            @Override
+////            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+////                //Log.d("WEBCLIENT", "OnreDirect url:" + url);
+////                if (url.equals(link)) {
+////                    AkwamController.START_BROWSER_CODE = true;
+////                }
+////                return !url.contains("akwam.");
+////            }
+////
+////            @Override
+////            public void onPageFinished(WebView view, String url) {
+////                super.onPageFinished(view, url);
+////                //Log.d("WEBCLIENT", "onPageFinished");
+////                if (AkwamController.START_BROWSER_CODE) {
+////                    view.evaluateJavascript("(function() { let x = document.getElementsByClassName(\"link btn btn-light\")[0]; return x.getAttribute(\"href\").toString();})();", new ValueCallback<String>() {
+////                        @Override
+////                        public void onReceiveValue(String s) {
+////                            //Log.d("LogName", s); // Prints the string 'null' NOT Java null
+////                            if (s.contains(".download")) {
+////                                Intent intent = new Intent(Intent.ACTION_VIEW);
+////                                String type = "video/*"; // It works for all video application
+////                                String link = s.replace("\"", "");
+////                                Uri uri = Uri.parse(link);
+////                                intent.setDataAndType(uri, type);
+////                                try {
+////                                    activity.startActivity(intent);
+////                                } catch (ActivityNotFoundException e) {
+////                                    //Log.d("errorr", e.getMessage());
+////                                }
+////                                AkwamController.START_BROWSER_CODE = false;
+////                                activity.finish();
+////                            }
+////                        }
+////                    });
+////
+////                }
+////            }
+////
+////            @Override
+////            public void onLoadResource(WebView view, String url) {
+////                super.onLoadResource(view, url);
+////                //Log.d("WEBCLIENT", "onLoadResource");
+////
+////
+////            }
+////        });
+////        simpleWebView.setWebChromeClient(new ChromeClient());
+////        WebSettings webSettings = simpleWebView.getSettings();
+////
+////        webSettings.setJavaScriptEnabled(true);
+////        webSettings.setAllowFileAccess(true);
+////        //webSettings.setAppCacheEnabled(true);
+////
+////        simpleWebView.loadUrl(link);
+//    }
+
+//    @Override
+//    public void startBrowser(String url) {
+//        ////Log.i(TAG, "startBrowser: " + url);
+//        if (url.contains("yout")) {
+//            url = fixTrailerUrl(url);
+//        }
+//        WebView webView = activity.findViewById(R.id.webView);
+//
+//        webView.loadData("<html><body><iframe width=\"100%\" height=\"100%\" src=\"" + url + "\" frameborder=\"0\" allowfullscreen></iframe></body></html>", "text/html", "utf-8");
+//    }
+
+    private MovieFetchProcess fetchCookie(Movie movie) {
+        return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_COOKE_REQUIRE, movie);
+    }
+
+//    private Movie startWebForResultActivity(Movie movie) {
+////        activity.runOnUiThread(new Runnable() {
+////            @Override
+////            public void run() {
+//        Intent browse = new Intent(activity, BrowserActivity.class);
+//        browse.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
+//        browse.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie());
+//        //   Log.d(TAG, "getResultFromWeb: activity:" + fragment.getClass().getName());
+//        //activity.startActivity(browse);
+//        fragment.startActivityForResult(browse, movie.getFetch());
+//        //activity.startActivity(browse);
+////            }
+////        });
+//
+//        return movie;
+//    }
+
+    public String fixTrailerUrl(String url) {
+        ////Log.i(TAG, "browseTrailer: " + url);
+        String newUrl = url;
+        if (url.contains("v=")) {
+            newUrl = "https://www.youtube.com/embed/" +
+                    url.substring(url.indexOf("v=") + 2)
+                    + "?autoplay=1&fs=1";
+            //Log.d(TAG, "browseTrailer: newUrl=" + newUrl);
+        }
+//        Movie movie = new Movie();
+//        movie.setVideoUrl(newUrl);
+//        movie.setStudio(Movie.SERVER_AKWAM);
+//        movie.setState(Movie.BROWSER_STATE);
+//
+//        Intent intent = new Intent(activity, BrowserActivity.class); //start a browser to fetch item
+//        intent.putExtra(DetailsActivity.MOVIE, (Serializable) movie);
+//        activity.startActivity(intent);
+
+        //      WebView simpleWebView = activity.findViewById(R.id.webView);
+
+//        simpleWebView.clearCache(true);
+//        simpleWebView.clearFormData();
+//        simpleWebView.clearHistory();
+//
+//
+//        simpleWebView.setWebViewClient(new Browser_Home() {
+//            // !url.contains("youtube") || !url.contains(WEBSITE_NAME);
+//
+//            @Override
+//            public void onPageFinished(WebView view, String url) {
+//                super.onPageFinished(view, url);
+//                //Log.d("WEBCLIENT", "onPageFinished");
+//            }
+//
+//            @Override
+//            public void onLoadResource(final WebView view, String url) {
+//                //Log.d("WEBCLIENT", "onLoadResource :url" + url);
+//                super.onLoadResource(view, url);
+//            }
+//        });
+//        simpleWebView.setWebChromeClient(new ChromeClient());
+//        WebSettings webSettings = simpleWebView.getSettings();
+//
+//        webSettings.setJavaScriptEnabled(true);
+//        webSettings.setAllowFileAccess(true);
+//        webSettings.setAppCacheEnabled(true);
+//        webSettings.setDomStorageEnabled(true);
+//        webSettings.setLoadsImagesAutomatically(true);
+//        webSettings.setBlockNetworkImage(false);
+//
+//        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+//        webSettings.setPluginState(WebSettings.PluginState.ON);
+//        webSettings.setMediaPlaybackRequiresUserGesture(false);
+//
+//
+//        simpleWebView.loadUrl(newUrl);
+        return newUrl;
     }
 
     public boolean isSeries(Movie movie) {
         String u = movie.getVideoUrl();
-        return isSeries(u);
+        return u.contains("/series") || u.contains("/movies");
+    }
+
+    public String getStudioText(String serverName) {
+
+        switch (serverName) {
+            case Movie.SERVER_SHAHID4U:
+                return "https://shahid4u";
+            case Movie.SERVER_FASELHD:
+                return "www.faselhd";
+            case Movie.SERVER_CIMA4U:
+                return "cima4u.io/";
+            case Movie.SERVER_AKWAM:
+                return "akwam.";
+
+        }
+
+        return "akwam.";
+    }
+
+
+    public boolean onLoadResource(Activity activity, WebView view, String url, Movie movie) {
+        return false;
+    }
+
+    public void fetchWebResult(Movie movie) {
     }
 
     @Override
     public int detectMovieState(Movie movie) {
         String u = movie.getVideoUrl();
-        if (u.contains("/series") || u.contains("/movies")) {
+        if (u.contains("/series") || u.contains("/movies")){
             return Movie.GROUP_STATE;
         }
         return Movie.ITEM_STATE;
@@ -604,20 +936,46 @@ public class AkwamServer extends AbstractServer {
     public String getWebScript(int mode, Movie movie) {
         int state = movie.getState();
         String script = "";
-        if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED && state == Movie.RESOLUTION_STATE) {
-            script = createDataExtractionScript(movie, ".btn-loader",
-                    "let aElem = elements[0].getElementsByTagName('a');" +
-                            "let extractedUrl = '';" +
-                            "if(aElem.length > 0){" +
-                            "    extractedUrl = aElem[0].getAttribute('href');" +
-                            "}");
+        if (mode == BrowserActivity.WEB_VIEW_MODE_ON_PAGE_STARTED) {
+            if (state == Movie.RESOLUTION_STATE) {
+                Log.d(TAG, "getScript:SERVER_AKWAM WEB_VIEW_MODE_ON_PAGE_STARTED RESOLUTION_STATE");
+                script = "if(document != null){" +
+                        "document.addEventListener(\"DOMContentLoaded\", () => {" +
+                        "let postList = [];" +
+                        "let seasons = document.querySelectorAll('.btn-loader');" +
+                        "if (seasons.length > 0){" +
+                        "let aElem = seasons[0].getElementsByTagName('a');" +
+                        "if(aElem.length > 0){" +
+                        "    let post = {};" +
+                        "    post.videoUrl = aElem[0].getAttribute('href');" +
+                        "    post.rowIndex = '" + movie.getRowIndex() + "';" + //very important
+                        "    post.title = '" + movie.getTitle() + "';" +
+                        "    post.fetch = '" + movie.getFetch() + "';" +
+                        "    post.cardImageUrl = '" + movie.getCardImageUrl() + "';" +
+                        "    post.bgImageUrl = '" + movie.getBgImageUrl() + "';" +
+                        "    post.description = '" + movie.getDescription() + "';" +
+                        "    post.state = '" + Movie.VIDEO_STATE + "';" +
+                        "    post.studio = '" + movie.getStudio() + "';" +
+                        "    postList.push(post);" +
+                        "}" +
+                        "MyJavaScriptInterface.myMethod(JSON.stringify(postList));" +
+                        "}" +
+                        "}); }";
+            }
         }
+//        else if (mode == BrowserActivity.WEB_VIEW_MODE_ON_LOAD_RESOURCES) {
+//            script = "let element = document.querySelector('.recaptcha-checkbox-border');\n" +
+//                    "if (element) {\n" +
+//                    "  element.scrollIntoView();\n" +
+//                    "}\n";
+//        }
         return script;
     }
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getConfig().getUrl() + "/recent", activityCallback);
+        Log.d(TAG, "getHomepageMovies: ");
+        return search(getConfig().getUrl()+"/recent", activityCallback);
     }
 
     @Override
@@ -625,24 +983,24 @@ public class AkwamServer extends AbstractServer {
         return "أكوام";
     }
 
-    @Override
-    public MovieFetchProcess handleJSResult(String elementJson, ArrayList<Movie> movies, Movie movie) {
+    public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie){
         Movie resultMovie = movies.isEmpty() ? movie : movies.get(0);
         resultMovie.setMainMovie(movie.getMainMovie());
 
         ServerConfig config = getConfig();
-        Logger.d(TAG, "handleAkwamServer: resultActivity finish");
-        String movieReferer = WEBSITE_URL;
+
+        Log.d(TAG, "handleAkwamServer: resultActivity finish");
+        String movieReferer = Util.getValidReferer(movie.getVideoUrl());
         if (config != null) {
             config.setReferer(movieReferer);
             config.setUrl(movieReferer);
-            ServerConfigManager.updateConfig(config);
+            //update config in the ServerConfigManager and in the db being handled in BrowserActivity
+            ServerConfigRepository.getInstance().updateConfig(config);
         }
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_UPDATE_CONFIG_AND_RETURN_RESULT, resultMovie);
     }
 
-    @Override
-    public boolean shouldUpdateDomainOnSearchResult() {
+    public boolean shouldUpdateDomainOnSearchResult(){
         return false;
     }
 }

@@ -16,6 +16,7 @@ import com.omerflex.entity.dto.CookieDTO;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.IOException;
@@ -113,7 +114,7 @@ public class ServerManager_old_2 {
 
                 config.setHeaders(getMappedHeaders(serverCookie.headers));
                 config.setStringCookies(serverCookie.cookie);
-                ServerConfigManager.addConfig(config);
+                ServerConfigRepository.getInstance().updateConfig(config);
                 Log.d(TAG, "generateServers: adding server:"+server.getLabel());
                 this.servers.add(server);
 //                Log.d(TAG, "generateServers: after adding servers.size: "+servers.size());
