@@ -137,7 +137,7 @@ public class VideoDetailsFragment_old extends DetailsSupportFragment {
         }
 
         mSelectedMovie = Util.recieveSelectedMovie(getActivity().getIntent());
-        Log.d(TAG, "start: mainMovie:"+ mSelectedMovie.getMainMovie());
+//        Log.d(TAG, "start: mainMovie:"+ mSelectedMovie.getMainMovie());
         listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
 
         // default value in case of activity result
@@ -148,9 +148,9 @@ public class VideoDetailsFragment_old extends DetailsSupportFragment {
         initializeThings();
 
         // todo clarify
-        if (mSelectedMovie.getMovieHistory() == null && mSelectedMovie.getMainMovie() != null) {
-            mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mSelectedMovie.getMainMovie().getVideoUrl())));
-        }
+//        if (mSelectedMovie.getMovieHistory() == null && mSelectedMovie.getMainMovie() != null) {
+//            mSelectedMovie.setMovieHistory(dbHelper.getMovieHistoryByMainMovie(Util.getUrlPathOnly(mSelectedMovie.getMainMovie().getVideoUrl())));
+//        }
         setupRowsAndServer();
 
         isInitialized = true;
@@ -868,7 +868,7 @@ public class VideoDetailsFragment_old extends DetailsSupportFragment {
             clickedMovieAdapter = (ArrayObjectAdapter) ((ListRow) row).getAdapter();
 //            clickedMovie = movie;
             clickedMovieIndex = clickedMovieAdapter.indexOf(movie);
-            generateMovieHistory(mSelectedMovie, movie);
+//            generateMovieHistory(mSelectedMovie, movie);
 //            handleItemClick(itemViewHolder, item, rowViewHolder, row);
             detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,clickedMovieAdapter, defaultHeadersCounter);
 //            detailsViewControl.handleMovieItemClick(movie, clickedMovieIndex, mAdapter,(ListRow) row, defaultHeadersCounter);
@@ -1288,77 +1288,77 @@ public class VideoDetailsFragment_old extends DetailsSupportFragment {
             listRowAdapter.replace(resultMovie.getRowIndex(), resultMovie);
     }
 
-    private void generateMovieHistory(Movie movie, Movie subMovie) {
-        MovieHistory history = new MovieHistory();
-//        String mainMovieUrl = movie.getVideoUrl();
-//        String title = movie.getTitle();
-//        Movie mainMovie = movie.getMainMovie();
-//        Log.d(TAG, "generateMovieHistory: main0:"+movie.getTitle());
-//        switch (movie.getState()){
-//            case Movie.GROUP_OF_GROUP_STATE:
-//                mainMovieUrl = movie.getVideoUrl();
-//            case Movie.GROUP_STATE:
-//                mainMovie = movie.getMainMovie();
-//                if (mainMovie != null){
-//                    mainMovieUrl = mainMovie.getVideoUrl();
-//                    title = title + " | "+ mainMovie.getTitle();
-//                }
+//    private void generateMovieHistory(Movie movie, Movie subMovie) {
+//        MovieHistory history = new MovieHistory();
+////        String mainMovieUrl = movie.getVideoUrl();
+////        String title = movie.getTitle();
+////        Movie mainMovie = movie.getMainMovie();
+////        Log.d(TAG, "generateMovieHistory: main0:"+movie.getTitle());
+////        switch (movie.getState()){
+////            case Movie.GROUP_OF_GROUP_STATE:
+////                mainMovieUrl = movie.getVideoUrl();
+////            case Movie.GROUP_STATE:
+////                mainMovie = movie.getMainMovie();
+////                if (mainMovie != null){
+////                    mainMovieUrl = mainMovie.getVideoUrl();
+////                    title = title + " | "+ mainMovie.getTitle();
+////                }
+////
+////                mainMovieUrl = (mainMovie != null) ? mainMovie.getMainMovie() : mainMovie.getVideoUrl();
+////            case Movie.GROUP_OF_GROUP_STATE:
+////                mainMovie = movie.getVideoUrl();
+////        }
+////        if(mainMovie != null ) {
+////            Log.d(TAG, "generateMovieHistory: main1:"+mainMovie.getTitle());
+////            mainMovieUrl = mainMovie.getVideoUrl();
+////            title = mainMovie.getTitle();
+////            Movie mainMovie2 = mainMovie.getMainMovie();
+////            if(mainMovie2 != null ) {
+////                Log.d(TAG, "generateMovieHistory: main2:"+mainMovie2.getTitle());
+////                mainMovieUrl = mainMovie2.getVideoUrl();
+////                title = title + " | " + mainMovie2.getTitle();
+////                Movie mainMovie3 = mainMovie2.getMainMovie();
+////                if(mainMovie3.getMainMovie() != null ) {
+////                    Log.d(TAG, "generateMovieHistory: main3:"+mainMovie3.getTitle());
+////                    mainMovieUrl = mainMovie3.getVideoUrl();
+////                    title = title + " | " + mainMovie3.getTitle();
+////                }
+////            }
+////        }
 //
-//                mainMovieUrl = (mainMovie != null) ? mainMovie.getMainMovie() : mainMovie.getVideoUrl();
-//            case Movie.GROUP_OF_GROUP_STATE:
-//                mainMovie = movie.getVideoUrl();
+//        if (movie.getState() > Movie.ITEM_STATE) {
+//            return;
 //        }
-//        if(mainMovie != null ) {
-//            Log.d(TAG, "generateMovieHistory: main1:"+mainMovie.getTitle());
-//            mainMovieUrl = mainMovie.getVideoUrl();
-//            title = mainMovie.getTitle();
-//            Movie mainMovie2 = mainMovie.getMainMovie();
-//            if(mainMovie2 != null ) {
-//                Log.d(TAG, "generateMovieHistory: main2:"+mainMovie2.getTitle());
-//                mainMovieUrl = mainMovie2.getVideoUrl();
-//                title = title + " | " + mainMovie2.getTitle();
-//                Movie mainMovie3 = mainMovie2.getMainMovie();
-//                if(mainMovie3.getMainMovie() != null ) {
-//                    Log.d(TAG, "generateMovieHistory: main3:"+mainMovie3.getTitle());
-//                    mainMovieUrl = mainMovie3.getVideoUrl();
-//                    title = title + " | " + mainMovie3.getTitle();
-//                }
-//            }
+////        Movie mainMovie = movie.getMainMovie();
+//
+//        if (movie.getState() == Movie.GROUP_STATE) {
+//            history.setSeason(movie.getTitle());
 //        }
-
-        if (movie.getState() > Movie.ITEM_STATE) {
-            return;
-        }
-        Movie mainMovie = movie.getMainMovie();
-
-        if (movie.getState() == Movie.GROUP_STATE) {
-            history.setSeason(movie.getTitle());
-        }
-
-        if (movie.getState() == Movie.ITEM_STATE) {
-            history.setEpisode(movie.getTitle());
-        }
-
-        if (subMovie.getState() == Movie.GROUP_STATE) {
-            history.setSeason(subMovie.getTitle());
-        }
-
-        if (subMovie.getState() == Movie.ITEM_STATE) {
-            history.setEpisode(subMovie.getTitle());
-        }
-
-//        history.setSeason(subMovie.getTitle() + " | " + mainMovie.getTitle());
-//        history.setEpisode(removeDomain(movie.getVideoUrl()));
-
-        String historyMainMovieUrl = movie.getMainMovieTitle();
-        if (mainMovie != null && mainMovie.getVideoUrl() != null) {
-            historyMainMovieUrl = mainMovie.getVideoUrl();
-        }
-        history.setMainMovieUrl(Util.getUrlPathOnly(historyMainMovieUrl));
-        Log.d(TAG, "generateMovieHistory: " + historyMainMovieUrl);
-//        subMovie.setMovieHistory(history);
-        dbHelper.saveMovieHistory(history);
-    }
+//
+//        if (movie.getState() == Movie.ITEM_STATE) {
+//            history.setEpisode(movie.getTitle());
+//        }
+//
+//        if (subMovie.getState() == Movie.GROUP_STATE) {
+//            history.setSeason(subMovie.getTitle());
+//        }
+//
+//        if (subMovie.getState() == Movie.ITEM_STATE) {
+//            history.setEpisode(subMovie.getTitle());
+//        }
+//
+////        history.setSeason(subMovie.getTitle() + " | " + mainMovie.getTitle());
+////        history.setEpisode(removeDomain(movie.getVideoUrl()));
+//
+//        String historyMainMovieUrl = movie.getMainMovieTitle();
+////        if (mainMovie != null && mainMovie.getVideoUrl() != null) {
+////            historyMainMovieUrl = mainMovie.getVideoUrl();
+////        }
+//        history.setMainMovieUrl(Util.getUrlPathOnly(historyMainMovieUrl));
+//        Log.d(TAG, "generateMovieHistory: " + historyMainMovieUrl);
+////        subMovie.setMovieHistory(history);
+//        dbHelper.saveMovieHistory(history);
+//    }
 
 
     // Show the ProgressDialog

@@ -5,8 +5,8 @@ import com.omerflex.entity.Movie;
 public class ServerFactory {
     public static AbstractServer createServer(String serverName) {
         switch (serverName) {
-//            case Movie.SERVER_MyCima:
-//                return new MyCimaServer();
+            case Movie.SERVER_MyCima:
+                return new MyCimaServer();
 //            case "CimaNow":
 //                return new CimaNowServer();
 //            case "ArabSeed":
@@ -26,7 +26,7 @@ public class ServerFactory {
 //            case "Imdb":
 //                return new ImdbServer();
             default:
-                throw new IllegalArgumentException("Unknown server name: " + serverName );
+                throw new IllegalArgumentException("Fail generating server object in ServerFactory. Unknown server name: " + serverName );
         }
     }
 }

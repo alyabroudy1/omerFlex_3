@@ -1,5 +1,7 @@
 package com.omerflex.server;
 
+import com.omerflex.entity.MovieType;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.util.Log;
@@ -177,7 +179,7 @@ public class MyCimaServer extends AbstractServer {
                 nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
                 nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
                 nextPage.setState(Movie.NEXT_PAGE_STATE);
-                nextPage.setMainMovie(nextPage);
+//                nextPage.setMainMovie(nextPage);
                 nextPage.setMainMovieTitle(videoUrl);
             }
         }
@@ -234,15 +236,15 @@ public class MyCimaServer extends AbstractServer {
 //                    movie.setState(Movie.ITEM_STATE);
 //                }
                 // detectMovieState important after setting the title and videoUrl
-                movie.setState(detectMovieState(movie));
-                movie.setDescription("");
+//                movie.setState(detectMovieState(movie));
                 movie.setStudio(Movie.SERVER_MyCima);
+                movie.setDescription("");
                 movie.setCardImageUrl(image);
                 movie.setBackgroundImageUrl(image);
                 movie.setBgImageUrl(image);
-                movie.setState(movie.getState());
-                movie.setMainMovieTitle(videoUrl);
-                movie.setMainMovie(movie);
+
+                movie = updateMovieState(movie);
+//                movie.setMainMovie(movie);
             }
 
         } catch (Exception e) {
@@ -321,21 +323,28 @@ public class MyCimaServer extends AbstractServer {
     }
 
     @Override
-    public int detectMovieState(Movie movie) {
+    public Movie updateMovieState(Movie movie) {
         String u = movie.getVideoUrl();
         String n = movie.getTitle();
-        // Log.d(TAG, "isSeries: title:" + n + ", url=" + u);
-        boolean seriesCase = n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
-                || u.contains("series");
-        boolean itemCase = u.contains("/watch") || n.contains("حلقة") || n.contains("حلقه");
 
-        if (itemCase) {
-            return Movie.ITEM_STATE;
-        } else if (seriesCase) {
-            return Movie.GROUP_OF_GROUP_STATE;
+        boolean seriesCase = n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
+                || u.contains("series") || n.contains("فلام");
+
+        if (seriesCase){
+            movie.setState(Movie.GROUP_OF_GROUP_STATE);
+            movie.setType(MovieType.SERIES);
+            return movie;
         }
-        return Movie.ITEM_STATE;
+        movie.setState(Movie.ITEM_STATE);
+        if (n.contains("حلقة") || n.contains("حلقه")){
+            movie.setType(MovieType.EPISODE);
+        }
+        if (n.contains("فلم") || n.contains("فيلم")){
+            movie.setType(MovieType.FILM);
+        }
+        return movie;
     }
+
 
     public String determineRelatedMovieLabel(Movie movie) {
         switch (movie.getState()) {

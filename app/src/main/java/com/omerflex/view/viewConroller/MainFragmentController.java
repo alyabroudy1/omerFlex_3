@@ -7,6 +7,7 @@ import androidx.leanback.widget.HeaderItem;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.MovieRepository;
 import com.omerflex.service.UpdateService;
 
@@ -18,7 +19,7 @@ public class MainFragmentController extends BaseFragmentController {
 
     public MainFragmentController(BrowseSupportFragment fragment, ArrayObjectAdapter rowsAdapter, Drawable defaultBackground) {
         super(fragment, rowsAdapter, defaultBackground);
-        this.movieRepository = MovieRepository.getInstance(fragment.getActivity());
+        this.movieRepository = MovieRepository.getInstance(fragment.getActivity(), ((OmerFlexApplication) fragment.getActivity().getApplication()).getDatabase().movieDao());
         updateService = new UpdateService(mFragment);
     }
 

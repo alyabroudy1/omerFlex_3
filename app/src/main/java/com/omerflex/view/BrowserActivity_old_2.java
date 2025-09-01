@@ -977,7 +977,7 @@ public class BrowserActivity_old_2 extends AppCompatActivity {
                         }
 
                         // If you want to send back data
-                        resultMovie.setMainMovie(movie.getMainMovie());
+//                        resultMovie.setMainMovie(movie.getMainMovie());
                         setResult(Activity.RESULT_OK, Util.generateIntentResult(resultMovie));
                         Log.d(TAG, "myMethod: akwam resultActivity finish ");
 

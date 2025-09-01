@@ -121,7 +121,7 @@ public class CardPresenter extends Presenter {
         ProgressBar progressBar = customViewHolder.progressBar;
         if (progressBar != null) {
             // Assuming Movie has a getWatchedProgress() method.
-            int progress = 69; // Use a real method to get progress
+            int progress = (int) movie.getPlayedTime(); // Use a real method to get progress
             progressBar.setProgress(Math.min(Math.max(progress, 0), 100));
         }
 

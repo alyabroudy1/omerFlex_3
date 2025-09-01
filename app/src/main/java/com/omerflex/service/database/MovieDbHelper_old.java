@@ -187,46 +187,46 @@ public class MovieDbHelper_old extends SQLiteOpenHelper {
         db.close();
     }
 
-    public void saveMovieHistory(MovieHistory history) {
-        ContentValues values = new ContentValues();
-
-
-        SQLiteDatabase db = this.getReadableDatabase();
-
-        Log.d(TAG, "saveMovieHistory: " + history);
-
-        if (history.getMainMovieUrl() == null) {
-            Log.d(TAG, "saveMovieHistory: fail history.getMainMovieUrl() == null");
-            return;
-        }
-        try (Cursor cursor = db.query(
-                MovieHistoryTable.TABLE_NAME, null,
-                MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " = ?", new String[]{history.getMainMovieUrl()}, null, null, null)) {
-
-            Log.d(TAG, "saveMovieHistory: cursor:" + cursor.getCount());
-            if (history.getEpisode() != null) {
-                values.put(MovieHistoryTable.COLUMN_EPISODE, history.getEpisode());
-            }
-
-            if (history.getSeason() != null) {
-                values.put(MovieHistoryTable.COLUMN_SEASON, history.getSeason());
-            }
-
-            values.put(MovieHistoryTable.COLUMN_PLAYED_TIME, history.getPlayedTime());
-            values.put(MovieHistoryTable.COLUMN_PLAYED_AT, history.getPlayedAt().getTime());
-            db = this.getWritableDatabase();
-            if (cursor.getCount() > 0) {
-                // Server entry already exists, update the headers and cookies
-
-                db.update(MovieHistoryTable.TABLE_NAME, values, MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " = ?", new String[]{history.getMainMovieUrl()});
-            } else {
-                values.put(MovieHistoryTable.COLUMN_MAIN_MOVIE_URL, history.getMainMovieUrl());
-
-                // Server entry does not exist, insert a new row
-                db.insert(MovieHistoryTable.TABLE_NAME, null, values);
-            }
-        }
-    }
+//    public void saveMovieHistory(MovieHistory history) {
+//        ContentValues values = new ContentValues();
+//
+//
+//        SQLiteDatabase db = this.getReadableDatabase();
+//
+//        Log.d(TAG, "saveMovieHistory: " + history);
+//
+//        if (history.getMainMovieUrl() == null) {
+//            Log.d(TAG, "saveMovieHistory: fail history.getMainMovieUrl() == null");
+//            return;
+//        }
+//        try (Cursor cursor = db.query(
+//                MovieHistoryTable.TABLE_NAME, null,
+//                MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " = ?", new String[]{history.getMainMovieUrl()}, null, null, null)) {
+//
+//            Log.d(TAG, "saveMovieHistory: cursor:" + cursor.getCount());
+//            if (history.getEpisode() != null) {
+//                values.put(MovieHistoryTable.COLUMN_EPISODE, history.getEpisode());
+//            }
+//
+//            if (history.getSeason() != null) {
+//                values.put(MovieHistoryTable.COLUMN_SEASON, history.getSeason());
+//            }
+//
+//            values.put(MovieHistoryTable.COLUMN_PLAYED_TIME, history.getPlayedTime());
+//            values.put(MovieHistoryTable.COLUMN_PLAYED_AT, history.getPlayedAt().getTime());
+//            db = this.getWritableDatabase();
+//            if (cursor.getCount() > 0) {
+//                // Server entry already exists, update the headers and cookies
+//
+//                db.update(MovieHistoryTable.TABLE_NAME, values, MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " = ?", new String[]{history.getMainMovieUrl()});
+//            } else {
+//                values.put(MovieHistoryTable.COLUMN_MAIN_MOVIE_URL, history.getMainMovieUrl());
+//
+//                // Server entry does not exist, insert a new row
+//                db.insert(MovieHistoryTable.TABLE_NAME, null, values);
+//            }
+//        }
+//    }
 
     public void saveHeadersAndCookies(AbstractServer server, String serverName) {
         //.getHeaders(), server.getCookies(), movie.getStudio()
@@ -275,51 +275,51 @@ public class MovieDbHelper_old extends SQLiteOpenHelper {
     }
 
 
-    public MovieHistory getMovieHistoryByMainMovie(String mainMovieUrl) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        String selection = MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " LIKE '%" + mainMovieUrl + "%'";
-        Cursor cursor = null;
-        MovieHistory history = new MovieHistory();
-        try {
-            cursor = db.query(MovieHistoryTable.TABLE_NAME, null, selection, null, null, null, null);
-            if (cursor != null && cursor.moveToFirst()) {
-                int columnId = cursor.getColumnIndex(MovieHistoryTable.COLUMN_ID);
-                if (columnId >= 0) {
-                    history.setId(cursor.getInt(columnId));
-                }
-
-                int columnMainMovie = cursor.getColumnIndex(MovieHistoryTable.COLUMN_MAIN_MOVIE_URL);
-                if (columnMainMovie >= 0) {
-                    history.setMainMovieUrl(cursor.getString(columnMainMovie));
-                }
-
-                int columnPlayedMovie = cursor.getColumnIndex(MovieHistoryTable.COLUMN_EPISODE);
-                if (columnPlayedMovie >= 0) {
-                    history.setEpisode(cursor.getString(columnPlayedMovie));
-                }
-
-                int columnTitle = cursor.getColumnIndex(MovieHistoryTable.COLUMN_SEASON);
-                if (columnTitle >= 0) {
-                    history.setSeason(cursor.getString(columnTitle));
-                }
-
-                int columnTime = cursor.getColumnIndex(MovieHistoryTable.COLUMN_PLAYED_TIME);
-                if (columnTime >= 0) {
-                    history.setPlayedTime(cursor.getLong(columnTime));
-                }
-
-                int columnPlayedAt = cursor.getColumnIndex(MovieHistoryTable.COLUMN_PLAYED_AT);
-                if (columnPlayedAt >= 0) {
-                    history.setPlayedAt(new Date(cursor.getLong(columnPlayedAt)));
-                }
-            }
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-        return history;
-    }
+//    public MovieHistory getMovieHistoryByMainMovie(String mainMovieUrl) {
+//        SQLiteDatabase db = this.getReadableDatabase();
+//        String selection = MovieHistoryTable.COLUMN_MAIN_MOVIE_URL + " LIKE '%" + mainMovieUrl + "%'";
+//        Cursor cursor = null;
+//        MovieHistory history = new MovieHistory();
+//        try {
+//            cursor = db.query(MovieHistoryTable.TABLE_NAME, null, selection, null, null, null, null);
+//            if (cursor != null && cursor.moveToFirst()) {
+//                int columnId = cursor.getColumnIndex(MovieHistoryTable.COLUMN_ID);
+//                if (columnId >= 0) {
+//                    history.setId(cursor.getInt(columnId));
+//                }
+//
+//                int columnMainMovie = cursor.getColumnIndex(MovieHistoryTable.COLUMN_MAIN_MOVIE_URL);
+//                if (columnMainMovie >= 0) {
+//                    history.setMainMovieUrl(cursor.getString(columnMainMovie));
+//                }
+//
+//                int columnPlayedMovie = cursor.getColumnIndex(MovieHistoryTable.COLUMN_EPISODE);
+//                if (columnPlayedMovie >= 0) {
+//                    history.setEpisode(cursor.getString(columnPlayedMovie));
+//                }
+//
+//                int columnTitle = cursor.getColumnIndex(MovieHistoryTable.COLUMN_SEASON);
+//                if (columnTitle >= 0) {
+//                    history.setSeason(cursor.getString(columnTitle));
+//                }
+//
+//                int columnTime = cursor.getColumnIndex(MovieHistoryTable.COLUMN_PLAYED_TIME);
+//                if (columnTime >= 0) {
+//                    history.setPlayedTime(cursor.getLong(columnTime));
+//                }
+//
+//                int columnPlayedAt = cursor.getColumnIndex(MovieHistoryTable.COLUMN_PLAYED_AT);
+//                if (columnPlayedAt >= 0) {
+//                    history.setPlayedAt(new Date(cursor.getLong(columnPlayedAt)));
+//                }
+//            }
+//        } finally {
+//            if (cursor != null) {
+//                cursor.close();
+//            }
+//        }
+//        return history;
+//    }
 
     private ServerConfig generateServerConfigObject(Cursor cursor) {
         ServerConfig serverConfig = new ServerConfig();
@@ -731,9 +731,9 @@ public class MovieDbHelper_old extends SQLiteOpenHelper {
         //cv.put(MoviesTable.T, new Date().getTime());
 
         String videoUrl = movie.getVideoUrl();
-        if (movie.getMainMovie() != null && movie.getMainMovie().getVideoUrl() != null) {
-            videoUrl = movie.getMainMovie().getVideoUrl();
-        }
+//        if (movie.getMainMovie() != null && movie.getMainMovie().getVideoUrl() != null) {
+//            videoUrl = movie.getMainMovie().getVideoUrl();
+//        }
 
         String selection = MoviesTable.COLUMN_VIDEO_URL + " = ? ";
         String[] selectionArgs = new String[]{videoUrl};
@@ -884,24 +884,26 @@ public class MovieDbHelper_old extends SQLiteOpenHelper {
 //                }catch (Exception e){
 //                    Log.d(TAG, "search: fail parsing url: "+ e.getMessage());
 //                }
-        Movie mainMovie = movie.getMainMovie();
-        if (mainMovie == null) {
-            mainMovie = movie;
-        }
+//        Movie mainMovie = movie.getMainMovie();
+//        if (mainMovie == null) {
+//            mainMovie = movie;
+//        }
 
 
 //        if (mainMovie.getIsHistory() == 1) {
 //            return;
 //        }
-        Log.d(TAG, "addMainMovieToHistory:ss " + mainMovie);
-        Log.d(TAG, "tag:ss " + movie.getMainMovie());
+//        Log.d(TAG, "addMainMovieToHistory:ss " + mainMovie);
+//        Log.d(TAG, "tag:ss " + movie.getMainMovie());
 
         ContentValues cv = new ContentValues();
         cv.put(MoviesTable.COLUMN_IS_HISTORY, 1);
         cv.put(MoviesTable.COLUMN_UPDATED_AT, new Date().getTime());
 
         String selection = MoviesTable.COLUMN_VIDEO_URL + " = ? ";
-        String[] selectionArgs = new String[]{mainMovie.getVideoUrl()};
+        String[] selectionArgs = new String[]{
+//                mainMovie.getVideoUrl()
+        };
         // Check if the movie exists in the database
         Cursor cursor = null;
         try {
@@ -921,9 +923,9 @@ public class MovieDbHelper_old extends SQLiteOpenHelper {
                 //cursor.close();
             } else {
                 // The movie is not found, insert it as a new record
-                mainMovie.setIsHistory(1);
-                cv = getContentValueMovie(cv, mainMovie);
-                long insertResult = db.insert(MoviesTable.TABLE_NAME, null, cv);
+//                mainMovie.setIsHistory(1);
+//                cv = getContentValueMovie(cv, mainMovie);
+//                long insertResult = db.insert(MoviesTable.TABLE_NAME, null, cv);
             }
         } finally {
             if (cursor != null) {
@@ -1117,7 +1119,7 @@ public class MovieDbHelper_old extends SQLiteOpenHelper {
         if (c.moveToFirst()) {
             do {
                 Movie movie = readMovieFromDB(c);
-                movie.setMainMovie(movie);
+//                movie.setMainMovie(movie);
                 movieArrayList.add(movie);
             } while (c.moveToNext());
         }

@@ -1,31 +1,35 @@
 package com.omerflex.view.viewConroller;
 
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
-import androidx.fragment.app.Fragment;
+import androidx.leanback.app.RowsSupportFragment;
 import androidx.leanback.widget.Action;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.DetailsOverviewRow;
+import androidx.leanback.widget.HorizontalGridView;
 import androidx.leanback.widget.ListRow;
+import androidx.leanback.widget.ListRowPresenter;
+import androidx.leanback.widget.Presenter;
 
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
-import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.MovieRepository;
+import com.omerflex.entity.MovieType;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.server.config.ServerConfigRepository;
-import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
 import com.omerflex.view.handler.ActivityResultHandler;
 import com.omerflex.viewmodel.SharedViewModel;
 
-import java.io.Serializable;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -42,13 +46,15 @@ public class VideoDetailsFragmentController {
     private ArrayObjectAdapter listRowAdapter;
     private ActivityResultHandler activityResultHandler;
     private SharedViewModel sharedViewModel;
+    private Integer selectedItemIndex = -1;
+    private Integer selectedRowIndex = -1;
 
     public VideoDetailsFragmentController(VideoDetailsFragment fragment, ArrayObjectAdapter adapter, DetailsOverviewRow row, Movie movie, ArrayObjectAdapter listRowAdapter, SharedViewModel sharedViewModel) {
         this.fragment = fragment;
         this.mAdapter = adapter;
         this.row = row;
         this.mSelectedMovie = movie;
-        this.movieRepository = MovieRepository.getInstance(fragment.getActivity());
+        this.movieRepository = MovieRepository.getInstance(fragment.getActivity(), ((OmerFlexApplication) fragment.getActivity().getApplication()).getDatabase().movieDao());
         this.listRowAdapter = listRowAdapter;
         this.activityResultHandler = new ActivityResultHandler(fragment.getActivity());
         this.sharedViewModel = sharedViewModel;
@@ -58,12 +64,105 @@ public class VideoDetailsFragmentController {
         fragment.showProgressDialog(true);
         Log.d(TAG, "fetchDetails: ");
         movieRepository.fetchMovieDetails( mSelectedMovie, fetchedMovie -> {
-                sharedViewModel.updateMovie(fetchedMovie);
-                listRowAdapter.addAll(0, fetchedMovie.getSubList());
+            sharedViewModel.updateMovie(fetchedMovie);
+            listRowAdapter.clear();
+            listRowAdapter.addAll(0, fetchedMovie.getSubList());
+
+            // Resume watching logic
+            resumeWatching(fetchedMovie);
 
             fragment.hideProgressDialog(true, null);
             evaluateWatchAction();
         });
+    }
+
+    private void resumeWatching(Movie fetchedMovie) {
+        if (fetchedMovie.getType() == MovieType.SERIES || fetchedMovie.getType() == MovieType.SEASON) {
+            List<Movie> subList = fetchedMovie.getSubList();
+            if (subList != null && !subList.isEmpty()) {
+                Movie lastWatchedItem = null;
+                java.util.Date latestDate = null;
+
+                for (Movie item : subList) {
+                    if (item.getPlayedTime() > 0 && item.getUpdatedAt() != null) {
+                        if (latestDate == null || item.getUpdatedAt().after(latestDate)) {
+                            latestDate = item.getUpdatedAt();
+                            lastWatchedItem = item;
+                        }
+                    }
+                }
+
+                if (lastWatchedItem != null) {
+                    final int itemIndex = subList.indexOf(lastWatchedItem);
+                    if (itemIndex != -1) {
+                        Log.d(TAG, "Last watched item found: " + lastWatchedItem.getTitle() + " at index " + itemIndex);
+
+                        int rowIndex = -1;
+                        for (int i = 0; i < mAdapter.size(); i++) {
+                            Object rowObject = mAdapter.get(i);
+                            if (rowObject instanceof ListRow) {
+                                ListRow row = (ListRow) rowObject;
+                                if (row.getAdapter() == listRowAdapter) {
+                                    rowIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+
+                        selectItemOnRowListAdapter(rowIndex, itemIndex);
+                    }
+                }
+            }
+        }
+    }
+
+    private void selectItemOnRowListAdapter(int rowIndex, int itemIndex) {
+        if (rowIndex != -1) {
+            selectedItemIndex = itemIndex;
+            selectedRowIndex = rowIndex;
+
+            final int finalRowIndex = rowIndex;
+            RowsSupportFragment rowsFrag = fragment.getRowsSupportFragment();
+
+            // Request focus on the RowsSupportFragment's view
+            rowsFrag.getView().requestFocus();
+
+            rowsFrag.getView().post(() -> {
+                Log.d(TAG, "Step1: select row " + finalRowIndex);
+                rowsFrag.setSelectedPosition(finalRowIndex, true);
+
+                rowsFrag.getView().postDelayed(() -> {
+                    Log.d(TAG, "Step2: select item via SelectItemViewHolderTask, itemIndex=" + itemIndex);
+                    rowsFrag.setSelectedPosition(
+                            finalRowIndex,
+                            true,
+                            new ListRowPresenter.SelectItemViewHolderTask(itemIndex) {
+                                @Override
+                                public void run(Presenter.ViewHolder holder) {
+                                    Log.d(TAG, "Task.run(): holder=" + (holder != null ? holder.getClass().getSimpleName() : "null"));
+                                    if (holder instanceof ListRowPresenter.ViewHolder) {
+                                        ListRowPresenter.ViewHolder lvh = (ListRowPresenter.ViewHolder) holder;
+                                        HorizontalGridView grid = lvh.getGridView();
+                                        Log.d(TAG, "Before grid select: attached=" + grid.isAttachedToWindow()
+                                                + " childCount=" + grid.getChildCount()
+                                                + " adapterCount=" + (grid.getAdapter() != null ? grid.getAdapter().getItemCount() : -1)
+                                                + " hasFocus=" + grid.hasFocus());
+
+                                        // Set the selected position
+                                        grid.setSelectedPositionSmooth(itemIndex);
+                                        boolean focusResult = grid.requestFocus();
+                                        Log.d(TAG, "Selection applied: requestFocus()=" + focusResult);
+                                    } else {
+                                        Log.w(TAG, "Task.run(): not a ListRow ViewHolder; cannot select item.");
+                                    }
+                                }
+                            }
+                    );
+                }, 200); // Delay for UI to settle
+            });
+        } else {
+            Log.w(TAG, "Could not find ListRow to select last watched item.");
+        }
     }
 
     private void updateOverview(Movie movie) {
@@ -83,12 +182,30 @@ public class VideoDetailsFragmentController {
     public void evaluateWatchAction() {
         if (mSelectedMovie == null) return;
         ArrayObjectAdapter actionAdapter = new ArrayObjectAdapter();
-        actionAdapter.add(new Action(ACTION_WATCH, fragment.getResources().getString(R.string.watch)));
+
+        Movie firstSubMovie = mSelectedMovie;
+        if (!mSelectedMovie.getSubList().isEmpty()){
+            firstSubMovie = mSelectedMovie.getSubList().get(0);
+        }
+
+        boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE;
+//        boolean watchOmarCond = firstSubMovie.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
+//        boolean watchOmarCond = result.getStudio().equals(Movie.SERVER_OMAR) && firstSubMovie.getState() > Movie.ITEM_STATE;
+        Log.d(TAG, "evaluateWatchAction: " + watchCond + ", "+ firstSubMovie);
+//        if (watchCond || watchOmarCond) {
+        if (watchCond) {
+            Log.d(TAG, "onSuccess: watchCond");
+            actionAdapter.add(new Action(ACTION_WATCH, fragment.getResources().getString(R.string.watch)));
+        }
         if (mSelectedMovie.getTrailerUrl() != null && mSelectedMovie.getTrailerUrl().length() > 2) {
             actionAdapter.add(new Action(ACTION_WATCH_TRAILER, fragment.getResources().getString(R.string.watch_trailer_1)));
         }
+
         row.setActionsAdapter(actionAdapter);
-        mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
+        int overviewRowIndex = mAdapter.indexOf(row);
+        if (overviewRowIndex >= 0) {
+            mAdapter.notifyArrayItemRangeChanged(overviewRowIndex, 1);
+        }
     }
     public void handleActionClick(Movie movie, Action action, ArrayObjectAdapter clickedAdapter) {
         if (movie == null || action == null || clickedAdapter == null) {
@@ -113,6 +230,11 @@ public class VideoDetailsFragmentController {
             return;
         }
         watchMovie.setRowIndex(0); // Update the correct item of the row
+                if (watchMovie.getState() == Movie.VIDEO_STATE) {
+                    Log.d(TAG, "handleActionClick: Already video");
+                    Util.openExoPlayer(watchMovie, fragment.getActivity(), true);
+                    return;
+                }
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -126,11 +248,6 @@ public class VideoDetailsFragmentController {
                     return;
                 }
 
-                if (watchMovie.getState() == Movie.VIDEO_STATE) {
-                    Log.d(TAG, "handleActionClick: Already video");
-                    Util.openExoPlayer(watchMovie, fragment.getActivity(), true);
-                    return;
-                }
 
                 server.fetch(watchMovie, Movie.ACTION_WATCH_LOCALLY, new ServerInterface.ActivityCallback<Movie>() {
                     @Override
@@ -178,5 +295,17 @@ public class VideoDetailsFragmentController {
                 executor.shutdown();
             }
         });
+    }
+
+    public void onResume() {
+        if (selectedRowIndex != null && selectedItemIndex != null && selectedRowIndex != -1 && selectedItemIndex != -1) {
+            selectItemOnRowListAdapter(selectedRowIndex, selectedItemIndex);
+        }
+    }
+
+    public void onSaveInstanceState(Bundle outState) {
+        Log.d(TAG, "onSaveInstanceState: ");
+        outState.putInt("selectedRowIndex", selectedRowIndex);
+        outState.putInt("selectedItemIndex", selectedItemIndex);
     }
 }

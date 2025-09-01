@@ -7,17 +7,6 @@ import android.os.Parcelable;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
-import androidx.room.TypeConverters;
-import androidx.room.Ignore;
-import androidx.room.Embedded;
-
-import com.omerflex.db.Converters;
-import com.omerflex.entity.specific.EpisodeData;
-import com.omerflex.entity.specific.FilmData;
-import com.omerflex.entity.specific.ResolutionData;
-import com.omerflex.entity.specific.SeasonData;
-import com.omerflex.entity.specific.SeriesData;
-
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -27,9 +16,8 @@ import java.util.List;
 /*
  * Movie class represents video entity with title, description, image thumbs and video url.
  */
-@Entity(tableName = "movies", indices = {@androidx.room.Index(value = {"videoUrl"}, unique = true)})
-@TypeConverters(Converters.class)
-public class Movie implements Parcelable {
+@Entity(tableName = "movies")
+public class Movie_old implements Parcelable {
     public static final String SERVER_APP = "app";
     public static final String SERVER_OMAR = "omar";
 //    static final long serialVersionUID = 727566175075960653L;
@@ -78,93 +66,34 @@ public class Movie implements Parcelable {
     private static int count = 0;
     private String searchContext;
 
-    @PrimaryKey(autoGenerate = true)
-    private long id;
-    private Long parentId;
-    private MovieType type;
-    private long movieLength;
+    private int id;
     private int rowIndex;
     private String title;
     private String description;
     private String bgImageUrl;
     private String cardImageUrl;
+    @PrimaryKey
     private String videoUrl;
     private String trailerUrl;
     private String studio;
     private String rate;
     private int state;
     private String mainMovieTitle;
-    @Ignore
-    private List<Movie> subList;
+    private List<Movie_old> subList;
     private List<String> categories;
     private int isHistory;
     private long playedTime;
+    private Movie_old mainMovie;
     private String createdAt;
     private Date updatedAt;
     private int fetch;
     private String backgroundImageUrl;
     private String group;
-
-    @Ignore
     private MovieHistory movieHistory;
 
-    @Embedded
-    public SeriesData seriesData;
 
-    @Embedded
-    public SeasonData seasonData;
-
-    @Embedded
-    public EpisodeData episodeData;
-
-    @Embedded
-    public FilmData filmData;
-
-    @Embedded
-    public ResolutionData resolutionData;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public Long getParentId() {
-        return parentId;
-    }
-
-    public void setParentId(Long parentId) {
-        this.parentId = parentId;
-    }
-
-    public MovieType getType() {
-        return type;
-    }
-
-    public void setType(MovieType type) {
-        this.type = type;
-    }
-
-    public long getMovieLength() {
-        return movieLength;
-    }
-
-    public void setMovieLength(long movieLength) {
-        this.movieLength = movieLength;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-
-    public Movie() {
+    public Movie_old() {
+       // this.createdAt = Calendar.getInstance().getTime().toString();
         this.subList= new ArrayList<>();
         this.categories= new ArrayList<>();
         this.createdAt = new Date().toString();
@@ -174,54 +103,37 @@ public class Movie implements Parcelable {
     }
 
     //database things
-    public Movie(
-            long id,
-            Long parentId,
-            MovieType type,
-            long movieLength,
-            String searchContext,
-            int rowIndex,
+    public Movie_old(
             String title,
+            String searchContext,
+            String mainMovieTitle,
+            String studio,
+            int state,
             String description,
             String bgImageUrl,
             String cardImageUrl,
             String videoUrl,
-            String trailerUrl,
-            String studio,
             String rate,
-            int state,
-            String mainMovieTitle,
-            List<String> categories,
+            String trailerUrl,
             int isHistory,
             long playedTime,
             String createdAt,
             Date updatedAt,
             int fetch,
             String backgroundImageUrl,
-            String group,
-            SeriesData seriesData,
-            SeasonData seasonData,
-            EpisodeData episodeData,
-            FilmData filmData,
-            ResolutionData resolutionData
-    ) {
-        this.id = id;
-        this.parentId = parentId;
-        this.type = type;
-        this.movieLength = movieLength;
-        this.searchContext = searchContext;
-        this.rowIndex = rowIndex;
+            String group
+            ) {
         this.title = title;
+        this.searchContext = searchContext;
+        this.mainMovieTitle = mainMovieTitle;
+        this.studio = studio;
+        this.state = state;
         this.description = description;
         this.bgImageUrl = bgImageUrl;
         this.cardImageUrl = cardImageUrl;
         this.videoUrl = videoUrl;
-        this.trailerUrl = trailerUrl;
-        this.studio = studio;
         this.rate = rate;
-        this.state = state;
-        this.mainMovieTitle = mainMovieTitle;
-        this.categories = categories;
+        this.trailerUrl = trailerUrl;
         this.isHistory = isHistory;
         this.playedTime = playedTime;
         this.createdAt = createdAt;
@@ -229,21 +141,13 @@ public class Movie implements Parcelable {
         this.fetch = fetch;
         this.backgroundImageUrl = backgroundImageUrl;
         this.group = group;
-        this.seriesData = seriesData;
-        this.seasonData = seasonData;
-        this.episodeData = episodeData;
-        this.filmData = filmData;
-        this.resolutionData = resolutionData;
-        if (this.categories == null){
-            this.categories= new ArrayList<>();
+        if (this.subList == null){
+            this.subList= new ArrayList<>();
         }
     }
 
-    protected Movie(Parcel in) {
-        id = in.readLong();
-        parentId = (Long) in.readValue(Long.class.getClassLoader());
-        type = (MovieType) in.readSerializable();
-        movieLength = in.readLong();
+    protected Movie_old(Parcel in) {
+        id = in.readInt();
         rowIndex = in.readInt();
         title = in.readString();
         searchContext = in.readString();
@@ -263,13 +167,9 @@ public class Movie implements Parcelable {
         fetch = in.readInt();
         backgroundImageUrl = in.readString();
         group = in.readString();
-        seriesData = in.readParcelable(SeriesData.class.getClassLoader());
-        seasonData = in.readParcelable(SeasonData.class.getClassLoader());
-        episodeData = in.readParcelable(EpisodeData.class.getClassLoader());
-        filmData = in.readParcelable(FilmData.class.getClassLoader());
-        resolutionData = in.readParcelable(ResolutionData.class.getClassLoader());
-        movieHistory = in.readParcelable(MovieHistory.class.getClassLoader());
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            movieHistory = in.readTypedObject(MovieHistory.CREATOR);
+        }
         if (this.subList == null){
             this.subList= new ArrayList<>();
         }
@@ -277,10 +177,7 @@ public class Movie implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeLong(id);
-        dest.writeValue(parentId);
-        dest.writeSerializable(type);
-        dest.writeLong(movieLength);
+        dest.writeInt(id);
         dest.writeInt(rowIndex);
         dest.writeString(title);
         dest.writeString(searchContext);
@@ -300,12 +197,9 @@ public class Movie implements Parcelable {
         dest.writeInt(fetch);
         dest.writeString(backgroundImageUrl);
         dest.writeString(group);
-        dest.writeParcelable(seriesData, flags);
-        dest.writeParcelable(seasonData, flags);
-        dest.writeParcelable(episodeData, flags);
-        dest.writeParcelable(filmData, flags);
-        dest.writeParcelable(resolutionData, flags);
-        dest.writeParcelable(movieHistory, flags);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            dest.writeTypedObject(movieHistory, MovieHistory.PARCELABLE_WRITE_RETURN_VALUE);
+        }
     }
 
     @Override
@@ -313,17 +207,26 @@ public class Movie implements Parcelable {
         return 0;
     }
 
-    public static final Creator<Movie> CREATOR = new Creator<Movie>() {
+    public static final Creator<Movie_old> CREATOR = new Creator<Movie_old>() {
         @Override
-        public Movie createFromParcel(Parcel in) {
-            return new Movie(in);
+        public Movie_old createFromParcel(Parcel in) {
+            return new Movie_old(in);
         }
 
         @Override
-        public Movie[] newArray(int size) {
-            return new Movie[size];
+        public Movie_old[] newArray(int size) {
+            return new Movie_old[size];
         }
     };
+////
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
 
     public String getTitle() {
             return title;
@@ -347,6 +250,14 @@ public class Movie implements Parcelable {
 
     public void setStudio(String studio) {
         this.studio = studio;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     public String getBackgroundImageUrl() {
@@ -392,36 +303,28 @@ public class Movie implements Parcelable {
 
     @Override
     public String toString() {
-        return "Movie{"
-                + "id=" + id +
-                ", parentId=" + parentId +
-                ", type=" + type +
-                ", movieLength=" + movieLength +
-                ", rowIndex=" + rowIndex +id +
+        return "Movie{" +
+                "id=" + id +
                 "rowIndex=" + rowIndex +
-                ", title='" + title + "'"
-                + ", studio='" + studio + "'"
-                + ", state='" + state + "'"
-                + ", trailer='" + trailerUrl + "'"
-                + ", videoUrl='" + videoUrl + "'"
-                + ", group='" + group + "'"
-                + ", backgroundImageUrl='" + bgImageUrl + "'"
-                + ", cardImageUrl='" + cardImageUrl + "'"
-                + ", mainMovie='" + mainMovieTitle + "'"
-                + ", searchContext='" + searchContext + "'"
-                + ", createdAt='" + createdAt + "'"
-                + ", isHistory='" + isHistory + "'"
-                + ", playedTime='" + playedTime / 60000+ "'"
-                + ", updatedAt='" + updatedAt.toString() + "'"
-                + ", fetch='" + fetch + "'"
-                + "}";
+                ", title='" + title + '\'' +
+                ", studio='" + studio + '\'' +
+                ", state='" + state + '\'' +
+                ", trailer='" + trailerUrl + '\'' +
+                ", videoUrl='" + videoUrl + '\'' +
+                ", group='" + group + '\'' +
+                ", backgroundImageUrl='" + bgImageUrl + '\'' +
+                ", cardImageUrl='" + cardImageUrl + '\'' +
+                ", mainMovie='" + mainMovieTitle + '\'' +
+                ", searchContext='" + searchContext + '\'' +
+                ", createdAt='" + createdAt + '\'' +
+                ", isHistory='" + isHistory + '\'' +
+                ", playedTime='" + playedTime / 60000+ '\'' +
+                ", updatedAt='" + updatedAt.toString() + '\'' +
+                ", fetch='" + fetch + '\'' +
+                '}';
     }
 
-    public static Movie buildMovieInfo(
-            long id,
-            Long parentId,
-            MovieType type,
-            long movieLength,
+    public static Movie_old buildMovieInfo(
             String title,
             String searchContext,
             String mainMovieTitle,
@@ -438,18 +341,10 @@ public class Movie implements Parcelable {
             String createdAt,
             Date updatedAt,
             int fetch,
-            String group,
-            SeriesData seriesData,
-            SeasonData seasonData,
-            EpisodeData episodeData,
-            FilmData filmData,
-            ResolutionData resolutionData
+            String group
             ) {
-        Movie movie = new Movie();
-        movie.setId(id);
-        movie.setParentId(parentId);
-        movie.setType(type);
-        movie.setMovieLength(movieLength);
+        Movie_old movie = new Movie_old();
+        movie.setId(count++);
         movie.setTitle(title);
         movie.setDescription(description);
         movie.setStudio(studio);
@@ -467,11 +362,6 @@ public class Movie implements Parcelable {
         movie.setUpdatedAt(updatedAt);
         movie.setFetch(fetch);
         movie.setGroup(group);
-        movie.seriesData = seriesData;
-        movie.seasonData = seasonData;
-        movie.episodeData = episodeData;
-        movie.filmData = filmData;
-        movie.resolutionData = resolutionData;
         return movie;
     }
 
@@ -503,11 +393,9 @@ public class Movie implements Parcelable {
         return isHistory;
     }
 
-    public static Movie clone(Movie movie){
-        Movie newM = new Movie();
-        newM.setParentId(movie.getParentId());
-        newM.setType(movie.getType());
-        newM.setMovieLength(movie.getMovieLength());
+    public static Movie_old clone(Movie_old movie){
+        Movie_old newM = new Movie_old();
+        newM.setId(movie.getId());
         newM.setRowIndex(movie.getRowIndex());
         newM.setTitle(movie.getTitle());
         newM.setVideoUrl(movie.getVideoUrl());
@@ -521,6 +409,7 @@ public class Movie implements Parcelable {
         newM.setTrailerUrl(movie.getTrailerUrl());
         newM.setCreatedAt(movie.getCreatedAt());
         newM.setMainMovieTitle(movie.getMainMovieTitle());
+        newM.setMainMovie(movie.getMainMovie());
         newM.setSubList(movie.getSubList());
         newM.setSearchContext(movie.getSearchContext());
         newM.setIsHistory(movie.isHistory());
@@ -529,11 +418,6 @@ public class Movie implements Parcelable {
         newM.setFetch(movie.getFetch());
         newM.setBackgroundImageUrl(movie.getBackgroundImageUrl());
         newM.setGroup(movie.getGroup());
-        newM.seriesData = movie.seriesData;
-        newM.seasonData = movie.seasonData;
-        newM.episodeData = movie.episodeData;
-        newM.filmData = movie.filmData;
-        newM.resolutionData = movie.resolutionData;
         return newM;
     }
 
@@ -549,7 +433,7 @@ public class Movie implements Parcelable {
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
-        Movie movie = (Movie) obj;
+        Movie_old movie = (Movie_old) obj;
         return videoUrl != null && videoUrl.equals(movie.videoUrl);
     }
 
@@ -578,18 +462,17 @@ public class Movie implements Parcelable {
         this.searchContext = searchContext;
     }
 
-    public List<Movie> getSubList() {
+    public List<Movie_old> getSubList() {
         return subList;
     }
 
-    public boolean addSubList(Movie movie) {
+    public boolean addSubList(Movie_old movie) {
         return this.subList.add(movie);
     }
-    public void setSubList(List<Movie> subList) {
+    public void setSubList(List<Movie_old> subList) {
         this.subList = subList;
     }
 
-    @Ignore
     public int isHistory() {
         return isHistory;
     }
@@ -604,6 +487,14 @@ public class Movie implements Parcelable {
 
     public void setPlayedTime(long playedTime) {
         this.playedTime = playedTime;
+    }
+
+    public Movie_old getMainMovie() {
+        return mainMovie;
+    }
+
+    public void setMainMovie(Movie_old mainMovie) {
+        this.mainMovie = mainMovie;
     }
 
     public int getFetch() {

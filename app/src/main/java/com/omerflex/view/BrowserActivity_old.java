@@ -144,7 +144,7 @@ public class BrowserActivity_old extends AppCompatActivity {
 
         movie = (Movie) getIntent().getSerializableExtra(DetailsActivity.MOVIE);
         Movie mainMovie = (Movie) getIntent().getSerializableExtra(DetailsActivity.MAIN_MOVIE);
-        movie.setMainMovie(mainMovie);
+//        movie.setMainMovie(mainMovie);
 
 //        String movieJson = getIntent().getStringExtra("sub");
 //        Gson gson = new Gson();
@@ -892,7 +892,7 @@ super.onBackPressed();
                         // If you want to send back data
                         Intent returnIntent = new Intent();
                         returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) resultMovie);
-                        returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie()); //selected Movie mainMovie
+//                        returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie()); //selected Movie mainMovie
                         setResult(Activity.RESULT_OK, returnIntent);
                         Log.d(TAG, "myMethod: akwam resultActivity finish ");
 
@@ -925,7 +925,7 @@ super.onBackPressed();
                     Intent returnIntent = new Intent(activity, VideoDetailsFragment.class);
                     resultMovie.setFetch(0); //tell next activity not to fetch movie on start
                     returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) resultMovie);
-                    returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie()); //selected Movie mainMovie
+//                    returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) movie.getMainMovie()); //selected Movie mainMovie
                     returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, elementJson);
                     startActivity(returnIntent);
                     finish();
@@ -1236,7 +1236,7 @@ super.onBackPressed();
 
                 //movie.setFetch(0); //tell next activity not to fetch movie on start
                 returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mm);
-                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
+//                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mm.getMainMovie());
                 returnIntent.putExtra(DetailsActivity.MOVIE_SUBLIST, jsonMovie);
                 activity.startActivity(returnIntent);
                 Log.d(TAG, "shouldOverrideUrlLoading:3 true: "+url);
@@ -1451,7 +1451,7 @@ super.onBackPressed();
                 //hier hhhhhhhh
                 Intent returnIntent = new Intent();
                 returnIntent.putExtra(DetailsActivity.MOVIE, (Serializable) mov);
-                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mov.getMainMovie());
+//                returnIntent.putExtra(DetailsActivity.MAIN_MOVIE, (Serializable) mov.getMainMovie());
                 setResult(Activity.RESULT_OK, returnIntent);
                 finish();
                 //hier hhhhhhhh

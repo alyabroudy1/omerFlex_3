@@ -2,19 +2,24 @@ package com.omerflex.data.source.local;
 
 import android.content.Context;
 
+import androidx.lifecycle.LiveData;
+
+import com.omerflex.db.AppDatabase;
+import com.omerflex.db.MovieDao;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
-import com.omerflex.service.database.MovieDbHelper;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class LocalDataSource {
 
     private static LocalDataSource instance;
-    private MovieDbHelper dbHelper;
+    private MovieDao movieDao;
 
     private LocalDataSource(Context context) {
-        dbHelper = MovieDbHelper.getInstance(context);
+        AppDatabase db = AppDatabase.getDatabase(context);
+        this.movieDao = db.movieDao();
     }
 
     public static synchronized LocalDataSource getInstance(Context context) {
@@ -25,17 +30,21 @@ public class LocalDataSource {
     }
 
     public void getMovieByUrl(String videoUrl, MovieRepository.MovieCallback callback) {
-        // Assuming findMovieByUrl is synchronous
-        Movie movie = dbHelper.findMovieByUrl(videoUrl);
-        callback.onMovieFetched(movie);
+        new Thread(() -> {
+            Movie movie = movieDao.getMovieByVideoUrlSync(videoUrl);
+            callback.onMovieFetched(movie);
+        }).start();
     }
 
     public void getHomepageMovies(MovieRepository.MovieListCallback callback) {
-        dbHelper.getAllHistoryMovies(false, callback);
+        LiveData<List<Movie>> historyMovies = movieDao.getHistory();
+        historyMovies.observeForever(movies -> {
+            callback.onMovieListFetched("History", (ArrayList<Movie>) movies);
+        });
     }
 
     public void saveMovie(Movie movie) {
-        dbHelper.saveMovie(movie, false);
+        new Thread(() -> movieDao.insert(movie)).start();
     }
 
     public void fetchMovieDetails(Movie mSelectedMovie, MovieRepository.MovieCallback callback) {

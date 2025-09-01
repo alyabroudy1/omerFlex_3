@@ -5,6 +5,7 @@ import android.util.Log;
 import android.webkit.WebView;
 
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieType;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.config.ServerConfigRepository;
@@ -247,29 +248,32 @@ public class AkwamServer extends AbstractServer {
 
                 String videoUrl = linkUrl;
 
-                int state = Movie.ITEM_STATE;
+//                int state = Movie.ITEM_STATE;
 
-                a.setTitle(title);
-                a.setVideoUrl(videoUrl);
+//                a.setTitle(title);
+//                a.setVideoUrl(videoUrl);
                 Movie movie = new Movie();
 
-                if (isSeries(a)) {
-                    state = Movie.GROUP_STATE;
-                }
-                //Log.d(TAG, "search: isSeries:" + isSeries(a));
+//                if (isSeries(a)) {
+//                    movie.setType(MovieType.SERIES);
+//                    state = Movie.GROUP_STATE;
+//                } else {
+//                    movie.setType(MovieType.FILM);
+//                }
 
                 movie.setTitle(title);
                 movie.setDescription(description);
                 movie.setStudio(Movie.SERVER_AKWAM);
-                movie.setVideoUrl(videoUrl);
+                movie.setVideoUrl(Util.getUrlPathOnly(videoUrl));
                 movie.setCardImageUrl(cardImageUrl);
                 movie.setBackgroundImageUrl(backgroundImageUrl);
-                movie.setState(state);
+//                movie.setState(state);
                 movie.setRate(rate);
                 movie.setSearchContext(searchContext);
-                movie.setMainMovie(movie);
-                movie.setMainMovieTitle(videoUrl);
-                movieList.add(movie);
+//                movie.setMainMovie(movie);
+//                movie.setMainMovieTitle(videoUrl);
+
+                movieList.add(updateMovieState(movie));
             }
         }
 
@@ -285,10 +289,11 @@ public class AkwamServer extends AbstractServer {
                 nextPage.setVideoUrl(videoUrl);
                 nextPage.setCardImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
                 nextPage.setBackgroundImageUrl("https://colorslab.com/blog/wp-content/uploads/2012/03/next-button-usability.png");
+                nextPage.setType(MovieType.NEXT_PAGE);
                 nextPage.setState(Movie.NEXT_PAGE_STATE);
                 nextPage.setRate("");
                 nextPage.setSearchContext(searchContext);
-                nextPage.setMainMovie(nextPage);
+//                nextPage.setMainMovie(nextPage);
                 nextPage.setMainMovieTitle(videoUrl);
                 movieList.add(nextPage);
 
@@ -356,8 +361,12 @@ public class AkwamServer extends AbstractServer {
 
     private MovieFetchProcess fetchGroup(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
-        final String url = movie.getVideoUrl();
+        String seasonUrl = movie.getVideoUrl();
 
+        if (!seasonUrl.startsWith("http")){
+            seasonUrl = getConfig().getUrl() + seasonUrl;
+        }
+        final String url = seasonUrl;
         Observable.fromCallable(() -> getRequestDoc(url))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -418,6 +427,7 @@ public class AkwamServer extends AbstractServer {
                                         link.getElementsByAttribute("src").hasAttr("alt")
                         ) {
                             Movie episode = Movie.clone(movie);
+                            episode.setParentId(movie.getId());
                             String title = link.getElementsByAttribute("src").attr("alt");
                             String cardImageUrl = link.getElementsByAttribute("src").attr("src");
                             String backgroundImageUrl = bgImage;
@@ -426,9 +436,10 @@ public class AkwamServer extends AbstractServer {
 
                             episode.setTitle(title);
                             episode.setDescription(description);
-                            episode.setVideoUrl(videoUrl);
+                            episode.setVideoUrl(Util.getUrlPathOnly(videoUrl));
                             episode.setCardImageUrl(cardImageUrl);
                             episode.setBackgroundImageUrl(backgroundImageUrl);
+                            episode.setType(MovieType.EPISODE);
                             episode.setState(Movie.ITEM_STATE);
                             if (movie.getSubList() == null) {
                                 movie.setSubList(new ArrayList<>());
@@ -448,8 +459,12 @@ public class AkwamServer extends AbstractServer {
 
     private MovieFetchProcess fetchItem(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
+        Log.i(TAG, "fetchItem: " + movie);
 
         String url = movie.getVideoUrl();
+        if (!url.startsWith("http")){
+            url = getConfig().getUrl() + url;
+        }
 
         // page2 fetch goo- links
         String p2Caption = "/link/";
@@ -509,10 +524,10 @@ public class AkwamServer extends AbstractServer {
         }
         movie.setBackgroundImageUrl(bgImage);
         movie.setTrailerUrl(ytLink);
-        if (movie.getMainMovie() != null) {
-            movie.getMainMovie().setTrailerUrl(ytLink);
-            movie.getMainMovie().setBackgroundImageUrl(bgImage);
-        }
+//        if (movie.getMainMovie() != null) {
+//            movie.getMainMovie().setTrailerUrl(ytLink);
+//            movie.getMainMovie().setBackgroundImageUrl(bgImage);
+//        }
 
         //description
         Elements decDivs = doc.select("h2");
@@ -553,10 +568,12 @@ public class AkwamServer extends AbstractServer {
             String backgroundImageUrl = bgImage;
 
             Movie resolution = Movie.clone(movie);
+            resolution.setParentId(movie.getId());
             resolution.setTitle(title);
             resolution.setDescription(description);
             resolution.setVideoUrl(videoUrl);
             resolution.setBackgroundImageUrl(backgroundImageUrl);
+            resolution.setType(MovieType.RESOLUTION);
             resolution.setState(Movie.RESOLUTION_STATE);
             // resolution.setState(Movie.VIDEO_STATE);
             if (movie.getSubList() == null) {
@@ -691,7 +708,9 @@ public class AkwamServer extends AbstractServer {
             Log.i(TAG, "FetchOneLink url3: " + url);
 
             url = url + "|referer=" + getConfig().getReferer();
+            resolution.setParentId(movie.getParentId()); // very important to set the parent id to the parent id of the movie not to movie id as the resolution is not intended to be saved to db
             resolution.setVideoUrl(url);//####
+            resolution.setType(MovieType.VIDEO); // Assuming it's a film resolution
             resolution.setState(Movie.VIDEO_STATE);
             if (resolution.getSubList() == null) {
                 resolution.setSubList(new ArrayList<>());
@@ -924,12 +943,23 @@ public class AkwamServer extends AbstractServer {
     }
 
     @Override
-    public int detectMovieState(Movie movie) {
+    public Movie updateMovieState(Movie movie) {
         String u = movie.getVideoUrl();
-        if (u.contains("/series") || u.contains("/movies")){
-            return Movie.GROUP_STATE;
+        String n = movie.getTitle();
+        if (u.contains("/series") || u.contains("/movies") || n.contains("فلام")){
+            movie.setState(Movie.GROUP_STATE);
+            movie.setType(MovieType.SEASON);
+            return movie;
         }
-        return Movie.ITEM_STATE;
+        movie.setState(Movie.ITEM_STATE);
+        if (u.contains("/movie/") || n.contains("فلم") || n.contains("فيلم")){
+            movie.setType(MovieType.FILM);
+            return movie;
+        }
+        if (u.contains("/episode") || n.contains("حلقة") || n.contains("حلقه")){
+            movie.setType(MovieType.EPISODE);
+        }
+        return movie;
     }
 
     @Override
@@ -975,7 +1005,8 @@ public class AkwamServer extends AbstractServer {
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
         Log.d(TAG, "getHomepageMovies: ");
-        return search(getConfig().getUrl()+"/recent", activityCallback);
+//        return search(getConfig().getUrl()+"/recent", activityCallback);
+        return search("ratched", activityCallback);
     }
 
     @Override
@@ -985,7 +1016,7 @@ public class AkwamServer extends AbstractServer {
 
     public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie){
         Movie resultMovie = movies.isEmpty() ? movie : movies.get(0);
-        resultMovie.setMainMovie(movie.getMainMovie());
+//        resultMovie.setMainMovie(movie.getMainMovie());
 
         ServerConfig config = getConfig();
 

@@ -18,6 +18,7 @@ import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
 import androidx.leanback.widget.RowPresenter;
 
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.MovieRepository;
@@ -53,7 +54,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
     public MovieItemViewClickedListener(Fragment fragment, ArrayObjectAdapter mRowsAdapter) {
         this.mFragment = fragment;
         this.mRowsAdapter = mRowsAdapter;
-        this.movieRepository = MovieRepository.getInstance(fragment.getActivity());
+        this.movieRepository = MovieRepository.getInstance(fragment.getActivity(), ((OmerFlexApplication) fragment.getActivity().getApplication()).getDatabase().movieDao());
     }
 
     @Override

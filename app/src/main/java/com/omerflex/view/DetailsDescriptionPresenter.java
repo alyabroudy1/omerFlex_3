@@ -30,9 +30,9 @@ public class DetailsDescriptionPresenter extends AbstractDetailsDescriptionPrese
                                     movie.getState() == Movie.GROUP_STATE
                     )
             ) {
-                history = ((movie.getMovieHistory().getEpisode() != null) ?
-                        (" | " + movie.getMovieHistory().getEpisode()) : "") +
-                        ((movie.getMovieHistory().getSeason() != null) ? (" | " + movie.getMovieHistory().getSeason()) : "");
+//                history = ((movie.getMovieHistory().getEpisode() != null) ?
+//                        (" | " + movie.getMovieHistory().getEpisode()) : "") +
+//                        ((movie.getMovieHistory().getSeason() != null) ? (" | " + movie.getMovieHistory().getSeason()) : "");
             }
 //            Log.d(TAG, "onBindDescription: history: "+history);
             viewHolder.getBody().setText(movie.getDescription() + history);

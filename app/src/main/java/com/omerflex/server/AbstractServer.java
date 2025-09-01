@@ -7,7 +7,6 @@ import android.webkit.WebView;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
-import com.omerflex.entity.MovieRepository;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.view.VideoDetailsFragment;
@@ -412,7 +411,7 @@ public abstract class AbstractServer implements ServerInterface {
     protected abstract MovieFetchProcess fetchSeriesAction(Movie movie, int action, ActivityCallback<Movie> activityCallback);
 
     protected abstract MovieFetchProcess fetchItemAction(Movie movie, int action, ActivityCallback<Movie> activityCallback);
-    public abstract int detectMovieState(Movie movie);
+    public abstract Movie updateMovieState(Movie movie);
 
     public abstract String getWebScript(int mode, Movie movie);
 

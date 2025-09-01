@@ -34,6 +34,7 @@ import com.omerflex.view.listener.MovieItemViewClickedListener;
 import com.omerflex.view.viewConroller.VideoDetailsFragmentController;
 import com.omerflex.viewmodel.SharedViewModel;
 
+import androidx.leanback.widget.RowPresenter;
 import androidx.lifecycle.ViewModelProvider;
 
 public class VideoDetailsFragment extends DetailsSupportFragment {
@@ -156,6 +157,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         }
         HeaderItem header = new HeaderItem(0, headerTitle);
         mAdapter.add(new ListRow(header, listRowAdapter));
+
         mPresenterSelector.addClassPresenter(ListRow.class, new ListRowPresenter());
     }
 
@@ -231,5 +233,17 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             mAdapter.notifyArrayItemRangeChanged(mAdapter.indexOf(row), mAdapter.size());
             initializeBackground(movie);
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        detailsViewControl.onResume();
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        detailsViewControl.onSaveInstanceState(outState);
     }
 }

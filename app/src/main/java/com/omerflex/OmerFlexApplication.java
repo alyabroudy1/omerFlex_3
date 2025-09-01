@@ -14,9 +14,11 @@ import androidx.multidex.MultiDex;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.database.FirebaseDatabase;
+import com.omerflex.db.AppDatabase;
 import com.omerflex.server.config.ServerConfigRepository;
 
 import java.lang.ref.WeakReference;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -33,6 +35,7 @@ public class OmerFlexApplication extends Application {
 
     // Initialization flags
     private final AtomicBoolean isServerConfigInitialized = new AtomicBoolean(false);
+    private AppDatabase database;
 
     @Override
     public void onCreate() {
@@ -73,7 +76,19 @@ public class OmerFlexApplication extends Application {
 
 
         contextReference = new WeakReference<>(getApplicationContext());
-        
+
+        // One-time migration from SQLiteOpenHelper to Room.
+        // Deletes the old database.
+        android.content.SharedPreferences migrationPrefs = getSharedPreferences("migration_to_room", MODE_PRIVATE);
+        if (!migrationPrefs.getBoolean("is_migrated", false)) {
+            deleteDatabase("MoviesHistory.db");
+            migrationPrefs.edit().putBoolean("is_migrated", true).apply();
+            Log.i(TAG, "Old database 'MoviesHistory.db' has been removed for Room migration.");
+        }
+
+        database = AppDatabase.getDatabase(this);
+        Log.i(TAG, "Database initialized");
+
         initializeServerConfigRepository();
 
         // Enable strict mode for debug builds
@@ -87,15 +102,17 @@ public class OmerFlexApplication extends Application {
 
     private void initializeServerConfigRepository() {
         if (isServerConfigInitialized.compareAndSet(false, true)) {
-            try {
-                ServerConfigRepository.initialize(getApplicationContext());
-                ServerConfigRepository.getInstance().initializeDbWithDefaults();
-                ServerConfigRepository.getInstance().checkForRemoteUpdates();
-                Log.i(TAG, "ServerConfigRepository initialized");
-            } catch (Exception e) {
-                Log.e(TAG, "Error initializing ServerConfigRepository", e);
-                isServerConfigInitialized.set(false);
-            }
+            Executors.newSingleThreadExecutor().execute(() -> {
+                try {
+                    ServerConfigRepository.initialize(getApplicationContext());
+                    ServerConfigRepository.getInstance().initializeDbWithDefaults();
+                    ServerConfigRepository.getInstance().checkForRemoteUpdates();
+                    Log.i(TAG, "ServerConfigRepository initialized");
+                } catch (Exception e) {
+                    Log.e(TAG, "Error initializing ServerConfigRepository", e);
+                    isServerConfigInitialized.set(false);
+                }
+            });
         }
     }
 
@@ -117,7 +134,7 @@ public class OmerFlexApplication extends Application {
      */
     private void enableStrictMode() {
         StrictMode.ThreadPolicy.Builder threadPolicyBuilder = new StrictMode.ThreadPolicy.Builder()
-                .detectDiskReads()
+                //.detectDiskReads() // Disabled due to framework-level violations from IdsController
                 .detectDiskWrites()
                 .detectNetwork()
                 .penaltyLog();
@@ -173,6 +190,10 @@ public class OmerFlexApplication extends Application {
             throw new IllegalStateException("Application context is not available");
         }
         return context;
+    }
+
+    public AppDatabase getDatabase() {
+        return database;
     }
 
     @Override

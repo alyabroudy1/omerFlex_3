@@ -36,6 +36,7 @@ import androidx.leanback.widget.RowPresenter;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
@@ -138,7 +139,7 @@ public class MainFragment_old extends BrowseSupportFragment {
 
 
 // Initialize MovieRepository
-        movieRepository = MovieRepository.getInstance(activity);
+        movieRepository = MovieRepository.getInstance(activity, ((OmerFlexApplication) activity.getApplication()).getDatabase().movieDao());
 
         Movie movie = new Movie();
         movie.setVideoUrl("https://example.com/video1.mp4"); // Unique ID

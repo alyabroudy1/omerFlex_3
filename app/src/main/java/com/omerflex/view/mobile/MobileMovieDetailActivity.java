@@ -152,9 +152,9 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                                 mSelectedMovie.getState() == Movie.GROUP_STATE
                 )
         ) {
-            history = ((mSelectedMovie.getMovieHistory().getEpisode() != null) ?
-                    (" | " + mSelectedMovie.getMovieHistory().getEpisode()) : "") +
-                    ((mSelectedMovie.getMovieHistory().getSeason() != null) ? (" | " + mSelectedMovie.getMovieHistory().getSeason()) : "");
+//            history = ((mSelectedMovie.getMovieHistory().getEpisode() != null) ?
+//                    (" | " + mSelectedMovie.getMovieHistory().getEpisode()) : "") +
+//                    ((mSelectedMovie.getMovieHistory().getSeason() != null) ? (" | " + mSelectedMovie.getMovieHistory().getSeason()) : "");
         }
 
 

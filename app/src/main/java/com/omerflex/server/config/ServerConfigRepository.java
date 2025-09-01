@@ -2,6 +2,10 @@ package com.omerflex.server.config;
 
 import android.content.Context;
 import android.util.Log;
+
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -12,7 +16,8 @@ import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerFactory;
-import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.dao.ServerConfigDao;
+import com.omerflex.db.AppDatabase;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -30,12 +35,14 @@ public class ServerConfigRepository {
     private static final String TAG = "ServerConfigRepository";
     private static final String REMOTE_CONFIG_URL = "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/main/app/src/main/java/com/omerflex/server/servers.json";
     private static ServerConfigRepository instance;
-    private final MovieDbHelper dbHelper;
+    private final ServerConfigDao serverConfigDao;
     private final ConcurrentHashMap<String, ServerConfig> cache = new ConcurrentHashMap<>();
+    private final MutableLiveData<Boolean> isInitialized = new MutableLiveData<>(false);
 
 
     private ServerConfigRepository(Context context) {
-        this.dbHelper = MovieDbHelper.getInstance(context.getApplicationContext());
+        AppDatabase db = AppDatabase.getDatabase(context.getApplicationContext());
+        this.serverConfigDao = db.serverConfigDao();
     }
 
     public static synchronized void initialize(Context context) {
@@ -51,13 +58,17 @@ public class ServerConfigRepository {
         return instance;
     }
 
-    public ServerConfig getConfig(String serverId) {
-        if (cache.containsKey(serverId)) {
-            return cache.get(serverId);
+    public LiveData<Boolean> getIsInitialized() {
+        return isInitialized;
+    }
+
+    public ServerConfig getConfig(String serverName) {
+        if (cache.containsKey(serverName)) {
+            return cache.get(serverName);
         }
-        ServerConfig config = dbHelper.getServerConfig(serverId);
+        ServerConfig config = serverConfigDao.findByName(serverName);
         if (config != null) {
-            cache.put(serverId, config);
+            cache.put(serverName, config);
         }
         return config;
     }
@@ -66,20 +77,31 @@ public class ServerConfigRepository {
         if (newConfig == null || newConfig.getName() == null) {
             return;
         }
-        // todo save config to database
-        dbHelper.saveServerConfig(newConfig);
+        if (newConfig.getId() == 0) {
+            serverConfigDao.insert(newConfig);
+        } else {
+            serverConfigDao.update(newConfig);
+        }
         cache.put(newConfig.getName(), newConfig);
     }
 
-    public List<ServerConfig> getAllConfigs() {
-//        return dbHelper.getAllServerConfigs();
-        return dbHelper.getAllServerConfigs();
+    public LiveData<List<ServerConfig>> getAllConfigs() {
+        return serverConfigDao.getAll();
+    }
+
+    public List<ServerConfig> getAllConfigsList() {
+        return serverConfigDao.getAllList();
+    }
+
+    public List<ServerConfig> getAllActiveConfigsList() {
+        return serverConfigDao.getActiveServers();
     }
 
     public void initializeDbWithDefaults() {
-        if (dbHelper.getAllServerConfigs().isEmpty()) {
+        if (serverConfigDao.getAllList().isEmpty()) {
             DefaultServersConfig.initializeDefaultServers();
         }
+        isInitialized.postValue(true);
     }
 
     public void checkForRemoteUpdates() {
@@ -112,7 +134,7 @@ public class ServerConfigRepository {
             return;
         }
 
-        ServerConfig existingConfig = getConfig(githubServerConfigDTO.name);
+        ServerConfig existingConfig = serverConfigDao.findByName(githubServerConfigDTO.name);
         if (existingConfig == null) {
             // This is a new server, add it.
             ServerConfig newConfig = new ServerConfig();
@@ -145,10 +167,10 @@ public class ServerConfigRepository {
         }
     }
 
-    public AbstractServer getServer(String serverId) {
-       ServerConfig config = getConfig(serverId);
+    public AbstractServer getServer(String serverName) {
+       ServerConfig config = getConfig(serverName);
        if (config == null) {
-           Log.d(TAG, "server not found: "+ serverId);
+           Log.d(TAG, "server not found: "+ serverName);
            return null;
        }
        return ServerFactory.createServer(config.getName());

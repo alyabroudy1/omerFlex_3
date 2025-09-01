@@ -1,5 +1,10 @@
 package com.omerflex.entity;
 
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.room.TypeConverters;
+
+import com.omerflex.database.Converters;
 import com.omerflex.server.Util;
 
 import java.util.Date;
@@ -7,7 +12,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Entity(tableName = "server_config")
+@TypeConverters(Converters.class)
 public class ServerConfig {
+
+    @PrimaryKey(autoGenerate = true)
+    private int id;
 
     private String name;
     private String label;
@@ -35,18 +45,26 @@ public class ServerConfig {
 
     @Override
     public String toString() {
-        return "ServerConfig{" +
-                "name='" + name + '\'' +
-                ", referer='" + referer + '\'' +
-                ", displayName='" + label + '\'' +
-                ", url='" + url + '\'' +
-//                ", webName='" + webName + '\'' +
+        return "ServerConfig{"
+                + "name='" + name + "'" +
+                ", referer='" + referer + "'" +
+                ", displayName='" + label + "'" +
+                ", url='" + url + "'" +
+//                ", webName='" + webName + "'" +
                 ", isActive=" + isActive +
-//                ", description='" + description + '\'' +
-                ", date='" + createdAt + '\'' +
+//                ", description='" + description + "'" +
+                ", date='" + createdAt + "'" +
                 ", headers=" + headers +
-                ", stringCookies='" + stringCookies + '\'' +
+                ", stringCookies='" + stringCookies + "'" +
                 '}';
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getName() {

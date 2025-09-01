@@ -3,33 +3,51 @@ package com.omerflex.entity;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.ForeignKey;
+import androidx.room.Index;
+import androidx.room.PrimaryKey;
 
-import java.io.Serializable;
 import java.util.Date;
 
-public class MovieHistory implements Serializable, Parcelable {
+@Entity(tableName = "movie_history",
+        foreignKeys = @ForeignKey(entity = Movie.class,
+                parentColumns = "id",
+                childColumns = "movieId",
+                onDelete = ForeignKey.CASCADE),
+        indices = {@Index(value = {"movieId"}, unique = true)})
+public class MovieHistory implements Parcelable {
+    @PrimaryKey(autoGenerate = true)
+    private long id;
+    private long movieId;
+    private long watchedPosition;
+    private Date lastWatchedDate;
 
-    static final long serialVersionUID = 787566175075960653L;
-
-    private int id;
-    private String mainMovieUrl;
-    private String episode;
-    private String season;
-    private long playedTime;
-    private Date playedAt;
-
-    public MovieHistory() {
-        this.playedAt = new Date();
+    public MovieHistory(long movieId, long watchedPosition, Date lastWatchedDate) {
+        this.movieId = movieId;
+        this.watchedPosition = watchedPosition;
+        this.lastWatchedDate = lastWatchedDate;
     }
 
     protected MovieHistory(Parcel in) {
-        id = in.readInt();
-        mainMovieUrl = in.readString();
-        episode = in.readString();
-        season = in.readString();
-        playedAt = new Date(in.readLong());
-        playedTime = in.readLong();
+        id = in.readLong();
+        movieId = in.readLong();
+        watchedPosition = in.readLong();
+        long tmpLastWatchedDate = in.readLong();
+        lastWatchedDate = tmpLastWatchedDate == -1 ? null : new Date(tmpLastWatchedDate);
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeLong(id);
+        dest.writeLong(movieId);
+        dest.writeLong(watchedPosition);
+        dest.writeLong(lastWatchedDate != null ? lastWatchedDate.getTime() : -1);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
     }
 
     public static final Creator<MovieHistory> CREATOR = new Creator<MovieHistory>() {
@@ -44,78 +62,35 @@ public class MovieHistory implements Serializable, Parcelable {
         }
     };
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeInt(id);
-        dest.writeString(mainMovieUrl);
-        dest.writeString(episode);
-        dest.writeString(season);
-        dest.writeLong(playedAt.getTime());
-        dest.writeLong(playedTime);
-    }
-
-    public int getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 
-    public String getMainMovieUrl() {
-        return mainMovieUrl;
+    public long getMovieId() {
+        return movieId;
     }
 
-    public void setMainMovieUrl(String mainMovieUrl) {
-        this.mainMovieUrl = mainMovieUrl;
+    public void setMovieId(long movieId) {
+        this.movieId = movieId;
     }
 
-    public String getEpisode() {
-        return episode;
+    public long getWatchedPosition() {
+        return watchedPosition;
     }
 
-    public void setEpisode(String episode) {
-        this.episode = episode;
+    public void setWatchedPosition(long watchedPosition) {
+        this.watchedPosition = watchedPosition;
     }
 
-    public String getSeason() {
-        return season;
+    public Date getLastWatchedDate() {
+        return lastWatchedDate;
     }
 
-    public void setSeason(String season) {
-        this.season = season;
-    }
-
-    public long getPlayedTime() {
-        return playedTime;
-    }
-
-    public void setPlayedTime(long playedTime) {
-        this.playedTime = playedTime;
-    }
-
-    public Date getPlayedAt() {
-        return playedAt;
-    }
-
-    public void setPlayedAt(Date playedAt) {
-        this.playedAt = playedAt;
-    }
-
-    @Override
-    public String toString() {
-        return "MovieHistory{" +
-                "id=" + id +
-                ", mainMovieUrl='" + mainMovieUrl + '\'' +
-                ", episode='" + episode + '\'' +
-                ", season='" + season + '\'' +
-                ", playedTime=" + playedTime +
-                ", playedAt=" + playedAt +
-                '}';
+    public void setLastWatchedDate(Date lastWatchedDate) {
+        this.lastWatchedDate = lastWatchedDate;
     }
 }

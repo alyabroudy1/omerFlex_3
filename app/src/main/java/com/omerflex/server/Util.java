@@ -254,7 +254,7 @@ public class Util {
     @NonNull
     public static Intent generateIntent(Movie movie, Intent intent, boolean withSubList) {
         intent.putExtra(DetailsActivity.MOVIE, (Parcelable) movie);
-        intent.putExtra(DetailsActivity.MAIN_MOVIE, (Parcelable) movie.getMainMovie());
+//        intent.putExtra(DetailsActivity.MAIN_MOVIE, (Parcelable) movie.getMainMovie());
         if (withSubList && movie.getSubList() != null) {
             intent.putParcelableArrayListExtra(DetailsActivity.MOVIE_SUBLIST, (ArrayList<Movie>) movie.getSubList());  // Pass sublist as Parcelable ArrayList
         }
@@ -334,7 +334,7 @@ public class Util {
         if (movie.getSubList() == null) {
             movie.setSubList(new ArrayList<>());
         }
-        movie.setMainMovie(mSelectedMovieMainMovie);
+//        movie.setMainMovie(mSelectedMovieMainMovie);
         return movie;
     }
 

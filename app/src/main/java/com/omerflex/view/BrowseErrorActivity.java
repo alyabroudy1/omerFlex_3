@@ -15,6 +15,7 @@ import android.widget.ProgressBar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
@@ -100,7 +101,7 @@ public class BrowseErrorActivity extends FragmentActivity {
         private MovieRepository movieRepository;
         public MainViewControl(Activity activity, Fragment fragment, MovieDbHelper dbHelper) {
             super(activity, fragment, dbHelper);
-            movieRepository = MovieRepository.getInstance(activity);
+            movieRepository = MovieRepository.getInstance(activity, ((OmerFlexApplication) activity.getApplication()).getDatabase().movieDao());
         }
 
         protected <T> void loadServerRow(AbstractServer server, String finalQuery) {

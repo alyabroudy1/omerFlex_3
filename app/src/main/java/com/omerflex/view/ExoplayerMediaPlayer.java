@@ -9,6 +9,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -20,6 +21,7 @@ import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
+import androidx.media3.common.Timeline;
 import androidx.media3.common.util.Util;
 import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DefaultHttpDataSource;
@@ -37,13 +39,16 @@ import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.leanback.LeanbackPlayerAdapter;
 
 import com.omerflex.R;
+import com.omerflex.db.AppDatabase;
 import com.omerflex.entity.Movie;
-import com.omerflex.service.database.MovieDbHelper;
+import com.omerflex.entity.MovieHistory;
+import com.omerflex.entity.MovieRepository;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +65,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
     @Nullable private static ExoPlayer player;
     static String TAG = "Exoplayer";
 
-    MovieDbHelper dbHelper;
+    MovieRepository movieRepository;
     PlayerView playerView;
     private long backPressedTime;
     Movie movie;
@@ -78,6 +83,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
     private static final float MIN_SEEK_DISTANCE = 100; //  pixels
     public static float initialX = 0;
     private Map<String, String> headers;
+    private boolean hasSeekedToWatchedPosition = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,8 +106,9 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 //        player = new ExoPlayer.Builder(getApplicationContext()).build();
        // player.setPlayWhenReady(true);
         //leanbackPlayerAdapter = new LeanbackPlayerAdapter(this, player, 0);
-        dbHelper = MovieDbHelper.getInstance(this);
-         movie = com.omerflex.server.Util.recieveSelectedMovie(getIntent());
+        AppDatabase db = AppDatabase.getDatabase(this);
+        movieRepository = MovieRepository.getInstance(this, db.movieDao());
+        movie = com.omerflex.server.Util.recieveSelectedMovie(getIntent());
 
         leanbackPlayerAdapter = new LeanbackPlayerAdapter(this.getApplicationContext(), player, 16);
 
@@ -278,9 +285,51 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         });
         player.addListener(new Player.Listener() {
             @Override
+            public void onTimelineChanged(Timeline timeline, int reason) {
+                Log.d(TAG, "onTimelineChanged: " + reason);
+                if (player.getDuration() != C.TIME_UNSET) {
+                    if (!hasSeekedToWatchedPosition) {
+                        long movieLength = player.getDuration();
+                        hasSeekedToWatchedPosition = true; // Set it here to only try once.
+                        new Thread(() -> {
+                            movieRepository.updateMovieLength(movie.getParentId(), movieLength);
+
+                            // --- Start Gemini Debug Logging ---
+                            Object parentIdObj = movie.getParentId();
+                            Log.d(TAG, "DEBUG: parentId object is: " + parentIdObj);
+                            if (parentIdObj != null) {
+                                Log.d(TAG, "DEBUG: parentId class is: " + parentIdObj.getClass().getName());
+                                Log.d(TAG, "DEBUG: parentId value is: '" + parentIdObj + "'");
+                            }
+                            // --- End Gemini Debug Logging ---
+
+                            MovieHistory history = movieRepository.getMovieHistoryByMovieIdSync(movie.getParentId());
+                            Log.d(TAG, "onTimelineChanged: parentId: "+ movie.getParentId() );
+                            Log.d(TAG, "onTimelineChanged: movieId: "+ movie.getId() );
+                            Log.d(TAG, "onTimelineChanged: history: "+ history );
+                            if (history != null) {
+                                runOnUiThread(() -> {
+                                    long watchedPosition = history.getWatchedPosition();
+                                    Log.d(TAG, "onTimelineChanged: watchedPosition: "+ watchedPosition + ", length: "+ movieLength);
+                                    if (watchedPosition > 0 && movieLength > 0) {
+                                        long percentage = (watchedPosition * 100) / movieLength;
+                                        if (percentage < 95) {
+                                            player.seekTo(watchedPosition);
+                                            Log.d(TAG, "onTimelineChanged: seeked to: "+ watchedPosition);
+
+                                        }
+                                    }
+                                });
+                            }
+                        }).start();
+                    }
+                }
+            }
+
+            @Override
             public void onPlayerError(PlaybackException error) {
 //            public void onPlayerError(ExoPlaybackException error) {
-                Log.d("TAG", "onPlayerError: xxxx:"+error.getMessage()+", "+error.errorCode+", "+ error.toString()+", "+movie.getVideoUrl());
+                Log.d("TAG", "onPlayerError: xxxx:"+error.getMessage()+", "+error.errorCode+", "+ error.toString()+ ", "+movie.getVideoUrl());
 
                 int c = error.errorCode;
                 if (c == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ){
@@ -305,7 +354,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
                 }
                 if (deleteCond){
                     Log.d("TAG", "onPlayerError: movie deleted: "+movie.toString());
-                    dbHelper.deleteMovie(movie);
+                    movieRepository.deleteMovie(movie);
                 }
                 Toast.makeText(ExoplayerMediaPlayer.this, "فشل في تشغيل الرابط", Toast.LENGTH_SHORT).show();
                 Player.Listener.super.onPlayerError(error);
@@ -487,13 +536,13 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         return mediaSource;
 //        if (movie.getVideoUrl().contains("m3u")){
 //            HlsMediaSource.Factory factory = new HlsMediaSource.Factory(
-//                    new DefaultHttpDataSourceFactory(Util.getUserAgent(this, "exoplayer-codelab")));
+//                    new DefaultHttpDataSourceFactory(Util.getUserAgent(this, "exoplayer-codelab"))); 
 //            HlsMediaSource mediaSource = factory.createMediaSource(uri);
 //            return mediaSource;
 //        }
 
 
-//      DataSource.Factory dataSourceFactory =
+//      DataSource.Factory dataSourceFactory = 
 //                new DefaultDataSourceFactory(this, "exoplayer-codelab");
 //        return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
     }
@@ -640,7 +689,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         // Create a data source factory.
         DataSource.Factory dataSourceFactory = new DefaultHttpDataSourceFactory();
 // Create a SmoothStreaming media source pointing to a manifest uri.
-        MediaSource mediaSource =
+        MediaSource mediaSource = 
                 new SsMediaSource.Factory(dataSourceFactory)
                         .createMediaSource(MediaItem.fromUri(videoUri));
 
@@ -699,10 +748,26 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
 
         Log.d("TAG", "onStop: yess ");
         if (player != null) {
-            long playtime = player.getCurrentPosition();
-            Log.d(TAG, "onStop: playtime:"+playtime  / 60000);
-            movie.setPlayedTime(playtime);
-             dbHelper.updateMoviePlayTime(movie, playtime);
+            long watchedPosition = player.getCurrentPosition();
+            long movieLength = player.getDuration();
+
+            if (movieLength > 0) {
+                long playedPercentage = (watchedPosition * 100) / movieLength;
+                movie.setPlayedTime(playedPercentage);
+            }
+
+            MovieHistory movieHistory = movie.getMovieHistory();
+            if (movieHistory == null) {
+                // use parent movie
+                movieHistory = new MovieHistory(movie.getParentId(), watchedPosition, new Date());
+            } else {
+                movieHistory.setWatchedPosition(watchedPosition);
+                movieHistory.setLastWatchedDate(new Date());
+            }
+            movie.setMovieHistory(movieHistory);
+
+            movieRepository.updateWatchedTime(movie.getParentId(), watchedPosition);
+
             // Check if the activity is still running
             if (!isFinishing()) {
                 player.pause();

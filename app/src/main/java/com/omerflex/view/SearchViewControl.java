@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.ListRow;
 
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
 import com.omerflex.server.AbstractServer;
@@ -51,7 +52,7 @@ public abstract class SearchViewControl {
         this.activity = activity;
         this.fragment = fragment;
         this.dbHelper = dbHelper;
-        movieRepository = MovieRepository.getInstance(activity);
+        movieRepository = MovieRepository.getInstance(activity, ((OmerFlexApplication) activity.getApplication()).getDatabase().movieDao());
 //        Looper.prepare(); // to run Toasts
     }
 
@@ -577,7 +578,7 @@ public abstract class SearchViewControl {
             updateCurrentMovie(resultMovie);
 //            Log.d(TAG, "onActivityResult: updateMovieListOfMovieAdapter: mainMovie: "+ resultMovie.getMainMovie());
 
-            updateMainMovieOnJsResult(resultMovie.getMainMovie(), resultMovie.getSubList());
+//            updateMainMovieOnJsResult(resultMovie.getMainMovie(), resultMovie.getSubList());
 
             updateMovieListOfMovieAdapter((ArrayList<Movie>) resultMovie.getSubList(), clickedAdapter);
         }
@@ -646,7 +647,7 @@ public abstract class SearchViewControl {
             if (mainMovie == null) {
                 mainMovie = mov;
             }
-            mov.setMainMovie(mainMovie);
+//            mov.setMainMovie(mainMovie);
             subList.set(subList.indexOf(mov), mov);
 //            Log.d(TAG, "onActivityResult: mov main: 44: "+ mov.getMainMovie());
         }
