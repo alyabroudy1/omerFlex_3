@@ -87,7 +87,11 @@ public abstract class AbstractServer implements ServerInterface {
             Log.d(TAG, "shouldOverrideUrlLoading:0 false: s: " + getConfig().getUrl() + ", u: " + url);
         }
 
-        if (newUrl.contains(Util.extractDomain(movie.getVideoUrl(), false, false))) {
+        String videoLink = movie.getVideoUrl();
+        if (!videoLink.startsWith("http")){
+            videoLink = getConfig().getUrl() + videoLink;
+        }
+        if (newUrl.contains(Util.extractDomain(videoLink, false, false))) {
 //                Log.d(TAG, "shouldOverrideUrlLoading:0 false: domain: " + Util.extractDomain(url, false, false) + ", u: " + url);
             return false;
         }

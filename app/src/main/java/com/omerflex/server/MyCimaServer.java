@@ -509,7 +509,7 @@ public class MyCimaServer extends AbstractServer {
                 Movie episode = Movie.clone(movie);
                 episode.setParentId(movie.getId());
                 episode.setTitle(title);
-                episode.setVideoUrl(videoUrl);
+                episode.setVideoUrl(Util.getUrlPathOnly(videoUrl));
                 episode.setState(Movie.ITEM_STATE);
                 episode.setType(MovieType.EPISODE);
 
@@ -595,7 +595,7 @@ public class MyCimaServer extends AbstractServer {
                     Movie episode = Movie.clone(movie);
                     episode.setParentId(movie.getId());
                     episode.setTitle(title);
-                    episode.setVideoUrl(linkUrl);
+                    episode.setVideoUrl(Util.getUrlPathOnly(linkUrl));
                     episode.setState(Movie.ITEM_STATE);
                     episode.setType(MovieType.EPISODE);
                     movie.addSubList(episode);
@@ -890,7 +890,11 @@ public class MyCimaServer extends AbstractServer {
                         " });";
             }
             else if (movie.getState() == Movie.ITEM_STATE) {
-                String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
+                String videoLink = movie.getVideoUrl();
+                if (!videoLink.startsWith("http")){
+                    videoLink = getConfig().getUrl() + videoLink;
+                }
+                String referer = Util.extractDomain(videoLink, true, true);
                 script = "document.addEventListener('DOMContentLoaded', () => {\n" +
                         "if (!document.title.includes('Just a moment')){" +
                         "var descElems = document.getElementsByClassName('StoryMovieContent');\n" +
@@ -1044,6 +1048,10 @@ public class MyCimaServer extends AbstractServer {
 
     private MovieFetchProcess generateItemMovie(Document doc, Movie movie, ActivityCallback<Movie> activityCallback) {
 
+        String url = movie.getVideoUrl();
+        if (!url.startsWith("http")){
+            url = getConfig().getUrl() + url;
+        }
         //get link of episodes page
         Element descElem = doc.getElementsByClass("StoryMovieContent").first();
         String desc = "";
@@ -1051,7 +1059,7 @@ public class MyCimaServer extends AbstractServer {
             desc = descElem.text();
             movie.setDescription(desc);
         }
-        String referer = Util.extractDomain(movie.getVideoUrl(), true, true);
+        String referer = Util.extractDomain(url, true, true);
         Elements uls = doc.getElementsByClass("List--Download--Wecima--Single");
 //        Log.d(TAG, "generateItemMovie: html: " + doc.html());
 //        Log.d(TAG, "generateItemMovie: title: " + doc.title());
@@ -1099,6 +1107,7 @@ public class MyCimaServer extends AbstractServer {
                     continue;
                 }
                 videoUrl = videoUrl + "|referer=" + referer;
+                Log.d(TAG, "generateItemMovie: "+ videoUrl);
 //                videoUrl = videoUrl + Util.generateHeadersForVideoUrl(headers);
 
                 Element titleElem = li.getElementsByTag("strong").first();
