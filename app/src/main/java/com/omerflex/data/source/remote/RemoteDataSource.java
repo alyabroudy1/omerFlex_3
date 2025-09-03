@@ -70,6 +70,7 @@ public class RemoteDataSource {
                                         @Override
                                         public void onInvalidCookie(ArrayList<Movie> result, String title) {
                                             Log.d(TAG, "onInvalidCookie: ");
+                                            callback.onMovieListFetched(title, result);
                                         }
 
                                         @Override

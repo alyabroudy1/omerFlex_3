@@ -333,7 +333,7 @@ public class VideoDetailsFragment_old extends DetailsSupportFragment {
                             Log.d(TAG, "onInvalidCookie: 338: "+ result);
                             result.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
                             hideProgressDialog(true, null);
-                            Util.openBrowserIntent(result, fragment, false, true, true, 11);
+                            Util.openBrowserIntent(result, fragment, false, true, true);
                         }
 
                         @Override
@@ -770,7 +770,7 @@ public class VideoDetailsFragment_old extends DetailsSupportFragment {
                                     Log.d(TAG, "onInvalidCookie: 752"+ result);
                                     hideProgressDialog(false, null);
                                     result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
-                                    Util.openBrowserIntent(result, fragment, false, true, true, 11);
+                                    Util.openBrowserIntent(result, fragment, false, true, true);
                                 }
 
                                 @Override

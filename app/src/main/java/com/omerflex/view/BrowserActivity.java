@@ -101,6 +101,9 @@ public class BrowserActivity extends AppCompatActivity {
 
     static String currentVideoUrl = "";
 
+    private int selectedRowIndex = -1;
+    private int  selectedItemIndex = -1;
+
     //#############
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,8 +138,12 @@ public class BrowserActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         cursorLayout = new CursorLayout(this);
         openedForResult = getIntent().getBooleanExtra("openedForResult", false);
-        isCookieFetch = getIntent().getBooleanExtra("isCookieFetch", false);
+        isCookieFetch = getIntent().getBooleanExtra(Movie.KEY_IS_COOKIE_FETCH, false);
+        selectedRowIndex = getIntent().getIntExtra(Movie.KEY_CLICKED_ROW_ID, 0);
+        selectedItemIndex = getIntent().getIntExtra(Movie.KEY_CLICKED_MOVIE_INDEX, 0);
 //         Log.d(TAG, "initializeThings: isCookieFetch: "+ isCookieFetch);
+         Log.d(TAG, "initializeThings: selectedRowIndex: "+ selectedRowIndex);
+         Log.d(TAG, "initializeThings: selectedItemIndex: "+ selectedItemIndex);
         gson = new Gson();
         activity = this;
 
@@ -160,6 +167,7 @@ public class BrowserActivity extends AppCompatActivity {
         listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
 
         movie = Util.recieveSelectedMovie(getIntent());
+
 
         server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
         if (server == null) {
@@ -421,7 +429,7 @@ public class BrowserActivity extends AppCompatActivity {
                     ServerConfigRepository.getInstance().updateConfig(config);
                     setResult(
                             Activity.RESULT_OK,
-                            Util.generateIntentResult(movieFetchProcess.movie)
+                            Util.generateIntentResult(movieFetchProcess.movie, selectedRowIndex, selectedItemIndex)
                     );
                     finish();
                     return;
@@ -430,7 +438,7 @@ public class BrowserActivity extends AppCompatActivity {
 //                    Log.d(TAG, "processOnOtherMovieStates: FETCH_PROCESS_RETURN_RESULT");
                     setResult(
                             Activity.RESULT_OK,
-                            Util.generateIntentResult(movieFetchProcess.movie)
+                            Util.generateIntentResult(movieFetchProcess.movie, selectedRowIndex, selectedItemIndex)
                     );
                     finish();
                     return;
@@ -447,7 +455,7 @@ public class BrowserActivity extends AppCompatActivity {
                 return;
             }
             movie.setSubList(movies);
-            setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
+            setResult(Activity.RESULT_OK, Util.generateIntentResult(movie, selectedRowIndex, selectedItemIndex));
             finish();
         }
 
@@ -467,7 +475,7 @@ public class BrowserActivity extends AppCompatActivity {
                     movies
             );
 //             Log.d(TAG, "handleJSResultMovieUpdate: mainMovie: "+ movie.getMainMovie());
-            setResult(Activity.RESULT_OK, Util.generateIntentResult(movie));
+            setResult(Activity.RESULT_OK, Util.generateIntentResult(movie, selectedRowIndex, selectedItemIndex));
             finish();
         }
     }
@@ -643,7 +651,7 @@ public class BrowserActivity extends AppCompatActivity {
             }
             // Log.d(TAG, "shouldInterceptRequest: video shouldInterceptRequest. " + mm);
 
-            setResult(Activity.RESULT_OK, Util.generateIntentResult(mm));
+            setResult(Activity.RESULT_OK, Util.generateIntentResult(mm, selectedRowIndex, selectedItemIndex));
             activity.finish();
 
             activity.runOnUiThread(new Runnable() {
@@ -746,7 +754,7 @@ public class BrowserActivity extends AppCompatActivity {
             }
             config.setStringCookies(cookies);
             config.setHeaders(headers);
-            ServerConfigRepository.getInstance().updateConfig(config);
+            new Thread(() -> ServerConfigRepository.getInstance().updateConfig(config)).start();
         }
         @Override
         public void onLoadResource(WebView view, String url) {
@@ -780,7 +788,7 @@ public class BrowserActivity extends AppCompatActivity {
                 startExoplayer(mov);
                 return;
             }
-            setResult(Activity.RESULT_OK, Util.generateIntentResult(mov));
+            setResult(Activity.RESULT_OK, Util.generateIntentResult(mov, selectedRowIndex, selectedItemIndex));
             runOnUiThread(view::stopLoading);
             activity.finish();
         }

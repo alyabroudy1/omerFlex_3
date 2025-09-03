@@ -80,7 +80,7 @@ public class VideoDetailsFragmentController {
         if (fetchedMovie.getType() == MovieType.SERIES || fetchedMovie.getType() == MovieType.SEASON) {
             List<Movie> subList = fetchedMovie.getSubList();
             if (subList != null && !subList.isEmpty()) {
-                Movie lastWatchedItem = null;
+                Movie lastWatchedItem = subList.get(0);
                 java.util.Date latestDate = null;
 
                 for (Movie item : subList) {
@@ -216,7 +216,7 @@ public class VideoDetailsFragmentController {
         long actionId = action.getId();
         if (actionId == ACTION_WATCH_TRAILER) {
             Log.d(TAG, "onActionClicked: Trailer: " + movie.getTitle());
-            Util.openBrowserIntent(movie, fragment, true, false, false, 11);
+            Util.openBrowserIntent(movie, fragment, true, false, false);
             return;
         }
 
@@ -273,10 +273,10 @@ public class VideoDetailsFragmentController {
                         }
                         result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
                         if (fragment != null){
-                            Util.openBrowserIntent(result, fragment, false, true, true,0);
+                            Util.openBrowserIntent(result, fragment, false, true, true,selectedRowIndex, 0);
                             return;
                         }
-                        Util.openBrowserIntent(result, fragment.getActivity(), false, true, true,0);
+                        Util.openBrowserIntent(result, fragment.getActivity(), false, true, true,selectedRowIndex,0);
                     }
 
                     @Override

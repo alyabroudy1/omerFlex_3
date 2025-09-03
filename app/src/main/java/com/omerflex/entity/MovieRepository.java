@@ -146,9 +146,9 @@ public class MovieRepository {
             remoteDataSource.fetchMovieDetails(mSelectedMovie, remoteMovie -> {
                 if (remoteMovie != null) {
                     new Thread(() -> {
+                            movieDao.update(remoteMovie); // Update the parent movie (Series/Season)
                         if (saveCond && remoteMovie.getSubList() != null && !remoteMovie.getSubList().isEmpty()) {
                             Log.d(TAG, "fetchMovieDetails: saving/updating remote's sublist");
-                            movieDao.update(remoteMovie); // Update the parent movie (Series/Season)
 
                             List<Movie> subListFromRemote = remoteMovie.getSubList();
                             List<Movie> finalSubList = new ArrayList<>();

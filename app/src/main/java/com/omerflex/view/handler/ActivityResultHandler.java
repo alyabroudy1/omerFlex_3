@@ -29,6 +29,7 @@ public class ActivityResultHandler {
         Movie resultMovie = Util.recieveSelectedMovie(data);
         int clickedMovieIndex = data.getIntExtra(Movie.KEY_CLICKED_MOVIE_INDEX, -1);
         int clickedRowId = data.getIntExtra(Movie.KEY_CLICKED_ROW_ID, -1);
+        Log.d(TAG, "handleActivityResult: clickedMovieIndex: "+ clickedMovieIndex);
         Log.d(TAG, "handleActivityResult: clickedRowId: "+ clickedRowId);
         if (clickedRowId == -1) {
             Log.d(TAG, "handleActivityResult: clickedRowId == -1");

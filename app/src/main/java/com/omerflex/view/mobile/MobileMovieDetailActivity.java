@@ -168,7 +168,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
 
     private void fetchCookie(Movie result) {
         result.setFetch(Movie.REQUEST_CODE_EXOPLAYER);
-        Util.openBrowserIntent(result, activity, true, true, true, 11);
+        Util.openBrowserIntent(result, activity, true, true, true);
     }
 
     private void evaluateWatchButton() {
@@ -457,7 +457,7 @@ public class MobileMovieDetailActivity extends AppCompatActivity {
                         @Override
                         public void onInvalidCookie(Movie result, String title) {
                             movie.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
-                            Util.openBrowserIntent(movie, activity, false, true, true, 11);
+                            Util.openBrowserIntent(movie, activity, false, true, true);
                         }
 
                         @Override

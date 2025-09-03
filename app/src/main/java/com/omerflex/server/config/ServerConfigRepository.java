@@ -77,12 +77,15 @@ public class ServerConfigRepository {
         if (newConfig == null || newConfig.getName() == null) {
             return;
         }
-        if (newConfig.getId() == 0) {
-            serverConfigDao.insert(newConfig);
-        } else {
+        ServerConfig existingConfig = serverConfigDao.findByName(newConfig.getName());
+        if (existingConfig != null) {
+            newConfig.setId(existingConfig.getId());
             serverConfigDao.update(newConfig);
+            cache.put(newConfig.getName(), newConfig);
+        } else {
+            serverConfigDao.insert(newConfig);
+            cache.remove(newConfig.getName());
         }
-        cache.put(newConfig.getName(), newConfig);
     }
 
     public LiveData<List<ServerConfig>> getAllConfigs() {

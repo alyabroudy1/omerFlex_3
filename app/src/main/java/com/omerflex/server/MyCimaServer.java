@@ -4,6 +4,7 @@ import com.omerflex.entity.MovieType;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 
 import com.omerflex.entity.Movie;
@@ -18,6 +19,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public class MyCimaServer extends AbstractServer {
@@ -62,6 +66,7 @@ public class MyCimaServer extends AbstractServer {
             m.setVideoUrl(doc.location());
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
+            m.setType(MovieType.COOKIE);
             // m.setState(Movie.RESULT_STATE);
             m.setCardImageUrl(cardImageUrl);
             m.setBackgroundImageUrl(backgroundImageUrl);
@@ -229,7 +234,7 @@ public class MyCimaServer extends AbstractServer {
 
 //                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
                 movie.setTitle(title);
-                movie.setVideoUrl(videoUrl);
+                movie.setVideoUrl(Util.getUrlPathOnly(videoUrl));
 //                if (isSeries(movie)) {
 //                    movie.setState(Movie.GROUP_OF_GROUP_STATE);
 //                } else {
@@ -362,6 +367,11 @@ public class MyCimaServer extends AbstractServer {
     private MovieFetchProcess fetchGroupOfGroup(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
+
+        if (!url.startsWith("http")){
+            url = getConfig().getUrl() + url;
+        }
+
         Log.i(TAG, "ur:" + url);
         Document doc = getRequestDoc(url);
         if (doc == null) {
@@ -403,6 +413,7 @@ public class MyCimaServer extends AbstractServer {
 
         if (boxs.isEmpty()) {
             movie.setState(Movie.GROUP_STATE);
+            movie.setType(MovieType.SEASON);
             if (movie.getVideoUrl() == null) {
                 return null;
             }
@@ -417,10 +428,12 @@ public class MyCimaServer extends AbstractServer {
                 String cardImageUrl = movie.getCardImageUrl();
                 String backgroundImageUrl = movie.getCardImageUrl();
                 Movie episode = Movie.clone(movie);
+                episode.setParentId(movie.getId());
                 episode.setTitle(title);
                 episode.setDescription(desc);
-                episode.setVideoUrl(videoUrl);
+                episode.setVideoUrl(Util.getUrlPathOnly(videoUrl));
                 episode.setState(Movie.GROUP_STATE);
+                episode.setType(MovieType.SEASON);
                 if (movie.getSubList() == null) {
                     movie.setSubList(new ArrayList<>());
                 }
@@ -435,6 +448,9 @@ public class MyCimaServer extends AbstractServer {
         Log.i(TAG, "fetchGroup: " + movie.getVideoUrl());
 
         String url = movie.getVideoUrl();
+        if (!url.startsWith("http")){
+            url = getConfig().getUrl() + url;
+        }
         //         Log.i(TAG, "ur:" + url);
 //            Document doc = Jsoup.connect(url).header(
 //                    "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8").header(
@@ -472,6 +488,10 @@ public class MyCimaServer extends AbstractServer {
             movie.setDescription(desc);
         }
 
+        if (movie.getSubList() == null) {
+            movie.setSubList(new ArrayList<>());
+        }
+
         //fetch session
         Elements boxs = doc.getElementsByClass("Episodes--Seasons--Episodes");
         for (Element box : boxs) {
@@ -487,22 +507,134 @@ public class MyCimaServer extends AbstractServer {
                 a.setStudio(Movie.SERVER_MyCima);
 
                 Movie episode = Movie.clone(movie);
+                episode.setParentId(movie.getId());
                 episode.setTitle(title);
                 episode.setVideoUrl(videoUrl);
                 episode.setState(Movie.ITEM_STATE);
-                if (movie.getSubList() == null) {
-                    movie.setSubList(new ArrayList<>());
-                }
+                episode.setType(MovieType.EPISODE);
+
                 movie.addSubList(episode);
             }
         }
+
+        Element moreEp = doc.select(".MoreEpisodes--Button").first();
+        if (moreEp != null) {
+            String name = moreEp.attr("data-term");
+            if (name == null || name.isEmpty()) {
+                name = movie.getTitle();
+            }
+
+            String domain;
+            String baseUri = doc.baseUri();
+            if (baseUri != null && baseUri.startsWith("http")) {
+                int doubleSlash = baseUri.indexOf("//");
+                if (doubleSlash != -1) {
+                    int nextSlash = baseUri.indexOf('/', doubleSlash + 2);
+                    if (nextSlash != -1) {
+                        domain = baseUri.substring(0, nextSlash);
+                    } else {
+                        domain = baseUri;
+                    }
+                } else {
+                    domain = getConfig().getUrl();
+                }
+            } else {
+                domain = getConfig().getUrl();
+            }
+
+            int episodesCount = 0;
+            if (movie.getSubList() != null) {
+                episodesCount = movie.getSubList().size();
+            }
+
+            String moreUrl = domain + "/AjaxCenter/MoreEpisodes/" + name + "/" + episodesCount + "/";
+            Log.d(TAG, "Fetching hidden episodes from: " + moreUrl);
+
+            getConfig().getHeaders().put("Accept", "application/json, text/javascript, */*");
+            getConfig().getHeaders().put("X-Requested-With", "XMLHttpRequest");
+            Document doc2 = getRequestDoc(moreUrl);
+            getConfig().getHeaders().remove("Accept");
+            getConfig().getHeaders().remove("X-Requested-With");
+
+            if (doc2 != null) {
+                // Select all elements that have an href attribute
+                Elements links2 = doc2.select("[href]");
+
+                for (Element link : links2) {
+                    // Get the title element inside the link or elsewhere
+                    Element titleElm = link.selectFirst("episodetitle"); // search inside link if needed
+                    String title = "";
+                    if (titleElm == null) {
+                        continue;
+                    }
+                        // Get raw text
+                        title = titleElm.text();
+
+                        // Remove literal substrings
+                        title = title.replace("<\\/episodeTitle><\\/episodeArea><\\/a>", "")
+                                .replace("</episodeTitle></episodeArea></a>", "")
+                                .replace("\\", "")
+                                .replace("\"", "")
+                                .replace("}", "")
+                                .trim();
+
+                        // Decode Unicode like u0627 -> Arabic
+                        title = decodeUnicodeEscapes(title);
+
+                    // Clean the link URL
+                    String linkUrl = link.attr("href")
+                            .replace("\\", "")  // remove backslashes
+                            .replace("\"", ""); // remove quotes
+                    // Decode percent-encoded URL (e.g., %d9%85 -> Arabic)
+                    try {
+                        linkUrl = URLDecoder.decode(linkUrl, "UTF-8").trim();
+                    } catch (UnsupportedEncodingException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    Movie episode = Movie.clone(movie);
+                    episode.setParentId(movie.getId());
+                    episode.setTitle(title);
+                    episode.setVideoUrl(linkUrl);
+                    episode.setState(Movie.ITEM_STATE);
+                    episode.setType(MovieType.EPISODE);
+                    movie.addSubList(episode);
+                }
+            }
+        }
+
         activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
 
+    private static String decodeUnicodeEscapes(String input) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < input.length();) {
+            if (i + 5 < input.length() && input.charAt(i) == 'u') {
+                // handle u0627 style
+                try {
+                    String hex = input.substring(i + 1, i + 5);
+                    int codePoint = Integer.parseInt(hex, 16);
+                    sb.append((char) codePoint);
+                    i += 5;
+                    continue;
+                } catch (NumberFormatException e) {
+                    // fall through if not valid
+                }
+            }
+            sb.append(input.charAt(i));
+            i++;
+        }
+        return sb.toString();
+    }
+
+
     private MovieFetchProcess fetchItem(final Movie movie, ActivityCallback<Movie> activityCallback) {
         Log.i(TAG, "fetchItem: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
+        if (!url.startsWith("http")){
+            url = getConfig().getUrl() + url;
+        }
 //            Document doc = Jsoup.connect(url).header(
 //                    "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8").header(
 //                    "User-Agent", " Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36").header(
@@ -940,12 +1072,14 @@ public class MyCimaServer extends AbstractServer {
 
                     Movie episode = Movie.clone(movie);
                     episode.setTitle(title);
+                    episode.setParentId(movie.getId());
                     episode.setDescription(desc);
                     if (!getConfig().getHeaders().containsKey("referer")) {
                         getConfig().getHeaders().put("referer", referer);
                     }
                     episode.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(getConfig().getHeaders()));
                     episode.setState(Movie.RESOLUTION_STATE);
+                    episode.setType(MovieType.RESOLUTION);
                     if (movie.getSubList() == null) {
                         movie.setSubList(new ArrayList<>());
                     }
@@ -981,9 +1115,11 @@ public class MyCimaServer extends AbstractServer {
 
                 Movie episode = Movie.clone(movie);
                 episode.setTitle(title);
+                episode.setParentId(movie.getId());
                 episode.setDescription(desc);
                 episode.setVideoUrl(videoUrl);
                 episode.setState(Movie.BROWSER_STATE);
+                episode.setType(MovieType.BROWSER);
                 if (movie.getSubList() == null) {
                     movie.setSubList(new ArrayList<>());
                 }
@@ -998,7 +1134,8 @@ public class MyCimaServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search("sonic", activityCallback);
+//        return search("la casa", activityCallback);
+        return search("اسر", activityCallback);
 //        return search("ratched");
 //        return search(getConfig().getUrl() + "/movies/recent/", activityCallback);
 //   hhhhh     return search(getConfig().getUrl() + "/", activityCallback);

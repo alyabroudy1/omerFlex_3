@@ -45,6 +45,9 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
 
     private static final int ACTION_WATCH = 1;
     private static final int ACTION_WATCH_TRAILER = 2;
+
+    private Integer selectedItemIndex = -1;
+    private Integer selectedRowIndex = -1;
     Fragment mFragment;
     ArrayObjectAdapter mRowsAdapter;
     private final MovieRepository movieRepository;
@@ -69,7 +72,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
             Toast.makeText(mFragment.getActivity(), "Unknown movie or server: " + movie.getStudio(), Toast.LENGTH_SHORT).show();
             return;
         }
-
+        selectedRowIndex = mRowsAdapter.indexOf(row);
         // Submit the heavy lifting to a background thread
         executorService.submit(() -> processMovieClick(movie, (ListRow) row));
     }
@@ -84,13 +87,17 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
             // very important to monitor the selected movie in the repository
             movieRepository.setSelectedMovie(movie);
         }
+        ArrayObjectAdapter adapter =(ArrayObjectAdapter) clickedRow.getAdapter();
+        selectedItemIndex = adapter.indexOf(movie);
 //        Log.d(TAG, "processMovieClick 2: "+ movieRepository.getSelectedMovie().getValue());
         Log.d(TAG, "processMovieClick: state: " + movie.getState());
+        Log.d(TAG, "processMovieClick: selectedRowIndex: " + selectedRowIndex);
+        Log.d(TAG, "processMovieClick: selectedItemIndex: " + selectedItemIndex);
         // Use a switch statement for cleaner state handling
         switch (movie.getState()) {
             case Movie.COOKIE_STATE:
                 // Fetch cookie through browser
-                handleCookieState(movie, clickedRow);
+                handleCookieState(movie);
                 break;
             case Movie.VIDEO_STATE:
                 // play video
@@ -154,15 +161,14 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
     }
 
 
-    private void handleCookieState(Movie movie, ListRow clickedRow) {
-        Log.d(TAG, "handleMovieItemClick: renewing Cookie: "+ movie.getTitle() + ", row: "+ clickedRow.getHeaderItem().getName());
+    private void handleCookieState(Movie movie) {
         // to update the row with new result after fetching the cookie, setFetch to REQUEST_CODE_MOVIE_LIST
         movie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
         if (mFragment != null) {
-            Util.openBrowserIntent(movie, mFragment, true, true, true, (int)clickedRow.getId());
+            Util.openBrowserIntent(movie, mFragment, true, true, true, selectedRowIndex, selectedItemIndex);
             return;
         }
-        Util.openBrowserIntent(movie, mFragment.getActivity(), true, true, true, (int)clickedRow.getId());
+        Util.openBrowserIntent(movie, mFragment.getActivity(), true, true, true, selectedRowIndex, selectedItemIndex);
     }
 
     private void handleVideoState(Movie movie) {
@@ -172,7 +178,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
 
     private void handleBrowserState(Movie movie) {
         Log.d(TAG, "handleMovieItemClick: BROWSER_STATE");
-        Util.openBrowserIntent(movie, mFragment, false, false, false,11);
+        Util.openBrowserIntent(movie, mFragment, false, false, false);
     }
 
     protected void handleServerFetchByItemClickCase(Movie movie, ListRow clickedRow) {
@@ -219,10 +225,10 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
                     Log.d(TAG, "onInvalidCookie: " + result);
                     result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
                     if (mFragment != null) {
-                        Util.openBrowserIntent(result, mFragment, true, true, true, (int)clickedRow.getId());
+                        Util.openBrowserIntent(result, mFragment, true, true, true, (int)clickedRow.getId(), position);
                         return;
                     }
-                    Util.openBrowserIntent(result, mFragment.getActivity(), false, true, true,(int)clickedRow.getId());
+                    Util.openBrowserIntent(result, mFragment.getActivity(), false, true, true,(int)clickedRow.getId(), position);
                 }
 
                 @Override

@@ -226,9 +226,9 @@ public class Util {
         Objects.requireNonNull(fragment).startActivity(exoIntent);
     }
 
-    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult, boolean isCookieFetch, int clickedRowId) {
+    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult, boolean isCookieFetch) {
         Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class), withSubList);
-        exoIntent.putExtra("isCookieFetch", isCookieFetch);
+        exoIntent.putExtra(Movie.KEY_IS_COOKIE_FETCH, isCookieFetch);
         if (openForResult) {
             exoIntent.putExtra("openedForResult", true);
             Objects.requireNonNull(activity).startActivityForResult(exoIntent, movie.getFetch());
@@ -238,10 +238,41 @@ public class Util {
         Objects.requireNonNull(activity).startActivity(exoIntent);
     }
 
-    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult, boolean isCookieFetch, int clickedRowId) {
+    public static void openBrowserIntent(Movie movie, Activity activity, boolean withSubList, boolean openForResult, boolean isCookieFetch, int clickedRowId, int clickedMovieIndex) {
+        Intent exoIntent = generateIntent(movie, new Intent(activity, BrowserActivity.class), withSubList);
+        exoIntent.putExtra(Movie.KEY_IS_COOKIE_FETCH, isCookieFetch);
+        exoIntent.putExtra(Movie.KEY_CLICKED_ROW_ID, clickedRowId);
+        exoIntent.putExtra(Movie.KEY_CLICKED_MOVIE_INDEX, clickedMovieIndex);
+        if (openForResult) {
+            exoIntent.putExtra("openedForResult", true);
+            Objects.requireNonNull(activity).startActivityForResult(exoIntent, movie.getFetch());
+            return;
+        }
+        exoIntent.putExtra("openedForResult", false);
+        Objects.requireNonNull(activity).startActivity(exoIntent);
+    }
+
+    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult, boolean isCookieFetch, int clickedRowId, int clickedMovieIndex) {
         //todo to implement clickedRowId
         Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), BrowserActivity.class), withSubList);
-        exoIntent.putExtra("isCookieFetch", isCookieFetch);
+        exoIntent.putExtra(Movie.KEY_IS_COOKIE_FETCH, isCookieFetch);
+        exoIntent.putExtra(Movie.KEY_CLICKED_ROW_ID, clickedRowId);
+        exoIntent.putExtra(Movie.KEY_CLICKED_MOVIE_INDEX, clickedMovieIndex);
+        Log.d(TAG, "openBrowserIntent: clickedRowId:"+clickedRowId);
+        Log.d(TAG, "openBrowserIntent: clickedMovieIndex:"+clickedMovieIndex);
+        if (openForResult) {
+            exoIntent.putExtra("openedForResult", true);
+            fragment.startActivityForResult(exoIntent, movie.getFetch());
+            return;
+        }
+        exoIntent.putExtra("openedForResult", false);
+        fragment.startActivity(exoIntent);
+    }
+
+    public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult, boolean isCookieFetch) {
+        //todo to implement clickedRowId
+        Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), BrowserActivity.class), withSubList);
+        exoIntent.putExtra(Movie.KEY_IS_COOKIE_FETCH, isCookieFetch);
         if (openForResult) {
             exoIntent.putExtra("openedForResult", true);
             fragment.startActivityForResult(exoIntent, movie.getFetch());
@@ -374,6 +405,13 @@ public class Util {
 
     public static Intent generateIntentResult(Movie movie) {
         return generateIntent(movie, new Intent(), true);
+    }
+
+    public static Intent generateIntentResult(Movie movie, int clickedRowId, int clickedMovieIndex) {
+        Intent exoIntent = new Intent();
+        exoIntent.putExtra(Movie.KEY_CLICKED_ROW_ID, clickedRowId);
+        exoIntent.putExtra(Movie.KEY_CLICKED_MOVIE_INDEX, clickedMovieIndex);
+        return generateIntent(movie, exoIntent, true);
     }
 
     public static void openVideoDetailsIntent(Movie movie, Activity activity) {

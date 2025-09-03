@@ -84,6 +84,12 @@ public abstract class BaseFragmentController {
 
     // Method to update the background image.
     protected void updateBackground(String uri) {
+        if (mFragment == null || !mFragment.isAdded() || mFragment.getActivity() == null) {
+            if (mBackgroundTimer != null) {
+                mBackgroundTimer.cancel();
+            }
+            return;
+        }
         int width = mMetrics.widthPixels;
         int height = mMetrics.heightPixels;
         Glide.with(mFragment.getActivity())
@@ -93,7 +99,9 @@ public abstract class BaseFragmentController {
                 .into(new SimpleTarget<Drawable>(width, height) {
                     @Override
                     public void onResourceReady(@NonNull Drawable drawable, @Nullable Transition<? super Drawable> transition) {
-                        mBackgroundManager.setDrawable(drawable);
+                        if (mFragment != null && mFragment.isAdded() && mFragment.getActivity() != null) {
+                            mBackgroundManager.setDrawable(drawable);
+                        }
                     }
                 });
         if (mBackgroundTimer != null) {

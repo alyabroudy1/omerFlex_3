@@ -114,7 +114,7 @@ public abstract class SearchViewControl {
             if (movie.getState() == Movie.BROWSER_STATE) {
                 Log.d(TAG, "handleMovieItemClick: BROWSER_STATE");
                 //todo: add info to say if next already clicked, and handle the rest
-                Util.openBrowserIntent(movie, activity, false, false, false, 11);
+                Util.openBrowserIntent(movie, activity, false, false, false);
                 return;
             }
 
@@ -221,10 +221,10 @@ public abstract class SearchViewControl {
         Log.d(TAG, "renewCookie: ");
         movie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
         if (fragment != null) {
-            Util.openBrowserIntent(movie, fragment, true, true, true, 11);
+            Util.openBrowserIntent(movie, fragment, true, true, true);
             return;
         }
-        Util.openBrowserIntent(movie, activity, true, true, true,11);
+        Util.openBrowserIntent(movie, activity, true, true, true);
     }
 
     protected abstract void openDetailsActivity(Movie movie, Activity activity);

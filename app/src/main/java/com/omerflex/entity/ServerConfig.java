@@ -1,6 +1,7 @@
 package com.omerflex.entity;
 
 import androidx.room.Entity;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 import androidx.room.TypeConverters;
 
@@ -12,7 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Entity(tableName = "server_config")
+@Entity(tableName = "server_config", indices = {@Index(value = {"name"}, unique = true)})
 @TypeConverters(Converters.class)
 public class ServerConfig {
 

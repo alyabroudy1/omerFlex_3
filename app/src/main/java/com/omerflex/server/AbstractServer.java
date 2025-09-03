@@ -309,6 +309,7 @@ public abstract class AbstractServer implements ServerInterface {
         Log.d(TAG, "updateDomain: "+ newUrl);
         getConfig().setUrl(newUrl);
         getConfig().setReferer(newUrl + "/");
+        ServerConfigRepository.getInstance().updateConfig(getConfig());
     }
 
     protected Document getRequestDoc(String url) {
