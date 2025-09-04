@@ -1,5 +1,6 @@
 package com.omerflex.server;
 
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.MovieType;
 
 import android.app.Activity;
@@ -12,6 +13,7 @@ import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
+import com.omerflex.view.VideoDetailsFragment;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -135,7 +137,7 @@ public class MyCimaServer extends AbstractServer {
     private void getExtraSearchMovieList(String url, ArrayList<Movie> movies) {
         //search series
         String seriesSearch = url + "/list/series/";
-        Document doc = getRequestDoc(seriesSearch);
+        Document doc = getRequestDoc(seriesSearch, OmerFlexApplication.getAppContext());
 
         Elements lis2 = doc.getElementsByClass("GridItem");
         for (Element li : lis2) {
@@ -147,7 +149,7 @@ public class MyCimaServer extends AbstractServer {
 
         //search anime
         String animeSearch = url + "/list/anime/";
-        doc = getRequestDoc(animeSearch);
+        doc = getRequestDoc(animeSearch, OmerFlexApplication.getAppContext());
         Elements lis3 = doc.getElementsByClass("GridItem");
         for (Element li : lis3) {
             //              Log.i(TAG, "element found: ");
@@ -368,12 +370,8 @@ public class MyCimaServer extends AbstractServer {
         Log.i(TAG, "fetchGroupOfGroup: " + movie.getVideoUrl());
         String url = movie.getVideoUrl();
 
-        if (!url.startsWith("http")){
-            url = getConfig().getUrl() + url;
-        }
-
         Log.i(TAG, "ur:" + url);
-        Document doc = getRequestDoc(url);
+        Document doc = getRequestDoc(url, OmerFlexApplication.getAppContext());
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
             return null;
@@ -382,6 +380,7 @@ public class MyCimaServer extends AbstractServer {
 //            Movie clonedMovie = Movie.clone(movie);
 //            clonedMovie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
 //            return startWebForResultActivity(clonedMovie);
+            movie.setFetch(Movie.REQUEST_CODE_MOVIE_UPDATE);
             activityCallback.onInvalidCookie(movie, getLabel());
         }
 
@@ -461,7 +460,7 @@ public class MyCimaServer extends AbstractServer {
 //            ).timeout(6000).get();
         //Elements links = doc.select("a[href]");
 
-        Document doc = getRequestDoc(url);
+        Document doc = getRequestDoc(url, OmerFlexApplication.getAppContext());
         if (doc == null) {
             Log.d(TAG, "fetchGroup: error doc is null ");
             activityCallback.onInvalidLink(movie);
@@ -552,7 +551,7 @@ public class MyCimaServer extends AbstractServer {
 
             getConfig().getHeaders().put("Accept", "application/json, text/javascript, */*");
             getConfig().getHeaders().put("X-Requested-With", "XMLHttpRequest");
-            Document doc2 = getRequestDoc(moreUrl);
+            Document doc2 = getRequestDoc(moreUrl, OmerFlexApplication.getAppContext());
             getConfig().getHeaders().remove("Accept");
             getConfig().getHeaders().remove("X-Requested-With");
 
@@ -644,7 +643,7 @@ public class MyCimaServer extends AbstractServer {
 //            ).timeout(0).get();
         //Elements links = doc.select("a[href]");
 
-        Document doc = getRequestDoc(url);
+        Document doc = getRequestDoc(url, OmerFlexApplication.getAppContext());
         if (doc == null) {
             activityCallback.onInvalidLink(movie);
             return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_ERROR_UNKNOWN, movie);
@@ -670,6 +669,19 @@ public class MyCimaServer extends AbstractServer {
         // Log.d(TAG, "isSeries: title:" + n + ", url=" + u);
         return n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
                 || u.contains("series");
+    }
+
+    public int fetchNextAction(Movie movie) {
+//        Log.d(TAG, "fetchNextAction: "+ (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) );
+        switch (movie.getState()) {
+            case Movie.GROUP_OF_GROUP_STATE:
+            case Movie.GROUP_STATE:
+            case Movie.ITEM_STATE:
+                return VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY;
+            case Movie.BROWSER_STATE:
+                return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
+        }
+        return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
     }
 
     @Override
@@ -836,7 +848,7 @@ public class MyCimaServer extends AbstractServer {
                     movie.getState() == Movie.GROUP_OF_GROUP_STATE ||
                             movie.getState() == Movie.GROUP_STATE
             ) {
-                //Log.d(TAG, "getScript:mycima GROUP_OF_GROUP_STATE");
+                Log.d(TAG, "getScript:mycima GROUP_OF_GROUP_STATE");
                 String itemBoxName = "List--Seasons--Episodes";
 
                 int state = Movie.GROUP_STATE;
@@ -845,51 +857,71 @@ public class MyCimaServer extends AbstractServer {
                     itemBoxName = "Episodes--Seasons--Episodes";
                     state = Movie.ITEM_STATE;
                 }
-                script = "  document.addEventListener('DOMContentLoaded', () => {\n" +
-                        "if (!document.title.includes('Just a moment')){" +
-                        "console.log('title: '+ document.title);" +
-                        "var descElems = document.getElementsByClassName('StoryMovieContent');\n" +
-                        "                        var postList = [];\n" +
-                        "                        var desc = '';\n" +
-                        "                       if(descElems.length > 0){\n" +
-                        "                        desc = descElems[0].textContent;\n" +
-                        "                        }else{\n" +
-                        "                                descElems = document.getElementsByClassName('PostItemContent');\n" +
-                        "                                if(descElems.length > 0){\n" +
-                        "                        desc = descElems[0].textContent;\n" +
-                        "                            }\n" +
-                        "                        }" +
-                        "var boxs = document.getElementsByClassName('" + itemBoxName + "');" +
-                        "if(boxs.length == 0){\n" +
-                        "   boxs = document.getElementsByClassName('Episodes--Seasons--Episodes');" +
-                        "}" +
-                        "if(boxs.length > 0){" +
-                        "    var box = boxs[0];\n" +
-                        "    var lis = box.getElementsByTagName('a');\n" +
-                        "     if(lis.length > 0){\n" +
-                        "                             for (let l = 0; l < lis.length; l++) {\n" +
-                        "                                var li = lis[l];\n" +
-                        "                                var post = {};\n" +
-                        "                                post.title = li.textContent;\n" +
-                        "                                post.videoUrl = li.getAttribute('href');\n" +
-                        "                                post.description = desc;\n" +
-                        "                                post.state = '" + state + "';\n" +
-                        "                                // Clone 'movie' object\n" +
-                        "                                post.studio = '" + movie.getStudio() + "' ;\n" +
-                        "                                post.fetch = '" + movie.getFetch() + "';\n" +
-                        "                                post.studio = '" + Movie.SERVER_MyCima + "';\n" +
-                        "                                post.cardImageUrl = '" + movie.getStudio() + "';\n" +
-                        "                                post.backgroundImageUrl = '" + movie.getBackgroundImageUrl() + "';\n" +
-                        "                                post.cardImageUrl = '" + movie.getCardImageUrl() + "';\n" +
-                        "                                post.getMainMovieTitle = '" + movie.getMainMovieTitle() + "';\n" +
-                        "                             }" +
-                        "                             MyJavaScriptInterface.myMethod(JSON.stringify(postList));\n" +
-                        "                          }\n" +
-                        "     }\n" +
-                        "     }\n" +
-                        " });";
+                script =
+                        "document.addEventListener('DOMContentLoaded', () => {\n" +
+                                "  if (document.title.includes('Just a moment')) {\n" +
+                                "    console.log('[DEBUG] Skipping page due to title: ' + document.title);\n" +
+                                "    return;\n" +
+                                "  }\n" +
+                                "  console.log('[DEBUG] Page title: ' + document.title);\n" +
+
+                                "  let desc = '';\n" +
+                                "  let descElems = document.getElementsByClassName('StoryMovieContent');\n" +
+                                "  if (descElems.length > 0) {\n" +
+                                "    desc = descElems[0].textContent;\n" +
+                                "    console.log('[DEBUG] Found description in StoryMovieContent');\n" +
+                                "  } else {\n" +
+                                "    descElems = document.getElementsByClassName('PostItemContent');\n" +
+                                "    if (descElems.length > 0) {\n" +
+                                "      desc = descElems[0].textContent;\n" +
+                                "      console.log('[DEBUG] Found description in PostItemContent');\n" +
+                                "    } else {\n" +
+                                "      console.log('[DEBUG] No description element found');\n" +
+                                "    }\n" +
+                                "  }\n" +
+
+                                "  let boxs = document.getElementsByClassName('" + itemBoxName + "');\n" +
+                                "  if (boxs.length === 0) {\n" +
+                                "    boxs = document.getElementsByClassName('Episodes--Seasons--Episodes');\n" +
+                                "  }\n" +
+                                "  console.log('[DEBUG] Number of episode boxes: ' + boxs.length);\n" +
+
+                                "  if (boxs.length > 0) {\n" +
+                                "    let box = boxs[0];\n" +
+                                "    let links = box.getElementsByTagName('a');\n" +
+                                "    let postList = [];\n" +
+                                "    console.log('[DEBUG] Found ' + links.length + ' links in episode box');\n" +
+
+                                "    for (let link of links) {\n" +
+                                "      let post = {};\n" +
+                                "      post.title = link.textContent.trim();\n" +
+                                "      post.videoUrl = link.getAttribute('href');\n" +
+                                "      post.description = desc;\n" +
+                                "      post.state = '" + state + "';\n" +
+                                "      post.type = '" + (state == Movie.ITEM_STATE ? MovieType.EPISODE : MovieType.SEASON) + "';\n" +
+                                "      post.studio = '" + movie.getStudio() + "';\n" +
+                                "      post.fetch = '" + movie.getFetch() + "';\n" +
+                                "      post.studio = '" + Movie.SERVER_MyCima + "';\n" +
+                                "      post.parentId = '" + movie.getId() + "';\n" +
+                                "      post.cardImageUrl = '" + movie.getCardImageUrl() + "';\n" +
+                                "      post.backgroundImageUrl = '" + movie.getBackgroundImageUrl() + "';\n" +
+
+                                "      postList.push(post);\n" +
+                                "      console.log('[DEBUG] Added post: ' + JSON.stringify(post));\n" +
+                                "    }\n" +
+
+                                "    if (typeof MyJavaScriptInterface !== 'undefined') {\n" +
+                                "      console.log('[DEBUG] Sending postList to Android: ' + postList.length + ' items');\n" +
+                                "      MyJavaScriptInterface.myMethod(JSON.stringify(postList));\n" +
+                                "    } else {\n" +
+                                "      console.log('[DEBUG] MyJavaScriptInterface not available');\n" +
+                                "    }\n" +
+                                "  }\n" +
+                                "});";
+
             }
             else if (movie.getState() == Movie.ITEM_STATE) {
+                Log.d(TAG, "getScript:mycima ITEM_STATE");
                 String videoLink = movie.getVideoUrl();
                 if (!videoLink.startsWith("http")){
                     videoLink = getConfig().getUrl() + videoLink;
@@ -925,7 +957,7 @@ public class MyCimaServer extends AbstractServer {
                         "                                    var delimiter  = '||'; " +
                         "                                    var videoUrl = videoLinkElem.getAttribute('href');\n" +
                         "                                    post.videoUrl = videoUrl + delimiter + 'referer=' + '" + referer + "' ;\n" +
-                        "\n" +
+                        "                                post.parentId = '" + movie.getId() + "';\n" +
                         "                                    var titleElems = li.getElementsByTagName('resolution');\n" +
                         "                                     if(titleElems.length > 0){\n" +
                         "                                        var titleElem = titleElems[0];\n" +
@@ -938,6 +970,7 @@ public class MyCimaServer extends AbstractServer {
                         "                                                                         // Clone 'movie' object\n" +
                         "                                                                         post.studio = '" + movie.getStudio() + "' ;\n" +
                         "                                                                         post.fetch = '" + movie.getFetch() + "' ;\n" +
+                        "                                                                           post.parentId = '" + movie.getId() + "';\n" +
                         "                                                                         post.cardImageUrl = '" + movie.getStudio() + "' ;\n" +
                         "                                                                         post.backgroundImageUrl = '" + movie.getBackgroundImageUrl() + "' ;\n" +
                         "                                                                         post.cardImageUrl = '" + movie.getCardImageUrl() + "' ;\n" +
@@ -980,6 +1013,7 @@ public class MyCimaServer extends AbstractServer {
                         "                                                                         // Clone 'movie' object\n" +
                         "                                                                         post.studio = '" + movie.getStudio() + "' ;\n" +
                         "                                                                         post.fetch = '" + movie.getFetch() + "' ;\n" +
+                        "                                                                           post.parentId = '" + movie.getId() + "';\n" +
                         "                                                                         post.cardImageUrl = '" + movie.getCardImageUrl() + "' ;\n" +
                         "                                                                         post.backgroundImageUrl = '" + movie.getBackgroundImageUrl() + "' ;\n" +
                         "                                                                         post.cardImageUrl = '" + movie.getCardImageUrl() + "' ;\n" +
@@ -995,7 +1029,7 @@ public class MyCimaServer extends AbstractServer {
 
 
         }
-//        Log.d(TAG, "getWebScript: "+script);
+        Log.d(TAG, "getWebScript: "+script);
         return script;
     }
 
@@ -1143,8 +1177,8 @@ public class MyCimaServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-//        return search("la casa", activityCallback);
-        return search("اسر", activityCallback);
+        return search("la casa", activityCallback);
+//        return search("اسر", activityCallback);
 //        return search("ratched");
 //        return search(getConfig().getUrl() + "/movies/recent/", activityCallback);
 //   hhhhh     return search(getConfig().getUrl() + "/", activityCallback);

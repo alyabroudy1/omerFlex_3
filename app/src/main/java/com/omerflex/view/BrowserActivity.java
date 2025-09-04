@@ -109,12 +109,13 @@ public class BrowserActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browser);
+        Log.d(TAG, "onCreate: BrowserActivity");
 
         initializeThings();
         if (savedInstanceState == null) {
             redirectUrl = movie.getVideoUrl();
             LinkHeadersDTO linkHeadersDTO = prepareLoadingLink(movie);
-
+//            Log.d(TAG, "onCreate: linkHeadersDTO: "+ linkHeadersDTO);
 //            Log.d(TAG, "onCreate: linkHeadersDTO url: " + linkHeadersDTO.url);
 //            Log.d(TAG, "onCreate: linkHeadersDTO headers: " + linkHeadersDTO.headers);
             webView.loadUrl(linkHeadersDTO.url, linkHeadersDTO.headers);
@@ -167,7 +168,6 @@ public class BrowserActivity extends AppCompatActivity {
         listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
 
         movie = Util.recieveSelectedMovie(getIntent());
-
 
         server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
         if (server == null) {
@@ -378,7 +378,14 @@ public class BrowserActivity extends AppCompatActivity {
     class MyJavaScriptInterface {
         @JavascriptInterface
         public void myMethod(String elementJson) {
-            Log.d(TAG, "myMethod: xxxx");
+            Log.d(TAG, "myMethod: xxxx: "+ elementJson);
+            Log.d(TAG, "movie.getFetch: "+ movie.getFetch());
+
+
+            if (elementJson == null || elementJson.isEmpty() || elementJson.equals("[]")) {
+                Toast.makeText(activity, "حدث خطأ...", Toast.LENGTH_LONG).show();
+                return;
+            }
 
             ServerConfig config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
             // Parse the JSON string
@@ -421,6 +428,9 @@ public class BrowserActivity extends AppCompatActivity {
 
         private void processOnOtherMovieStates(String elementJson, List<Movie> movies, ServerConfig config) {
             MovieFetchProcess movieFetchProcess = server.handleJSResult(elementJson, (ArrayList<Movie>)movies, movie);
+            Log.d(TAG, "processOnOtherMovieStates: movie: "+ movie);
+            Log.d(TAG, "processOnOtherMovieStates: elementJson: "+ elementJson);
+            Log.d(TAG, "processOnOtherMovieStates: sublist: "+ movies);
             switch (movieFetchProcess.stateCode) {
                 case MovieFetchProcess.FETCH_PROCESS_UPDATE_CONFIG_AND_RETURN_RESULT:
                     // config being updated in the server and here saved to db
@@ -443,7 +453,8 @@ public class BrowserActivity extends AppCompatActivity {
                     finish();
                     return;
                 default:
-//                    Log.d(TAG, "processOnOtherMovieStates: default");
+                    movieFetchProcess.movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START); // Very important to change the fetch state not to go in an infinite loop
+                    Log.d(TAG, "processOnOtherMovieStates: default");
                     Util.openVideoDetailsIntent(movieFetchProcess.movie, activity);
                     finish();
             }

@@ -271,6 +271,7 @@ public class Util {
 
     public static void openBrowserIntent(Movie movie, Fragment fragment, boolean withSubList, boolean openForResult, boolean isCookieFetch) {
         //todo to implement clickedRowId
+        Log.d(TAG, "openBrowserIntent: ");
         Intent exoIntent = generateIntent(movie, new Intent(fragment.getActivity(), BrowserActivity.class), withSubList);
         exoIntent.putExtra(Movie.KEY_IS_COOKIE_FETCH, isCookieFetch);
         if (openForResult) {

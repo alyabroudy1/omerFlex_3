@@ -7,12 +7,17 @@ import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Transformations;
 
 import com.omerflex.data.source.local.LocalDataSource;
 import com.omerflex.data.source.remote.RemoteDataSource;
 import com.omerflex.db.AppDatabase;
 import com.omerflex.db.MovieDao;
 import com.omerflex.db.MovieHistoryDao;
+import com.omerflex.server.AbstractServer;
+import com.omerflex.server.ServerFactory;
+import com.omerflex.server.ServerInterface;
+import com.omerflex.server.config.ServerConfigRepository;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -41,6 +46,38 @@ public class MovieRepository {
         return instance;
     }
 
+    private String removeDomain(String url) {
+        if (url == null || !url.startsWith("http")) {
+            return url;
+        }
+        int doubleSlash = url.indexOf("//");
+        if (doubleSlash == -1) {
+            return url;
+        }
+        int nextSlash = url.indexOf('/', doubleSlash + 2);
+        if (nextSlash == -1) {
+            return "/"; // URL is just the domain
+        }
+        return url.substring(nextSlash);
+    }
+
+    private void reAddDomainToMovie(Movie movie) {
+        if (movie != null && movie.getVideoUrl() != null && !movie.getVideoUrl().startsWith("http")) {
+            ServerConfig config = ServerConfigRepository.getInstance().getConfig(movie.getStudio());
+            if (config != null) {
+                movie.setVideoUrl(config.getUrl() + movie.getVideoUrl());
+            }
+        }
+    }
+
+    private void reAddDomainToMovies(List<Movie> movies) {
+        if (movies != null) {
+            for (Movie movie : movies) {
+                reAddDomainToMovie(movie);
+            }
+        }
+    }
+
     public LiveData<Movie> getSelectedMovie() {
         return selectedMovie;
     }
@@ -51,6 +88,7 @@ public class MovieRepository {
 
     public void saveMovie(Movie movie) {
         new Thread(() -> {
+            movie.setVideoUrl(removeDomain(movie.getVideoUrl()));
             long id = movieDao.insert(movie);
             movie.setId(id);
             if (movie.getMovieHistory() != null) {
@@ -63,11 +101,13 @@ public class MovieRepository {
     public void getMovieByUrl(String videoUrl, MovieCallback callback) {
         localDataSource.getMovieByUrl(videoUrl, movie -> {
             if (movie != null) {
+                reAddDomainToMovie(movie);
                 callback.onMovieFetched(movie);
             } else {
                 remoteDataSource.fetchMovieByUrl(videoUrl, remoteMovie -> {
                     if (remoteMovie != null) {
                         saveMovie(remoteMovie);
+                        reAddDomainToMovie(remoteMovie);
                         callback.onMovieFetched(remoteMovie);
                     } else {
                         callback.onMovieFetched(null);
@@ -85,23 +125,22 @@ public class MovieRepository {
                 new Thread(() -> {
                     for (int i = 0; i < remoteMovies.size(); i++) {
                         Movie movie = remoteMovies.get(i);
+                        movie.setVideoUrl(removeDomain(movie.getVideoUrl()));
                         Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
 
                         if (existingMovie == null) {
                             long newId = movieDao.insert(movie);
                             movie.setId(newId);
                         } else {
-                            // Replace the object in the list
                             remoteMovies.set(i, existingMovie);
                         }
                     }
-                    // Now that all movies have their correct IDs, call the callback on the main thread
+                    reAddDomainToMovies(remoteMovies);
                     new Handler(Looper.getMainLooper()).post(() -> {
                         callback.onMovieListFetched(remoteCategory, remoteMovies);
                     });
                 }).start();
             } else {
-                // Handle empty or null list by calling back on the main thread
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                     callback.onMovieListFetched(remoteCategory, remoteMovies);
                 });
@@ -112,96 +151,127 @@ public class MovieRepository {
     public void fetchNextPage(String url, final MovieListCallback callback) {
         localDataSource.getHomepageMovies((localCategory, movies) -> {
             if (movies != null && !movies.isEmpty()) {
+                reAddDomainToMovies(movies);
                 callback.onMovieListFetched(localCategory, movies);
             } else {
-                // todo: save movies to local db
                 remoteDataSource.fetchHomepageMovies(callback);
             }
         });
     }
 
-    public void fetchMovieDetails(Movie mSelectedMovie, MovieCallback callback) {
+    public void fetchMovieDetails(Movie mSelectedMovie, ServerInterface.ActivityCallback<Movie> callback) {
         new Thread(() -> {
+            reAddDomainToMovie(mSelectedMovie);
             boolean saveCond = mSelectedMovie.getType() == MovieType.SERIES ||
-                    mSelectedMovie.getType() == MovieType.SEASON; // keep limit to season so the last sub-movies to be saved is the episodes
-//                    mSelectedMovie.getType() == MovieType.EPISODE;
+                    mSelectedMovie.getType() == MovieType.SEASON;
+
+            // Commenting out the local data check in fetchMovieDetails created a loop for the following reason:
+            //
+            //   1. UI Requests Data: The details screen (VideoDetailsFragmentController) requests movie details from the MovieRepository to display them.
+            //
+            //   2. Local Cache Skipped: With the local check commented out, the MovieRepository no longer looks in the local database first. It jumps directly to fetching the data from the remote server every single time
+            //      fetchMovieDetails is called.
+            //
+            //   3. Remote Fetch and DB Save: The app successfully fetches the data from the server, and as part of the success callback, it saves or updates that data in the local database.
+            //
+            //   4. UI Update: After saving, it notifies the UI (the VideoDetailsFragmentController) that the data has been fetched. The controller then updates the SharedViewModel with this new data.
+            //
+            //   5. The Loop: The UI is designed to be reactive. When the SharedViewModel is updated with new movie details, the UI observes this change and automatically refreshes itself to display the new data. This
+            //      refresh, in turn, triggers the initial data request (step 1) all over again.
             if (saveCond) {
                 List<Movie> localSubList = movieDao.getMoviesByParentIdSync(mSelectedMovie.getId());
                 Movie localMselectedMovie = movieDao.getMovieById(mSelectedMovie.getId());
 
                 if (localSubList != null && !localSubList.isEmpty()) {
                     Log.d(TAG, "fetchMovieDetails: found " + localSubList.size() + " sub-movies in local DB");
+                    reAddDomainToMovies(localSubList);
+                    reAddDomainToMovie(localMselectedMovie);
                     if (localMselectedMovie != null) {
                         localMselectedMovie.setSubList(localSubList);
-                        new Handler(Looper.getMainLooper()).post(() -> callback.onMovieFetched(localMselectedMovie));
+                        Movie finalLocalMselectedMovie = localMselectedMovie;
+                        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(finalLocalMselectedMovie, finalLocalMselectedMovie.getTitle()));
                     } else {
-                        // Fallback or error handling if the parent movie is somehow null
-                        new Handler(Looper.getMainLooper()).post(() -> callback.onMovieFetched(mSelectedMovie));
+                        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(mSelectedMovie, mSelectedMovie.getTitle()));
                     }
                     return;
                 }
             }
 
             Log.d(TAG, "fetchMovieDetails: no local sub-movies found, fetching from remote");
-            remoteDataSource.fetchMovieDetails(mSelectedMovie, remoteMovie -> {
-                if (remoteMovie != null) {
-                    new Thread(() -> {
-                            movieDao.update(remoteMovie); // Update the parent movie (Series/Season)
-                        if (saveCond && remoteMovie.getSubList() != null && !remoteMovie.getSubList().isEmpty()) {
-                            Log.d(TAG, "fetchMovieDetails: saving/updating remote's sublist");
-
-                            List<Movie> subListFromRemote = remoteMovie.getSubList();
-                            List<Movie> finalSubList = new ArrayList<>();
-
-                            for (Movie remoteSubMovie : subListFromRemote) {
-                                Log.d(TAG, "DEBUG: Processing remote sub-movie: " + remoteSubMovie.getTitle() + " | url: " + remoteSubMovie.getVideoUrl());
-                                Movie localSubMovie = movieDao.getMovieByVideoUrlSync(remoteSubMovie.getVideoUrl());
-
-                                if (localSubMovie != null) {
-                                    Log.d(TAG, "DEBUG: Found existing local movie with ID: " + localSubMovie.getId() + ". Updating it.");
-                                    // Update existing movie
-                                    localSubMovie.setTitle(remoteSubMovie.getTitle());
-                                    localSubMovie.setDescription(remoteSubMovie.getDescription());
-                                    localSubMovie.setCardImageUrl(remoteSubMovie.getCardImageUrl());
-                                    localSubMovie.setBackgroundImageUrl(remoteSubMovie.getBackgroundImageUrl());
-                                    localSubMovie.setVideoUrl(remoteSubMovie.getVideoUrl());
-                                    // Add any other fields that need to be updated from the remote source
-                                    movieDao.update(localSubMovie);
-                                    finalSubList.add(localSubMovie);
-                                } else {
-                                    Log.d(TAG, "DEBUG: No local movie found for url: " + remoteSubMovie.getVideoUrl() + ". Inserting new one.");
-                                    // Insert new movie
-                                    remoteSubMovie.setParentId(remoteMovie.getId());
-                                    long newId = movieDao.insert(remoteSubMovie);
-                                    remoteSubMovie.setId(newId);
-                                    Log.d(TAG, "DEBUG: New movie inserted with ID: " + newId);
-                                    finalSubList.add(remoteSubMovie);
+            remoteDataSource.fetchMovieDetails(mSelectedMovie, new ServerInterface.ActivityCallback<Movie>() {
+                @Override
+                public void onSuccess(Movie remoteMovie, String title) {
+                    if (remoteMovie != null) {
+                        new Thread(() -> {
+                            remoteMovie.setVideoUrl(removeDomain(remoteMovie.getVideoUrl()));
+                            movieDao.update(remoteMovie);
+                            if (saveCond && remoteMovie.getSubList() != null && !remoteMovie.getSubList().isEmpty()) {
+                                List<Movie> subListFromRemote = remoteMovie.getSubList();
+                                List<Movie> finalSubList = new ArrayList<>();
+                                for (Movie remoteSubMovie : subListFromRemote) {
+                                    remoteSubMovie.setVideoUrl(removeDomain(remoteSubMovie.getVideoUrl()));
+                                    Movie localSubMovie = movieDao.getMovieByVideoUrlSync(remoteSubMovie.getVideoUrl());
+                                    if (localSubMovie != null) {
+                                        localSubMovie.setTitle(remoteSubMovie.getTitle());
+                                        localSubMovie.setDescription(remoteSubMovie.getDescription());
+                                        localSubMovie.setCardImageUrl(remoteSubMovie.getCardImageUrl());
+                                        localSubMovie.setBackgroundImageUrl(remoteSubMovie.getBackgroundImageUrl());
+                                        localSubMovie.setVideoUrl(remoteSubMovie.getVideoUrl());
+                                        movieDao.update(localSubMovie);
+                                        finalSubList.add(localSubMovie);
+                                    } else {
+                                        remoteSubMovie.setParentId(remoteMovie.getId());
+                                        long newId = movieDao.insert(remoteSubMovie);
+                                        remoteSubMovie.setId(newId);
+                                        finalSubList.add(remoteSubMovie);
+                                    }
                                 }
+                                remoteMovie.setSubList(finalSubList);
                             }
-                            remoteMovie.setSubList(finalSubList);
-                        }
-                        // After processing, post the result back to the main thread
-                        new Handler(Looper.getMainLooper()).post(() -> callback.onMovieFetched(remoteMovie));
-                    }).start();
-                } else {
-                    // Remote fetch failed or returned null
-                    new Handler(Looper.getMainLooper()).post(() -> callback.onMovieFetched(mSelectedMovie));
+                            reAddDomainToMovie(remoteMovie);
+                            reAddDomainToMovies(remoteMovie.getSubList());
+                            new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(remoteMovie, title));
+                        }).start();
+                    } else {
+                        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(mSelectedMovie, mSelectedMovie.getTitle()));
+                    }
+                }
+
+                @Override
+                public void onInvalidCookie(Movie result, String title) {
+                    Log.d(TAG, "onInvalidCookie: MovieRepo fetchMovieDetails");
+                    new Handler(Looper.getMainLooper()).post(() -> callback.onInvalidCookie(result, title));
+                }
+
+                @Override
+                public void onInvalidLink(Movie result) {
+                    new Handler(Looper.getMainLooper()).post(() -> callback.onInvalidLink(result));
+                }
+
+                @Override
+                public void onInvalidLink(String message) {
+                    new Handler(Looper.getMainLooper()).post(() -> callback.onInvalidLink(message));
                 }
             });
         }).start();
     }
 
     public LiveData<List<Movie>> getMoviesByType(MovieType type) {
-        return movieDao.getMoviesByType(type);
+        return Transformations.map(movieDao.getMoviesByType(type), movies -> {
+            reAddDomainToMovies(movies);
+            return movies;
+        });
     }
 
     public LiveData<List<Movie>> getMoviesByParentId(long parentId) {
-        return movieDao.getMoviesByParentId(parentId);
+        return Transformations.map(movieDao.getMoviesByParentId(parentId), movies -> {
+            reAddDomainToMovies(movies);
+            return movies;
+        });
     }
 
     public void updateWatchedTime(Long movieId, long watchedTime) {
         new Thread(() -> {
-            // Ensure the movie has a valid ID from the database before proceeding.
             if (movieId == null || movieId == 0) {
                 Log.d(TAG, "updateWatchedTime: Error invalid movie with id: " + movieId);
                 return;
@@ -212,16 +282,13 @@ public class MovieRepository {
                 return;
             }
 
-            // Update MovieHistory for any movie type
             updateMovieHistory(movie, watchedTime);
 
-            // Proceed with progress update only for episodes
             if (movie.getType() != MovieType.EPISODE) {
                 return;
             }
 
             Movie episode = movie;
-            // 1. Update Episode's playedTime
             long episodeLength = episode.getMovieLength();
             if (episodeLength > 0) {
                 long episodePlayedTime = (watchedTime * 100) / episodeLength;
@@ -230,7 +297,6 @@ public class MovieRepository {
                 movieDao.update(episode);
             }
 
-            // 2. Update Parent Season's playedTime
             Long seasonId = episode.getParentId();
             if (seasonId != null && seasonId != 0) {
                 Movie season = movieDao.getMovieById(seasonId);
@@ -246,7 +312,6 @@ public class MovieRepository {
                         season.setUpdatedAt(new Date());
                         movieDao.update(season);
 
-                        // 3. Update Parent Series' playedTime
                         Long seriesId = season.getParentId();
                         if (seriesId != null && seriesId != 0) {
                             Movie series = movieDao.getMovieById(seriesId);
@@ -294,7 +359,10 @@ public class MovieRepository {
     }
 
     public LiveData<List<Movie>> getHistory() {
-        return movieDao.getHistory();
+        return Transformations.map(movieDao.getHistory(), movies -> {
+            reAddDomainToMovies(movies);
+            return movies;
+        });
     }
 
     public void deleteMovie(Movie movie) {
@@ -302,7 +370,6 @@ public class MovieRepository {
     }
 
     public void updateMovieLength(long id, long movieLength) {
-        // update parent movie if id belongs to resolution
         new Thread(() -> {
             movieDao.updateMovieLength(id, movieLength);
             Movie movie = movieDao.getMovieById(id);

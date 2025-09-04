@@ -219,7 +219,7 @@ public abstract class SearchViewControl {
 
     private void renewCookie(Movie movie) {
         Log.d(TAG, "renewCookie: ");
-        movie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
+        movie.setFetch(Movie.REQUEST_CODE_EXTEND_MOVIE_SUB_LIST);
         if (fragment != null) {
             Util.openBrowserIntent(movie, fragment, true, true, true);
             return;

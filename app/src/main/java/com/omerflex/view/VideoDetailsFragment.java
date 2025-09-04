@@ -46,6 +46,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
     private Movie mSelectedMovie;
     private ArrayObjectAdapter mAdapter;
+    private ListRow listRow; // contains the header and sublist
     private ClassPresenterSelector mPresenterSelector;
     private DetailsSupportFragmentBackgroundController mDetailsBackground;
     private ProgressDialog mProgressDialog;
@@ -67,11 +68,12 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
     @Override
     public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        sharedViewModel.selectedMovie.observe(getViewLifecycleOwner(), movie -> {
-            if (movie != null) {
-                updateOverviewUI(movie);
-            }
-        });
+        Log.d(TAG, "onViewCreated: ");
+//        sharedViewModel.selectedMovie.observe(getViewLifecycleOwner(), movie -> {
+//            if (movie != null) {
+////                updateOverviewUI(movie);
+//            }
+//        });
     }
 
     private void initialize() {
@@ -81,7 +83,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             return;
         }
 
-        sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
+//        sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
 
         mSelectedMovie = Util.recieveSelectedMovie(activity.getIntent());
         if (mSelectedMovie == null) {
@@ -90,11 +92,9 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
         mPresenterSelector = new ClassPresenterSelector();
         mAdapter = new ArrayObjectAdapter(mPresenterSelector);
-        listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
+        setupUI(); // it sets the ListRow for the sublist
 
-        setupUI();
-
-        detailsViewControl = new VideoDetailsFragmentController(this, mAdapter, row, mSelectedMovie, listRowAdapter, sharedViewModel);
+        detailsViewControl = new VideoDetailsFragmentController(this, mAdapter, row, mSelectedMovie, listRow, sharedViewModel);
         detailsViewControl.fetchDetails();
     }
 
@@ -143,7 +143,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         detailsPresenter.setListener(sharedElementHelper);
         detailsPresenter.setParticipatingEntranceTransition(true);
         detailsPresenter.setOnActionClickedListener(action ->
-                detailsViewControl.handleActionClick(mSelectedMovie, action, listRowAdapter));
+                detailsViewControl.handleActionClick(mSelectedMovie, action, (ArrayObjectAdapter) listRow.getAdapter()));
 
         mPresenterSelector.addClassPresenter(DetailsOverviewRow.class, detailsPresenter);
     }
@@ -156,7 +156,8 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
             headerTitle = getResources().getString(R.string.related_movie_row_header_series);
         }
         HeaderItem header = new HeaderItem(0, headerTitle);
-        mAdapter.add(new ListRow(header, listRowAdapter));
+        listRow = new ListRow(header, new ArrayObjectAdapter(new CardPresenter()));
+        mAdapter.add(listRow);
 
         mPresenterSelector.addClassPresenter(ListRow.class, new ListRowPresenter());
     }

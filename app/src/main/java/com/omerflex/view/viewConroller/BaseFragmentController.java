@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import androidx.leanback.app.BackgroundManager;
 import androidx.leanback.app.BrowseSupportFragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
@@ -118,7 +119,7 @@ public abstract class BaseFragmentController {
     }
 
     public void handleActivityResult(int requestCode, int resultCode, Intent data) {
-        activityResultHandler.handleResult(requestCode, resultCode, data, mRowsAdapter);
+        activityResultHandler.handleResult(requestCode, resultCode, data, mRowsAdapter, null);
     }
 
 

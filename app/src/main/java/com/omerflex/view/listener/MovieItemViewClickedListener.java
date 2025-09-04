@@ -1,16 +1,12 @@
 package com.omerflex.view.listener;
 
-import android.app.Activity;
-import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
-import androidx.leanback.widget.Action;
 import androidx.leanback.widget.ArrayObjectAdapter;
-import androidx.leanback.widget.DetailsOverviewRow;
 import androidx.leanback.widget.HeaderItem;
 import androidx.leanback.widget.ListRow;
 import androidx.leanback.widget.OnItemViewClickedListener;
@@ -27,10 +23,8 @@ import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.view.CardPresenter;
-import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.VideoDetailsFragment;
 
-import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -163,7 +157,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
 
     private void handleCookieState(Movie movie) {
         // to update the row with new result after fetching the cookie, setFetch to REQUEST_CODE_MOVIE_LIST
-        movie.setFetch(Movie.REQUEST_CODE_MOVIE_LIST);
+        movie.setFetch(Movie.REQUEST_CODE_EXTEND_MOVIE_SUB_LIST);
         if (mFragment != null) {
             Util.openBrowserIntent(movie, mFragment, true, true, true, selectedRowIndex, selectedItemIndex);
             return;
@@ -182,7 +176,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
     }
 
     protected void handleServerFetchByItemClickCase(Movie movie, ListRow clickedRow) {
-        Log.d(TAG, "openDetailsActivity");
+        Log.d(TAG, "handleServerFetchByItemClickCase");
         AbstractServer server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
 
         int nextAction = server.fetchNextAction(movie);

@@ -1,7 +1,6 @@
 package com.omerflex.entity;
 
 
-import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -68,7 +67,7 @@ public class Movie implements Parcelable {
     public final static int REQUEST_CODE_EXOPLAYER = 10;
     public final static int REQUEST_CODE_EXTERNAL_PLAYER = 11;
     public final static int REQUEST_CODE_MOVIE_UPDATE = 12;
-    public final static int REQUEST_CODE_MOVIE_LIST = 13;
+    public final static int REQUEST_CODE_EXTEND_MOVIE_SUB_LIST = 13;
     public final static int REQUEST_CODE_FETCH_HTML = 14;
     public static final int HTML_STATE = 15;
     public static final int FETCH_MOVIE_AT_START = 16;

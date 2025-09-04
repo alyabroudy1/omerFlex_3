@@ -43,37 +43,80 @@ public class VideoDetailsFragmentController {
     private DetailsOverviewRow row;
     private Movie mSelectedMovie;
     private MovieRepository movieRepository;
-    private ArrayObjectAdapter listRowAdapter;
+    private ListRow listRow;
     private ActivityResultHandler activityResultHandler;
     private SharedViewModel sharedViewModel;
     private Integer selectedItemIndex = -1;
     private Integer selectedRowIndex = -1;
 
-    public VideoDetailsFragmentController(VideoDetailsFragment fragment, ArrayObjectAdapter adapter, DetailsOverviewRow row, Movie movie, ArrayObjectAdapter listRowAdapter, SharedViewModel sharedViewModel) {
+    public VideoDetailsFragmentController(VideoDetailsFragment fragment, ArrayObjectAdapter adapter, DetailsOverviewRow row, Movie movie, ListRow listRow, SharedViewModel sharedViewModel) {
         this.fragment = fragment;
         this.mAdapter = adapter;
         this.row = row;
         this.mSelectedMovie = movie;
         this.movieRepository = MovieRepository.getInstance(fragment.getActivity(), ((OmerFlexApplication) fragment.getActivity().getApplication()).getDatabase().movieDao());
-        this.listRowAdapter = listRowAdapter;
+        this.listRow = listRow;
         this.activityResultHandler = new ActivityResultHandler(fragment.getActivity());
         this.sharedViewModel = sharedViewModel;
     }
 
     public void fetchDetails() {
         fragment.showProgressDialog(true);
-        Log.d(TAG, "fetchDetails: ");
-        movieRepository.fetchMovieDetails( mSelectedMovie, fetchedMovie -> {
-            sharedViewModel.updateMovie(fetchedMovie);
-            listRowAdapter.clear();
-            listRowAdapter.addAll(0, fetchedMovie.getSubList());
+        selectedRowIndex = mAdapter.indexOf(listRow); // track sublist adapter
+        Log.d(TAG, "fetchDetails: "+ mSelectedMovie.getFetch());
+        Log.d(TAG, "fetchDetails: selectedRowIndex: "+ selectedRowIndex);
+        Log.d(TAG, "fetchDetails: mAdapter size: "+ mAdapter.size());
+        Log.d(TAG, "fetchDetails: mAdapter size: "+ mAdapter.get(0).getClass());
+        Log.d(TAG, "fetchDetails: mAdapter size: "+ mAdapter.get(1).getClass());
 
-            // Resume watching logic
-            resumeWatching(fetchedMovie);
+        if (mSelectedMovie.getFetch() == Movie.NO_FETCH_MOVIE_AT_START){
+            Log.d(TAG, "fetchDetails: NO_FETCH_MOVIE_AT_START "+ mSelectedMovie.getFetch());
+            updateUI(mSelectedMovie);
+            return;
+        }
+        movieRepository.fetchMovieDetails(mSelectedMovie, new ServerInterface.ActivityCallback<Movie>() {
+            @Override
+            public void onSuccess(Movie fetchedMovie, String title) {
+//                sharedViewModel.updateMovie(fetchedMovie);
+                Log.d(TAG, "onSuccess: ");
+                updateUI(fetchedMovie);
+            }
 
-            fragment.hideProgressDialog(true, null);
-            evaluateWatchAction();
+            @Override
+            public void onInvalidCookie(Movie result, String title) {
+                Log.d(TAG, "onInvalidCookie: VideoDetailsFragmentController: " + title);
+                // Handle error, maybe show a toast
+                fragment.hideProgressDialog(true, "جاري التحديث٠٠٠");
+//                result.setFetch(Movie.REQUEST_CODE_EXOPLAYER); server should decide the fetch state
+                Util.openBrowserIntent(result, fragment, false, true, true, selectedRowIndex, selectedItemIndex);
+            }
+
+            @Override
+            public void onInvalidLink(Movie result) {
+                // Handle error
+                fragment.hideProgressDialog(true, "حدث خطأ...");
+            }
+
+            @Override
+            public void onInvalidLink(String message) {
+                // Handle error
+                fragment.hideProgressDialog(true, message);
+            }
         });
+    }
+
+    private void updateUI(Movie fetchedMovie) {
+//        listRowAdapter.clear();
+        ArrayObjectAdapter adapter = (ArrayObjectAdapter) listRow.getAdapter();
+        if (fetchedMovie.getSubList() != null) {
+            adapter.addAll(adapter.size(), fetchedMovie.getSubList());
+        }
+
+        // Resume watching logic
+        resumeWatching(fetchedMovie);
+
+        fragment.hideProgressDialog(true, null);
+        evaluateWatchAction();
     }
 
     private void resumeWatching(Movie fetchedMovie) {
@@ -97,19 +140,20 @@ public class VideoDetailsFragmentController {
                     if (itemIndex != -1) {
                         Log.d(TAG, "Last watched item found: " + lastWatchedItem.getTitle() + " at index " + itemIndex);
 
-                        int rowIndex = -1;
-                        for (int i = 0; i < mAdapter.size(); i++) {
-                            Object rowObject = mAdapter.get(i);
-                            if (rowObject instanceof ListRow) {
-                                ListRow row = (ListRow) rowObject;
-                                if (row.getAdapter() == listRowAdapter) {
-                                    rowIndex = i;
-                                    break;
-                                }
-                            }
-                        }
+//                        int rowIndex = -1;
+//                        ArrayObjectAdapter adapter = (ArrayObjectAdapter) listRow.getAdapter();
+//                        for (int i = 0; i < adapter.size(); i++) {
+//                            Object rowObject = adapter.get(i);
+//                            if (rowObject instanceof ListRow) {
+//                                ListRow row = (ListRow) rowObject;
+//                                if (row.getAdapter() == adapter) {
+//                                    rowIndex = i;
+//                                    break;
+//                                }
+//                            }
+//                        }
 
-                        selectItemOnRowListAdapter(rowIndex, itemIndex);
+                        selectItemOnRowListAdapter(selectedRowIndex, itemIndex);
                     }
                 }
             }
@@ -117,6 +161,7 @@ public class VideoDetailsFragmentController {
     }
 
     private void selectItemOnRowListAdapter(int rowIndex, int itemIndex) {
+        Log.d(TAG, "selectItemOnRowListAdapter: rowIndex: "+rowIndex + ", "+ itemIndex);
         if (rowIndex != -1) {
             selectedItemIndex = itemIndex;
             selectedRowIndex = rowIndex;
@@ -176,7 +221,7 @@ public class VideoDetailsFragmentController {
     }
 
     public void handleActivityResult(int requestCode, int resultCode, Intent data) {
-        activityResultHandler.handleResult(requestCode, resultCode, data, mAdapter);
+        activityResultHandler.handleResult(requestCode, resultCode, data, mAdapter, fragment);
     }
 
     public void evaluateWatchAction() {
@@ -210,6 +255,9 @@ public class VideoDetailsFragmentController {
     public void handleActionClick(Movie movie, Action action, ArrayObjectAdapter clickedAdapter) {
         if (movie == null || action == null || clickedAdapter == null) {
             Log.e(TAG, "handleActionClick: Invalid input parameters");
+//            Log.e(TAG, "movie: " + movie);
+//            Log.e(TAG, "action: "+ action);
+//            Log.e(TAG, "clickedAdapter: "+ clickedAdapter);
             return;
         }
 

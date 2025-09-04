@@ -224,30 +224,9 @@ public class RemoteDataSource {
 //        return dummyMovies;
 //    }
 
-    public void fetchMovieDetails(Movie mSelectedMovie, MovieRepository.MovieCallback callback) {
+    public void fetchMovieDetails(Movie mSelectedMovie, ServerInterface.ActivityCallback<Movie> callback) {
         Log.d(TAG, "fetchMovieDetails: ");
        AbstractServer server = ServerConfigRepository.getInstance().getServer(mSelectedMovie.getStudio());
-       server.fetch(mSelectedMovie, mSelectedMovie.getState(), new ServerInterface.ActivityCallback<Movie>() {
-           @Override
-           public void onSuccess(Movie result, String title) {
-               Log.d(TAG, "onSuccess: title");
-               callback.onMovieFetched(result);
-           }
-
-           @Override
-           public void onInvalidCookie(Movie result, String title) {
-               Log.d(TAG, "onInvalidCookie: ");
-           }
-
-           @Override
-           public void onInvalidLink(Movie result) {
-               Log.d(TAG, "onInvalidLink: ");
-           }
-
-           @Override
-           public void onInvalidLink(String message) {
-               Log.d(TAG, "onInvalidLink: ");
-           }
-       });
+       server.fetch(mSelectedMovie, mSelectedMovie.getState(), callback);
     }
 }
