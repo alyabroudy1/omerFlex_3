@@ -137,7 +137,7 @@ public class MyCimaServer extends AbstractServer {
     private void getExtraSearchMovieList(String url, ArrayList<Movie> movies) {
         //search series
         String seriesSearch = url + "/list/series/";
-        Document doc = getRequestDoc(seriesSearch, OmerFlexApplication.getAppContext());
+        Document doc = getRequestDoc(seriesSearch);
 
         Elements lis2 = doc.getElementsByClass("GridItem");
         for (Element li : lis2) {
@@ -149,7 +149,7 @@ public class MyCimaServer extends AbstractServer {
 
         //search anime
         String animeSearch = url + "/list/anime/";
-        doc = getRequestDoc(animeSearch, OmerFlexApplication.getAppContext());
+        doc = getRequestDoc(animeSearch);
         Elements lis3 = doc.getElementsByClass("GridItem");
         for (Element li : lis3) {
             //              Log.i(TAG, "element found: ");

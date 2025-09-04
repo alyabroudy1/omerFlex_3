@@ -370,32 +370,55 @@ public abstract class AbstractServer implements ServerInterface {
         return doc;
     }
 
-    protected Document getRequestDoc(String url){
+    protected Document getRequestDoc(String url) {
         Document doc = null;
         ServerConfig config = getConfig();
         Log.d(TAG, "getRequestDoc: "+url);
+//        String testo = CookieManager.getInstance().getCookie(config.getUrl());
+//        config.getHeaders().put("Cookie", testo);
+//        config.getHeaders().put("sec-ch-ua-full-version", "131.0.6778.205");
+//        config.getHeaders().put("sec-ch-ua-full-version-list", "Google Chrome\";v=\"131.0.6778.205, \"Chromium\";v=\"131.0.6778.205\", \"Not_A Brand\";v=\"24.0.0.0\"");
+//        config.getHeaders().put("sec-ch-ua-mobile", "?0");
+//        config.getHeaders().put("sec-ch-ua-platform", "Windows");
+//        config.getHeaders().put("sec-fetch-dest", "document");
+//        config.getHeaders().put("sec-fetch-mode", "navigate");
+//        config.getHeaders().put("sec-fetch-site", "none");
+//        config.getHeaders().put("sec-fetch-user", "?1");
+//        config.getHeaders().put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+//        config.getHeaders().put("sec-ch-ua-arch", "x86");
+//        config.getHeaders().put("sec-ch-ua-bitness", "64");
+//        config.getHeaders().put("sec-ch-ua", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"");
+//        config.getHeaders().put("upgrade-insecure-requests", "1");
+//        config.getHeaders().put("sec-ch-ua-platform-version", "10.0.0");
+//        config.getHeaders().put("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
 
         try {
+//            doc = Jsoup.connect("http://www.faselhds.center/most_recent")
             doc = Jsoup.connect(url)
+//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+//                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
                     .headers(config.getHeaders())
                     .cookies(config.getMappedCookies())
+//                    .userAgent("Android 7")
+//                    .userAgent("Mozilla/5.0 (Linux; Android 8.1.0; Android SDK built for x86 Build/OSM1.180201.031; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36")
                     .followRedirects(true)
                     .ignoreHttpErrors(true)
                     .ignoreContentType(true)
-                    .timeout(10000) // 10 seconds timeout
+//                    .timeout(16000)
+                    .timeout(0)
                     .get();
 
             String docTitle = doc.title();
+//            Log.d(TAG, "getRequestDoc: " + docTitle);
+//            if (docTitle.contains("Just a moment")) {
+//                return fetchDocUsingWebView(url);
+//            }
             Log.d(TAG, "getRequestDoc: " + docTitle);
 
-            // If Jsoup gets a challenge page, use the activity to get the real page
-            if (docTitle.contains("Just a moment") || docTitle.contains("Checking your browser")) {
-                Log.d(TAG, "getRequestDoc: Cloudflare detected, launching GetDocActivity.");
-                return doc;
-            }
-
         } catch (IOException e) {
+            //builder.append("Error : ").append(e.getMessage()).append("\n");
             Log.i(TAG, "error: " + e.getMessage() + ", url: "+ url);
+//            String errorMessage = "error: " + getServerId() + ": " + e.getMessage();
         }
         return doc;
     }
