@@ -9,10 +9,10 @@ public class ServerFactory {
                 return new MyCimaServer();
 //            case "CimaNow":
 //                return new CimaNowServer();
-//            case "ArabSeed":
-//                return new ArabSeedServer();
-//            case "FaselHD":
-//                return new FaselHDServer();
+            case Movie.SERVER_ARAB_SEED:
+                return new ArabSeedServer();
+            case Movie.SERVER_FASELHD:
+                return new FaselHdServer();
 //            case "Laroza":
 //                return new LarozaServer();
             case Movie.SERVER_AKWAM:

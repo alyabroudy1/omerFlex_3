@@ -43,6 +43,10 @@ public class ActivityResultHandler {
         int clickedMovieIndex = data.getIntExtra(Movie.KEY_CLICKED_MOVIE_INDEX, -1);
         Log.d(TAG, "handleActivityResult: clickedMovieIndex: "+ clickedMovieIndex);
         Log.d(TAG, "handleActivityResult: clickedRowId: "+ clickedRowId);
+        if (!(mAdapter.get(clickedRowId) instanceof ListRow)){
+            Log.d(TAG, "handleResult: error: fail to find the clicked row");
+        }
+
         ListRow listRow = (ListRow) mAdapter.get(clickedRowId);
         ArrayObjectAdapter clickedAdapter = (ArrayObjectAdapter) listRow.getAdapter();
         if (clickedMovieIndex != -1) {

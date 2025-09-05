@@ -228,10 +228,10 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
                     Log.d(TAG, "onInvalidCookie: " + result);
                     result.setFetch(Movie.REQUEST_CODE_EXTERNAL_PLAYER);
                     if (mFragment != null) {
-                        Util.openBrowserIntent(result, mFragment, true, true, true, (int)clickedRow.getId(), position);
+                        Util.openBrowserIntent(result, mFragment, true, true, true, selectedRowIndex, selectedItemIndex);
                         return;
                     }
-                    Util.openBrowserIntent(result, mFragment.getActivity(), false, true, true,(int)clickedRow.getId(), position);
+                    Util.openBrowserIntent(result, mFragment.getActivity(), false, true, true, selectedRowIndex, selectedItemIndex);
                 }
 
                 @Override

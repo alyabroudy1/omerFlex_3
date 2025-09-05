@@ -7,6 +7,7 @@ import android.webkit.MimeTypeMap;
 import android.webkit.WebResourceRequest;
 
 import com.omerflex.entity.Movie;
+import com.omerflex.server.Util;
 //import com.omerflex.server.LarozaServer;
 
 import java.nio.charset.StandardCharsets;
@@ -196,7 +197,7 @@ public class LinkFilterService {
     }
 
     public static boolean isSupportedMedia(WebResourceRequest request, String movieUrl)  {
-        Log.d(TAG, "isSupportedMedia: url: " + request.getUrl().toString());
+//        Log.d(TAG, "isSupportedMedia: url: " + request.getUrl().toString());
         // Check if the URL contains any of the substrings
 //        for (String pattern : PATTERNS_MOVIE_URL) {
 //            if (movieUrl.contains(pattern)) {
@@ -211,6 +212,10 @@ public class LinkFilterService {
 
         // 1. Check for byte range requests
 
+        if (LinkFilterService.isBlackListedUrl(url)){
+          return false;
+        }
+
         if (isMediaByHeaders(headers, url)) {
 //            if (url.endsWith(".mp4")){return false;}
             return true;
@@ -222,10 +227,10 @@ public class LinkFilterService {
             return true;
         }
         // 3. Check URL patterns
-        if (isMediaByUrlPattern(url)){
-            Log.d(TAG, "isSupportedMedia: true isMediaByUrlPattern, "+ url);
-            return true;
-        }
+//        if (isMediaByUrlPattern(url)){
+//            Log.d(TAG, "isSupportedMedia: true isMediaByUrlPattern, "+ url);
+//            return true;
+//        }
 
         // 4. Additional checks for streaming protocols
 //        if (url.contains("m3u8") || url.contains("mpd")) return true;
@@ -362,6 +367,10 @@ public class LinkFilterService {
             if (url.contains(pattern)) {
                 return true;
             }
+        }
+        if (url.length() < 50){
+            Log.d(TAG, "isBlackListedUrl: video url.length() < 50: "+ url);
+            return true;
         }
         return false;
     }

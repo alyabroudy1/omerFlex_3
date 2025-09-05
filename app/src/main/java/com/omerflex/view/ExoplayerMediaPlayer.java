@@ -747,7 +747,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         super.onStop();
 
         Log.d("TAG", "onStop: yess ");
-        if (player != null) {
+        if (player != null && movie.getParentId() != null) {
             long watchedPosition = player.getCurrentPosition();
             long movieLength = player.getDuration();
 

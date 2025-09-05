@@ -40,6 +40,7 @@ import com.google.gson.Gson;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
+import com.omerflex.entity.MovieType;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.LinkHeadersDTO;
 import com.omerflex.server.AbstractServer;
@@ -635,6 +636,7 @@ public class BrowserActivity extends AppCompatActivity {
             ) {
 //            if (isSupportedStateInInterceptRequest() && LinkFilterService.isSupportedMedia(request)) {
                     return handleSupportedMedia(view, request, headers);
+//                Log.d(TAG, "shouldInterceptRequest:xxxx videoUrl: "+ request.getUrl().toString());
             }
             return super.shouldInterceptRequest(view, request);
         }
@@ -650,11 +652,15 @@ public class BrowserActivity extends AppCompatActivity {
 //                Intent returnIntent = new Intent(activity, ExoplayerMediaPlayer.class);
             Movie mm = Movie.clone(movie);
             mm.setState(Movie.VIDEO_STATE);
+            mm.setType(MovieType.VIDEO);
 
 //            String videoUrl = request.getUrl().toString().replace("&amp;amp;", "&");
             String videoUrl = request.getUrl().toString();
             mm.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
-            Log.d(TAG, "handleSupportedMedia: videoUrl: "+ mm.getVideoUrl());
+            Log.d(TAG, "handleSupportedMedia:xxxx videoUrl: "+ mm.getVideoUrl());
+            if (true){
+            return super.shouldInterceptRequest(view, request);
+            }
             if (!openedForResult) {
                 Log.d(TAG, "handleSupportedMedia: if (!openedForResult) 1029");
                 startExoplayer(mm);
@@ -793,6 +799,7 @@ public class BrowserActivity extends AppCompatActivity {
             Movie mov = Movie.clone(movie);
             mov.setVideoUrl(newUrl);
             mov.setState(Movie.VIDEO_STATE);
+            mov.setType(MovieType.VIDEO);
             Log.d(TAG, "onLoadResource: isVideo: " + newUrl);
             if (!openedForResult) {
                 Log.d(TAG, "processVideoResource: 1272");

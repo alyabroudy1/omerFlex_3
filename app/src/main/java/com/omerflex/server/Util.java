@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 
 import com.google.gson.Gson;
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.dto.LinkHeadersDTO;
 import com.omerflex.view.BrowserActivity;
 import com.omerflex.view.DetailsActivity;
 import com.omerflex.view.ExoplayerMediaPlayer;
@@ -184,6 +185,35 @@ public class Util {
                     }
                 }
         return headersMap;
+    }
+
+    public static LinkHeadersDTO splitLinkAndHeaders(String url) {
+        LinkHeadersDTO linkHeaders = new LinkHeadersDTO();
+        if (url.contains("||")) {
+            linkHeaders.headers = Util.parseParamsToMap(url);
+            linkHeaders.url = url.substring(0, url.indexOf("||"));
+
+            Log.d(TAG, "browser: map:" + linkHeaders.toString() + ", url:" + url);
+            return linkHeaders;
+        }
+        if (url.contains("|")) {
+//                Map<String, String> map = parseParamsToMap(movie.getVideoUrl());
+            String[] parts = url.split("\\|", 2);
+            String cleanUrl = parts[0];
+            Map<String, String> headers = new HashMap<>();
+
+            if (parts.length == 2) {
+                linkHeaders.headers = Util.extractHeaders(parts[1]);
+                // Log.d("TAG", "buildMediaSource: h:" + parts[1]);
+            }
+            linkHeaders.url = cleanUrl;
+
+            // Log.d(TAG, "browser: map:" + linkHeaders.toString() + ", url:" + cleanUrl);
+            return linkHeaders;
+        }
+        // Log.d(TAG, "onCreate: url:" + url);
+        linkHeaders.url = url;
+        return linkHeaders;
     }
 
                 public static boolean shouldOverrideUrlLoading(String url) {
