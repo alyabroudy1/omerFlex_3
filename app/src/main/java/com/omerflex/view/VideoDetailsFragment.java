@@ -74,6 +74,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 ////                updateOverviewUI(movie);
 //            }
 //        });
+        updateOverviewUI(mSelectedMovie);
     }
 
     private void initialize() {

@@ -6,8 +6,8 @@ import com.omerflex.entity.MovieFetchProcess;
 import java.util.ArrayList;
 
 public interface ServerInterface {
-    public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback);
-    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback);
+    public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback);
+    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback, boolean handleCookie);
     public MovieFetchProcess fetch(Movie movie, int action, ActivityCallback<Movie> activityCallback);
     public int fetchNextAction(Movie movie);
     public String getLabel();

@@ -158,7 +158,7 @@ public class MainFragment_old extends BrowseSupportFragment {
 
 //        movieRepository.saveMovie(movie);
 
-        movieRepository.getHomepageMovies( (category, movieList) -> {
+        movieRepository.getHomepageMovies(false, (category, movieList) -> {
             if (movieList != null) {
                 Log.d("Movie", "Fetched movie: " + movieList.toString());
             } else {

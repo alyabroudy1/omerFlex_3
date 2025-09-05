@@ -35,7 +35,7 @@ public class RemoteDataSource {
 //        callback.onMovieFetched(generateDummyMovies().get(0));
     }
 
-    public void fetchHomepageMovies(MovieRepository.MovieListCallback callback) {
+    public void fetchHomepageMovies(boolean handleCookie, MovieRepository.MovieListCallback callback) {
         ServerConfigRepository repository = ServerConfigRepository.getInstance();
         
         // LiveData must be observed from the main thread.
@@ -56,7 +56,7 @@ public class RemoteDataSource {
                                 Log.d(TAG, "fetchHomepageMovies: " + config.getName());
                                 AbstractServer server = ServerFactory.createServer(config.getName());
                                 if (server != null) {
-                                    server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                                    server.getHomepageMovies(handleCookie, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                                         @Override
                                         public void onSuccess(ArrayList<Movie> result, String title) {
                                             if (result.isEmpty()){

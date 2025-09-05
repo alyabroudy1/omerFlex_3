@@ -29,7 +29,7 @@ public abstract class AbstractServer implements ServerInterface {
     private static final String TAG = "AbstractServer";
 
     @Override
-    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
+    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback, boolean handleCookie) {
         Log.i(getLabel(), "search: " + query);
         String url = query;
         if (!query.contains("http")) {
@@ -350,6 +350,7 @@ public abstract class AbstractServer implements ServerInterface {
 
                 Intent intent = new Intent(context, com.omerflex.view.GetDocActivity.class);
                 intent.putExtra("url", url); // Pass the URL to BrowserActivity via GetDocActivity
+                intent.putExtra("studio", getServerId()); // Pass the URL to BrowserActivity via GetDocActivity
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(intent);
 
@@ -374,6 +375,7 @@ public abstract class AbstractServer implements ServerInterface {
         Document doc = null;
         ServerConfig config = getConfig();
         Log.d(TAG, "getRequestDoc: "+url);
+        Log.d(TAG, "getRequestDoc: "+config);
 //        String testo = CookieManager.getInstance().getCookie(config.getUrl());
 //        config.getHeaders().put("Cookie", testo);
 //        config.getHeaders().put("sec-ch-ua-full-version", "131.0.6778.205");

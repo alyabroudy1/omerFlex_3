@@ -206,7 +206,7 @@ public abstract class SearchViewControl {
                     public void onInvalidLink(String message) {
                         Log.d(TAG, "onInvalidLink: handleNextPageMovieClick: " + message);
                     }
-                });
+                }, false);
 //                            Log.d(TAG, "handleItemClicked: nextPage:" + nextList.toString());
 
             });
@@ -460,7 +460,7 @@ public abstract class SearchViewControl {
 //        }
 
         // Update the RecyclerView on the main thread
-        ArrayList<Movie> movies = server.search(finalQuery, new SearchCallback());
+        ArrayList<Movie> movies = server.search(finalQuery, new SearchCallback(), false);
     }
 
     protected void loadOmarServerResult(String query, AbstractServer server) {
@@ -468,7 +468,7 @@ public abstract class SearchViewControl {
 
         ExecutorService executor2 = Executors.newSingleThreadExecutor();
         executor2.submit(() -> {
-            ArrayList<Movie> movies = server.search(query, new SearchCallback());
+            ArrayList<Movie> movies = server.search(query, new SearchCallback(), false);
         });
         executor2.shutdown();
 

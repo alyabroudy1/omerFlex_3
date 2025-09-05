@@ -9,13 +9,13 @@ public class DefaultServersConfig {
         ServerConfigRepository scm = ServerConfigRepository.getInstance();
 
         //### mycima ###
-        ServerConfig mycimaConfig = new ServerConfig();
-        mycimaConfig.setName(Movie.SERVER_MyCima);
-        mycimaConfig.setUrl("https://mycima.io");
-        mycimaConfig.setReferer("https://mycima.io/");
-        mycimaConfig.setActive(true);
-
-        scm.updateConfig(mycimaConfig);
+//        ServerConfig mycimaConfig = new ServerConfig();
+//        mycimaConfig.setName(Movie.SERVER_MyCima);
+//        mycimaConfig.setUrl("https://mycima.io");
+//        mycimaConfig.setReferer("https://mycima.io/");
+//        mycimaConfig.setActive(true);
+//
+//        scm.updateConfig(mycimaConfig);
 
 //        //         ### cimaNow ###
 //        ServerConfig cimaNowConfig = new ServerConfig();
@@ -55,13 +55,13 @@ public class DefaultServersConfig {
 //        scm.updateConfig(larozaConfig);
 //
 //         ### akwam ###
-//        ServerConfig akwamConfig = new ServerConfig();
-//        akwamConfig.setName(Movie.SERVER_AKWAM);
-//        akwamConfig.setActive(true);
-//        akwamConfig.setUrl("https://ak.sv");
-//        akwamConfig.setReferer("https://ak.sv/");
-//
-//        scm.updateConfig(akwamConfig);
+        ServerConfig akwamConfig = new ServerConfig();
+        akwamConfig.setName(Movie.SERVER_AKWAM);
+        akwamConfig.setActive(true);
+        akwamConfig.setUrl("https://ak.sv");
+        akwamConfig.setReferer("https://ak.sv/");
+
+        scm.updateConfig(akwamConfig);
 //
 //        //### old_Akwam ###
 //        ServerConfig oldAkwamConfig = new ServerConfig();

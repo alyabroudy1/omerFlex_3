@@ -34,17 +34,22 @@ public class MyCimaServer extends AbstractServer {
     }
 
     @Override
-    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
+    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback, boolean handleCookie) {
         Log.i(getLabel(), "search: " + query);
         String searchContext = query;
         String url = query;
-        boolean multiSearch = false;
+        boolean multiSearch = handleCookie;
         if (!query.contains("http")) {
             url = this.getSearchUrl(query);
             multiSearch = true;
         }
         Log.d(TAG, "search: url: " + url);
-        Document doc = this.getSearchRequestDoc(url);
+        Document doc = null;
+        if (handleCookie){
+            doc = this.getRequestDoc(url, OmerFlexApplication.getAppContext());
+        }else {
+            doc = getSearchRequestDoc(url);
+        }
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
             return null;
@@ -101,7 +106,7 @@ public class MyCimaServer extends AbstractServer {
             }
         }
         if (multiSearch) {
-            this.getExtraSearchMovieList(doc.baseUri(), movieList);
+            this.getExtraSearchMovieList(doc.baseUri().isEmpty() ? url : doc.baseUri(), movieList);
         }
 
         Movie nextPage = this.generateNextPageMovie(doc);
@@ -135,11 +140,13 @@ public class MyCimaServer extends AbstractServer {
     }
 
     private void getExtraSearchMovieList(String url, ArrayList<Movie> movies) {
+        Log.d(TAG, "getExtraSearchMovieList: ");
         //search series
         String seriesSearch = url + "/list/series/";
         Document doc = getRequestDoc(seriesSearch);
-
+        Log.d(TAG, "getExtraSearchMovieList: doc: " + doc.title());
         Elements lis2 = doc.getElementsByClass("GridItem");
+        Log.d(TAG, "getExtraSearchMovieList: lis2: " + lis2.size());
         for (Element li : lis2) {
             Movie movie = generateMovieFromDocElement(li);
             if (movie != null) {
@@ -150,7 +157,9 @@ public class MyCimaServer extends AbstractServer {
         //search anime
         String animeSearch = url + "/list/anime/";
         doc = getRequestDoc(animeSearch);
+        Log.d(TAG, "getExtraSearchMovieList: doc anime: " + doc.title());
         Elements lis3 = doc.getElementsByClass("GridItem");
+        Log.d(TAG, "getExtraSearchMovieList: lis3 anime: " + lis3.size());
         for (Element li : lis3) {
             //              Log.i(TAG, "element found: ");
             Movie movie = generateMovieFromDocElement(li);
@@ -671,18 +680,18 @@ public class MyCimaServer extends AbstractServer {
                 || u.contains("series");
     }
 
-    public int fetchNextAction(Movie movie) {
-//        Log.d(TAG, "fetchNextAction: "+ (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) );
-        switch (movie.getState()) {
-            case Movie.GROUP_OF_GROUP_STATE:
-            case Movie.GROUP_STATE:
-            case Movie.ITEM_STATE:
-                return VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY;
-            case Movie.BROWSER_STATE:
-                return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
-        }
-        return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
-    }
+//    public int fetchNextAction(Movie movie) {
+////        Log.d(TAG, "fetchNextAction: "+ (movie.getFetch() == Movie.REQUEST_CODE_MOVIE_UPDATE) );
+//        switch (movie.getState()) {
+//            case Movie.GROUP_OF_GROUP_STATE:
+//            case Movie.GROUP_STATE:
+//            case Movie.ITEM_STATE:
+//                return VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY;
+//            case Movie.BROWSER_STATE:
+//                return VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY;
+//        }
+//        return VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY;
+//    }
 
     @Override
     public String getWebScript(int mode, Movie movie) {
@@ -1176,11 +1185,11 @@ public class MyCimaServer extends AbstractServer {
     }
 
     @Override
-    public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search("la casa", activityCallback);
+    public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
+//        return search("la casa", activityCallback, handleCookie);
 //        return search("اسر", activityCallback);
 //        return search("ratched");
-//        return search(getConfig().getUrl() + "/movies/recent/", activityCallback);
+        return search(getConfig().getUrl() + "/movies/recent/", activityCallback, handleCookie);
 //   hhhhh     return search(getConfig().getUrl() + "/", activityCallback);
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);

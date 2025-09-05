@@ -25,6 +25,7 @@ import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.view.CardPresenter;
 import com.omerflex.view.VideoDetailsFragment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -75,7 +76,6 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
      * Handles the actual click processing logic on a background thread.
      */
     private void processMovieClick(Movie movie, ListRow clickedRow) {
-        Log.d(TAG, "processMovieClick: "+ movieRepository.getSelectedMovie().getValue());
         if (movieRepository.getSelectedMovie().getValue() == null){
             // set mSelectedMovie in the repository
             // very important to monitor the selected movie in the repository
@@ -91,7 +91,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         switch (movie.getState()) {
             case Movie.COOKIE_STATE:
                 // Fetch cookie through browser
-                handleCookieState(movie);
+                handleCookieState(movie, clickedRow);
                 break;
             case Movie.VIDEO_STATE:
                 // play video
@@ -124,7 +124,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         removeIpTvRows();
         // fetch iptv movies
         for (int i = 0; i < 350; i++) {
-            movieRepository.getHomepageMovies((category, movieList) -> {
+            movieRepository.getHomepageMovies(false, (category, movieList) -> {
                 if (movieList != null) {
                     Log.d("Movie", "Fetched movie33: " + movieList.toString());
                     HeaderItem header = new HeaderItem(Movie.IPTV_PLAY_LIST_STATE, category);
@@ -155,14 +155,23 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
     }
 
 
-    private void handleCookieState(Movie movie) {
+    private void handleCookieState(Movie movie, ListRow clickedRow) {
         // to update the row with new result after fetching the cookie, setFetch to REQUEST_CODE_MOVIE_LIST
-        movie.setFetch(Movie.REQUEST_CODE_EXTEND_MOVIE_SUB_LIST);
-        if (mFragment != null) {
-            Util.openBrowserIntent(movie, mFragment, true, true, true, selectedRowIndex, selectedItemIndex);
-            return;
-        }
-        Util.openBrowserIntent(movie, mFragment.getActivity(), true, true, true, selectedRowIndex, selectedItemIndex);
+        Log.d(TAG, "handleCookieState: ");
+//        movie.setFetch(Movie.REQUEST_CODE_EXTEND_MOVIE_SUB_LIST);
+//        if (mFragment != null) {
+//            Util.openBrowserIntent(movie, mFragment, true, true, true, selectedRowIndex, selectedItemIndex);
+//            return;
+//        }
+//        Util.openBrowserIntent(movie, mFragment.getActivity(), true, true, true, selectedRowIndex, selectedItemIndex);
+        movieRepository.getHomepageMovies(true, (category, movieList) -> {
+            if (movieList != null) {
+                Log.d("Movie", "Fetched movie33: " + movieList.toString());
+                updateAdapterOnMainThread(movieList, clickedRow, movie);
+            } else {
+                Log.d("Movie", "movieList not found.");
+            }
+        });
     }
 
     private void handleVideoState(Movie movie) {

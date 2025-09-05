@@ -26,7 +26,7 @@ public class MainFragmentController extends BaseFragmentController {
     @Override
     public void loadData() {
         Log.d(TAG, "loadData: ");
-        movieRepository.getHomepageMovies( (category, movieList) -> {
+        movieRepository.getHomepageMovies( false, (category, movieList) -> {
             if (movieList != null) {
                 Log.d("Movie", "Fetched movie33: " + movieList.toString());
                 // todo let the id be the studio name

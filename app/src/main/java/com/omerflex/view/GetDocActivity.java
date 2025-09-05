@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.webkit.CookieManager;
 import android.webkit.JsResult;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
@@ -17,10 +18,16 @@ import android.webkit.WebViewClient;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.omerflex.R;
+import com.omerflex.entity.Movie;
+import com.omerflex.entity.ServerConfig;
+import com.omerflex.server.Util;
+import com.omerflex.server.config.ServerConfigRepository;
+import com.omerflex.view.CursorLayout;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 
@@ -29,16 +36,31 @@ public class GetDocActivity extends AppCompatActivity {
     private static final String TAG = "GetDocActivity";
     public static CompletableFuture<String> resultFuture;
     private WebView webView;
+    private CursorLayout cursorLayout;
     private String url;
+    private String studio;
     private final Handler timeoutHandler = new Handler(Looper.getMainLooper());
+    private Movie movie;
+    private ServerConfig config;
+    private Map<String, String> headers;
 
     @SuppressLint({"SetJavaScriptEnabled", "WebViewApiAvailability"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_get_doc);
+        cursorLayout = new CursorLayout(this);
 
         url = getIntent().getStringExtra("url");
+        studio = getIntent().getStringExtra("studio");
+        movie = Util.recieveSelectedMovie(getIntent());
+        Log.d(TAG, "onCreate: studio: "+ studio);
+        Log.d(TAG, "onCreate: movie: "+ movie);
+        if (movie != null) {
+            config = ServerConfigRepository.getInstance().getConfig(studio);
+            Log.d(TAG, "onCreate: config: "+ config);
+        }
+
         if (url == null || url.isEmpty()) {
             completeExceptionally(new IllegalArgumentException("URL is missing from intent"));
             return;
@@ -86,6 +108,7 @@ public class GetDocActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 Log.d(TAG, "onPageFinished for URL: " + url);
+                updateCookies(url);
                 view.evaluateJavascript("document.title", title -> {
                     Log.d(TAG, "Page title: " + title);
                     if (title != null && (title.contains("Just a moment...") || title.contains("Checking your browser"))) {
@@ -105,6 +128,21 @@ public class GetDocActivity extends AppCompatActivity {
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 Log.w(TAG, "SSL Error: " + error.toString() + " Proceeding anyway.");
                 handler.proceed(); // Bypass SSL errors
+            }
+
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, android.webkit.WebResourceRequest request) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    if (request.isForMainFrame()) {
+                        headers = request.getRequestHeaders();
+                        Log.d(TAG, "Captured main frame headers: " + headers.toString());
+                    }
+                } else {
+                    // For older APIs, we can't reliably check isForMainFrame(),
+                    // so we'll continue to capture headers from any request.
+                    headers = request.getRequestHeaders();
+                }
+                return super.shouldInterceptRequest(view, request);
             }
         });
 
@@ -161,6 +199,22 @@ public class GetDocActivity extends AppCompatActivity {
             resultFuture.completeExceptionally(e);
             cleanup();
         }
+    }
+
+    private void updateCookies(String currentUrl) {
+        if (config == null) {
+            Log.w(TAG, "ServerConfig is null, cannot update cookies.");
+            return;
+        }
+        CookieManager cookieManager = CookieManager.getInstance();
+        String cookies = cookieManager.getCookie(currentUrl);
+        Log.d(TAG, "updateCookies for " + currentUrl + ": " + cookies);
+        if (cookies == null) {
+            return;
+        }
+        config.setStringCookies(cookies);
+        config.setHeaders(headers);
+        new Thread(() -> ServerConfigRepository.getInstance().updateConfig(config)).start();
     }
 
     private void cleanup() {

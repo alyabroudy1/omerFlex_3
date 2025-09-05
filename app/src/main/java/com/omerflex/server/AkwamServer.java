@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.util.Log;
 import android.webkit.WebView;
 
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieType;
 import com.omerflex.entity.MovieFetchProcess;
@@ -50,7 +51,7 @@ public class AkwamServer extends AbstractServer {
      * @return
      */
     @Override
-    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback) {
+    public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback, boolean handleCookie) {
         Log.i(TAG, "search: " + query);
         String searchContext = query;
 //        switch (query) {
@@ -91,7 +92,12 @@ public class AkwamServer extends AbstractServer {
         Log.d(TAG, "search: " + url);
 
 
-        Document doc = this.getRequestDoc(url);
+        Document doc = null;
+        if (handleCookie){
+            doc = getRequestDoc(url, OmerFlexApplication.getAppContext());
+        }else {
+            doc = getSearchRequestDoc(url);
+        }
         if (doc == null) {
             activityCallback.onInvalidLink("Invalid link");
             return null;
@@ -100,6 +106,7 @@ public class AkwamServer extends AbstractServer {
         ArrayList<Movie> movieList = new ArrayList<>();
 
         if (doc.title().contains("moment")) {
+//        if (!handleCookie) {
 //            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";
@@ -367,7 +374,7 @@ public class AkwamServer extends AbstractServer {
             seasonUrl = getConfig().getUrl() + seasonUrl;
         }
         final String url = seasonUrl;
-        Observable.fromCallable(() -> getRequestDoc(url))
+        Observable.fromCallable(() -> getRequestDoc(url, OmerFlexApplication.getAppContext()))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(doc -> {
@@ -476,7 +483,7 @@ public class AkwamServer extends AbstractServer {
 //                        .timeout(0)
 //                        .ignoreContentType(true)
 //                        .get();
-        Document doc = getRequestDoc(url);
+        Document doc = getRequestDoc(url, OmerFlexApplication.getAppContext());
 //            Document doc = Jsoup.connect(url)
 //                    .cookies(getMappedCookies())
 //                    .headers(getHeaders())
@@ -603,7 +610,7 @@ public class AkwamServer extends AbstractServer {
         }
 
         //Log.d(TAG, "fetchToWatchLocally run-2: " + url);
-        Document doc = getRequestDoc(url);
+        Document doc = getRequestDoc(url, OmerFlexApplication.getAppContext());
 //            Document doc = Jsoup.connect(url)
 //                    .cookies(getMappedCookies())
 //                    .headers(getHeaders())
@@ -657,7 +664,7 @@ public class AkwamServer extends AbstractServer {
 
         Log.d(TAG, "fetchToWatchLocally run-4: " + url);
         //####
-        Document doc2 = getRequestDoc(url);
+        Document doc2 = getRequestDoc(url, OmerFlexApplication.getAppContext());
 //            Document doc2 = Jsoup.connect(url)
 //                    .cookies(getMappedCookies())
 //                    .headers(getHeaders())
@@ -1003,10 +1010,10 @@ public class AkwamServer extends AbstractServer {
     }
 
     @Override
-    public ArrayList<Movie> getHomepageMovies(ActivityCallback<ArrayList<Movie>> activityCallback) {
-        Log.d(TAG, "getHomepageMovies: ");
-//        return search(getConfig().getUrl()+"/recent", activityCallback);
-        return search("ratched", activityCallback);
+    public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
+//        Log.d(TAG, "getHomepageMovies: ");
+        return search(getConfig().getUrl()+"/recent", activityCallback, handleCookie);
+//        return search("ratched", activityCallback, handleCookie);
     }
 
     @Override

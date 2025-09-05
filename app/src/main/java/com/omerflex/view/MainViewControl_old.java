@@ -59,7 +59,7 @@ public abstract class MainViewControl_old extends SearchViewControl {
             ExecutorService executor2 = Executors.newSingleThreadExecutor();
             executor2.submit(() -> {
                 try {
-                    ArrayList<Movie> movies = server.getHomepageMovies(new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                    ArrayList<Movie> movies = server.getHomepageMovies(false, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                         @Override
                         public void onSuccess(ArrayList<Movie> result, String title) {
                             if (result.isEmpty()) {
@@ -118,7 +118,7 @@ public abstract class MainViewControl_old extends SearchViewControl {
         ExecutorService executor2 = Executors.newSingleThreadExecutor();
         executor2.submit(() -> {
 //            Log.d(TAG, "loadOmarServerResult: before");
-           ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
+           ArrayList<Movie> movies = server.getHomepageMovies(false, new SearchCallback());
 //            Log.d(TAG, "loadOmarServerResult: after");
             try {
                 loadIptvServerHomepageResult();
@@ -137,7 +137,7 @@ public abstract class MainViewControl_old extends SearchViewControl {
             Log.d(TAG, "loadIptvServerHomepageResult: undefined iptv server");
             return;
         }
-        ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
+        ArrayList<Movie> movies = server.getHomepageMovies(false, new SearchCallback());
     }
 
     private void updateDomain(String movieLink, ServerConfig config, MovieDbHelper dbHelper) {

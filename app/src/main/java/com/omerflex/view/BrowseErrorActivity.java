@@ -136,7 +136,7 @@ public class BrowseErrorActivity extends FragmentActivity {
 //                }
                 T serverAdapter = generateCategory(server.getLabel(), new ArrayList<>(), true);
 
-                movieRepository.getHomepageMovies( (category,movieList) -> {
+                movieRepository.getHomepageMovies( false, (category,movieList) -> {
                     if (movieList != null) {
                         Log.d("Movie", "Fetched movie33: " + movieList.toString());
                         updateMovieListOfMovieAdapter(movieList, serverAdapter);
@@ -207,7 +207,7 @@ public class BrowseErrorActivity extends FragmentActivity {
             ExecutorService executor2 = Executors.newSingleThreadExecutor();
             executor2.submit(() -> {
     //            Log.d(TAG, "loadOmarServerResult: before");
-               ArrayList<Movie> movies = server.getHomepageMovies(new SearchCallback());
+               ArrayList<Movie> movies = server.getHomepageMovies(false, new SearchCallback());
     //            Log.d(TAG, "loadOmarServerResult: after");
                 try {
                     loadIptvServerHomepageResult();
