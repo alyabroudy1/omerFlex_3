@@ -216,6 +216,19 @@ public class Util {
         return linkHeaders;
     }
 
+    public static String getIdFromUrl(String url) {
+        if (url == null) return null;
+
+        // Regex: look for '#' then capture consecutive digits
+        Pattern pattern = Pattern.compile("#(\\d+)");
+        Matcher matcher = pattern.matcher(url);
+
+        if (matcher.find()) {
+            return matcher.group(1); // the number after #
+        }
+        return null;
+    }
+
                 public static boolean shouldOverrideUrlLoading(String url) {
 
         boolean result =

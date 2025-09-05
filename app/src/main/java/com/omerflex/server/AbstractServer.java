@@ -179,6 +179,7 @@ public abstract class AbstractServer implements ServerInterface {
         } catch (Exception e) {
             Log.e(TAG, "Unexpected error processing " + currentUrl + ": " + e.getMessage());
         }
+        Log.d(TAG, "getSearchRequestDoc: ");
         return null;
     }
 

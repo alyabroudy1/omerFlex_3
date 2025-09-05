@@ -117,8 +117,8 @@ public class BrowserActivity extends AppCompatActivity {
             redirectUrl = movie.getVideoUrl();
             LinkHeadersDTO linkHeadersDTO = prepareLoadingLink(movie);
 //            Log.d(TAG, "onCreate: linkHeadersDTO: "+ linkHeadersDTO);
-//            Log.d(TAG, "onCreate: linkHeadersDTO url: " + linkHeadersDTO.url);
-//            Log.d(TAG, "onCreate: linkHeadersDTO headers: " + linkHeadersDTO.headers);
+            Log.d(TAG, "onCreate: linkHeadersDTO url: " + linkHeadersDTO.url);
+            Log.d(TAG, "onCreate: linkHeadersDTO headers: " + linkHeadersDTO.headers);
             webView.loadUrl(linkHeadersDTO.url, linkHeadersDTO.headers);
 
 
@@ -658,9 +658,7 @@ public class BrowserActivity extends AppCompatActivity {
             String videoUrl = request.getUrl().toString();
             mm.setVideoUrl(videoUrl + Util.generateHeadersForVideoUrl(request.getRequestHeaders()));
             Log.d(TAG, "handleSupportedMedia:xxxx videoUrl: "+ mm.getVideoUrl());
-            if (true){
-            return super.shouldInterceptRequest(view, request);
-            }
+
             if (!openedForResult) {
                 Log.d(TAG, "handleSupportedMedia: if (!openedForResult) 1029");
                 startExoplayer(mm);
