@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public abstract class AbstractServer implements ServerInterface {
 
@@ -317,6 +318,64 @@ public abstract class AbstractServer implements ServerInterface {
         getConfig().setUrl(newUrl);
         getConfig().setReferer(newUrl + "/");
         ServerConfigRepository.getInstance().updateConfig(getConfig());
+    }
+
+    protected Document getRequestDoc(String url, Context context, Map<String, String> customHeaders ) {
+        Document doc = null;
+        ServerConfig config = getConfig();
+        Log.d(TAG, "getRequestDoc: "+url);
+//        Map<String, String> existingHeaders = config.getHeaders();
+//        existingHeaders.putAll(customHeaders);
+        Log.d(TAG, "getRequestDoc: new headers" + customHeaders);
+        try {
+            doc = Jsoup.connect(url)
+                    .headers(customHeaders)
+                    .cookies(config.getMappedCookies())
+                    .followRedirects(true)
+                    .ignoreHttpErrors(true)
+                    .ignoreContentType(true)
+                    .timeout(10000) // 10 seconds timeout
+                    .get();
+
+            String docTitle = doc.title();
+            Log.d(TAG, "getRequestDoc: " + docTitle);
+
+            // If Jsoup gets a challenge page, use the activity to get the real page
+            if (true) {
+//            if (docTitle.contains("Just a moment") || docTitle.contains("Checking your browser")) {
+                Log.d(TAG, "getRequestDoc: Cloudflare detected, launching GetDocActivity.");
+                if (context == null) {
+                    Log.e(TAG, "getRequestDoc: Context is null, cannot launch GetDocActivity for Cloudflare.");
+                    return doc; // return the challenge page doc
+                }
+
+                // Use a CompletableFuture to get the result from the activity
+                com.omerflex.view.GetDocActivity.resultFuture = new java.util.concurrent.CompletableFuture<>();
+
+                Intent intent = new Intent(context, com.omerflex.view.GetDocActivity.class);
+                intent.putExtra("url", url); // Pass the URL to BrowserActivity via GetDocActivity
+                if (customHeaders.containsKey("referer")){
+                    intent.putExtra("referer", customHeaders.get("referer")); // Pass the URL to BrowserActivity via GetDocActivity
+                }
+                intent.putExtra("studio", getServerId()); // Pass the URL to BrowserActivity via GetDocActivity
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+
+                try {
+                    // Wait for the result from GetDocActivity
+                    String html = com.omerflex.view.GetDocActivity.resultFuture.get(2, java.util.concurrent.TimeUnit.MINUTES); // 2 minutes timeout
+                    if (html != null) {
+                        doc = Jsoup.parse(html);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "getRequestDoc: Failed to get document from GetDocActivity", e);
+                }
+            }
+
+        } catch (IOException e) {
+            Log.i(TAG, "error: " + e.getMessage() + ", url: "+ url);
+        }
+        return doc;
     }
 
     protected Document getRequestDoc(String url, Context context) {

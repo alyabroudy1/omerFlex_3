@@ -310,13 +310,14 @@ public class ArabSeedServer extends AbstractServer {
     @Override
     public boolean shouldCleanWebPage(String pageUrl, Movie movie){
         int state = movie.getState();
-        String videoUrl = movie.getVideoUrl();
-
-        return state == Movie.RESOLUTION_STATE &&
-                !(videoUrl.contains("vidmoly")  ||
-         movie.getVideoUrl().contains("voe.sx") ||
-                movie.getVideoUrl().contains("brucevotewithin")
-                );
+//        String videoUrl = movie.getVideoUrl();
+//
+//        return state == Movie.RESOLUTION_STATE &&
+//                !(videoUrl.contains("vidmoly")  ||
+//         movie.getVideoUrl().contains("voe.sx") ||
+//                movie.getVideoUrl().contains("brucevotewithin")
+//                );
+        return false;
     }
 
     @Override
@@ -837,6 +838,7 @@ public class ArabSeedServer extends AbstractServer {
 //                String userAgent = "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36";
                 String userAgent = "Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36";
                 String newUrl = movie.getVideoUrl() + "|referer=" + referer + "&User-Agent=" + userAgent;
+                Log.d(TAG, "fetchServers: newUrl:"+ newUrl);
                 clonedMovie.setVideoUrl(newUrl);
 //                startWebForResultActivity(clonedMovie);
                 activityCallback.onInvalidCookie(clonedMovie, getLabel());
@@ -880,7 +882,7 @@ public class ArabSeedServer extends AbstractServer {
 //                        link = link + "||referer=https://arabseed.show/";
                     if (!link.startsWith("http")){
 //                        link = movie.getVideoUrl() + link;
-                        link = movie.getVideoUrl() + link + "|Referer=" + referer;
+                        link = movie.getVideoUrl() + link;
                     }
                     server.setVideoUrl(link);
                     Log.d(TAG, "fetchServers:link:  "+link);
@@ -1229,7 +1231,7 @@ public class ArabSeedServer extends AbstractServer {
 
                     script =
                             "document.addEventListener('DOMContentLoaded', () => {" +
-                                    "  const element = document.querySelector('li[data-server=\"" + id + "\"]');" +
+                                    "  let element = document.querySelector('li[data-server=\"" + id + "\"]');" +
                                     "  if (element) {" +
                                     "    element.click();" +
                                     "  } else {" +

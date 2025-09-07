@@ -7,14 +7,14 @@ public class ServerFactory {
         switch (serverName) {
             case Movie.SERVER_MyCima:
                 return new MyCimaServer();
-//            case "CimaNow":
-//                return new CimaNowServer();
+            case Movie.SERVER_CimaNow:
+                return new CimaNowServer();
             case Movie.SERVER_ARAB_SEED:
                 return new ArabSeedServer();
             case Movie.SERVER_FASELHD:
                 return new FaselHdServer();
-//            case "Laroza":
-//                return new LarozaServer();
+            case Movie.SERVER_LAROZA:
+                return new LarozaServer();
             case Movie.SERVER_AKWAM:
                 return new AkwamServer();
 //            case "OldAkwam":

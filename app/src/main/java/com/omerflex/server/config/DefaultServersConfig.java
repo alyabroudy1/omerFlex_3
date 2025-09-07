@@ -28,13 +28,13 @@ public class DefaultServersConfig {
 //
 //
 //        //### arabseed ###
-        ServerConfig arabseedConfig = new ServerConfig();
-        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
-        arabseedConfig.setUrl("https://arabseed.show");
-        arabseedConfig.setReferer("https://arabseed.show/");
-        arabseedConfig.setActive(true);
-
-        scm.updateConfig(arabseedConfig);
+//        ServerConfig arabseedConfig = new ServerConfig();
+//        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
+//        arabseedConfig.setUrl("https://arabseed.show");
+//        arabseedConfig.setReferer("https://arabseed.show/");
+//        arabseedConfig.setActive(true);
+//
+//        scm.updateConfig(arabseedConfig);
 //
         //        ### fasel ###
 //        ServerConfig faselConfig = new ServerConfig();
@@ -46,13 +46,13 @@ public class DefaultServersConfig {
 //        scm.updateConfig(faselConfig);
 //
 //        //         ### laroza ###
-//        ServerConfig larozaConfig = new ServerConfig();
-//        larozaConfig.setName(Movie.SERVER_LAROZA);
-//        larozaConfig.setActive(true);
-//        larozaConfig.setUrl("https://www.laroza.now");
-//        larozaConfig.setReferer("https://www.laroza.now/");
-//
-//        scm.updateConfig(larozaConfig);
+        ServerConfig larozaConfig = new ServerConfig();
+        larozaConfig.setName(Movie.SERVER_LAROZA);
+        larozaConfig.setActive(true);
+        larozaConfig.setUrl("https://www.laroza.now");
+        larozaConfig.setReferer("https://www.laroza.now/");
+
+        scm.updateConfig(larozaConfig);
 //
 //         ### akwam ###
 //        ServerConfig akwamConfig = new ServerConfig();

@@ -119,6 +119,7 @@ public class BrowserActivity extends AppCompatActivity {
 //            Log.d(TAG, "onCreate: linkHeadersDTO: "+ linkHeadersDTO);
             Log.d(TAG, "onCreate: linkHeadersDTO url: " + linkHeadersDTO.url);
             Log.d(TAG, "onCreate: linkHeadersDTO headers: " + linkHeadersDTO.headers);
+            movie.setVideoUrl(linkHeadersDTO.url);
             webView.loadUrl(linkHeadersDTO.url, linkHeadersDTO.headers);
 
 
@@ -622,7 +623,8 @@ public class BrowserActivity extends AppCompatActivity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
            Uri url = request.getUrl();
-//             Log.d(TAG, "shouldInterceptRequest: " + url.getHost());
+             Log.d(TAG, "shouldInterceptRequest: " + url.getHost());
+             Log.d(TAG, "shouldInterceptRequest: " + request.getRequestHeaders());
             if (LinkFilterService.isAdDomain(url.getHost())){
                 Log.d(TAG, "Blocking resource: " + url.getHost());
                 return new WebResourceResponse("text/plain", "utf-8", null); // Return an empty response
@@ -688,6 +690,9 @@ public class BrowserActivity extends AppCompatActivity {
                 Log.d(TAG, "shouldOverrideUrlLoading 1 true: "+request.getUrl().toString());
                 return true;
             }
+//            if (true){
+//                return super.shouldOverrideUrlLoading(view, request);
+//            }
             String url = request.getUrl().toString();
             redirectUrl = url;
 

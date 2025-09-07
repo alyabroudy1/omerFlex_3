@@ -227,10 +227,10 @@ public class LinkFilterService {
             return true;
         }
         // 3. Check URL patterns
-//        if (isMediaByUrlPattern(url)){
-//            Log.d(TAG, "isSupportedMedia: true isMediaByUrlPattern, "+ url);
-//            return true;
-//        }
+        if (isMediaByUrlPattern(url)){
+            Log.d(TAG, "isSupportedMedia: true isMediaByUrlPattern, "+ url);
+            return true;
+        }
 
         // 4. Additional checks for streaming protocols
 //        if (url.contains("m3u8") || url.contains("mpd")) return true;
