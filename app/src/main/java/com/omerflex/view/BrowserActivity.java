@@ -120,6 +120,16 @@ public class BrowserActivity extends AppCompatActivity {
             Log.d(TAG, "onCreate: linkHeadersDTO url: " + linkHeadersDTO.url);
             Log.d(TAG, "onCreate: linkHeadersDTO headers: " + linkHeadersDTO.headers);
             movie.setVideoUrl(linkHeadersDTO.url);
+
+//            CookieManager cookieManager = CookieManager.getInstance();
+//            cookieManager.setAcceptCookie(true);
+//            String sessionId = linkHeadersDTO.headers.get("Cookie")+" path=/; domain=rm.freex2line.online";
+//
+//            Log.d(TAG, "onCreate: cookie: "+ sessionId);
+//            cookieManager.setCookie("rm.freex2line.online", sessionId);
+//            cookieManager.setCookie(linkHeadersDTO.headers.get("Referer"), linkHeadersDTO.headers.get("Cookie"));
+//            // Sync to WebView (important!)
+//            cookieManager.flush();
             webView.loadUrl(linkHeadersDTO.url, linkHeadersDTO.headers);
 
 
@@ -685,7 +695,11 @@ public class BrowserActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-             Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
+//            webView.evaluateJavascript("document.cookie", value -> {
+//                Log.d("WebView", "document.cookie = " + value);
+//            });
+
+            Log.d(TAG, "shouldOverrideUrlLoading: " + request.getUrl());
             if (request.getUrl().getScheme() == null || !request.getUrl().getScheme().contains("http")) {
                 Log.d(TAG, "shouldOverrideUrlLoading 1 true: "+request.getUrl().toString());
                 return true;

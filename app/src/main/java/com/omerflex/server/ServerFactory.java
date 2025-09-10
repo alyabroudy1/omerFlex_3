@@ -17,10 +17,10 @@ public class ServerFactory {
                 return new LarozaServer();
             case Movie.SERVER_AKWAM:
                 return new AkwamServer();
-//            case "OldAkwam":
-//                return new OldAkwamServer();
-//            case "Iptv":
-//                return new IptvServer();
+            case Movie.SERVER_OLD_AKWAM:
+                return new OldAkwamServer();
+            case Movie.SERVER_IPTV:
+                return new IptvServer();
 //            case "Omar":
 //                return new OmarServer();
 //            case "Imdb":

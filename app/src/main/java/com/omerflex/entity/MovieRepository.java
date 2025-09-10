@@ -21,7 +21,9 @@ import com.omerflex.server.config.ServerConfigRepository;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MovieRepository {
     private static final String TAG = "MovieRepository";
@@ -123,9 +125,11 @@ public class MovieRepository {
             Log.d(TAG, "getHomepageMovies: remote: " + remoteMovies.size());
             if (remoteMovies != null && !remoteMovies.isEmpty()) {
                 new Thread(() -> {
+                    boolean isIpTv = remoteMovies.get(0).getStudio().equals(Movie.SERVER_IPTV);
                     for (int i = 0; i < remoteMovies.size(); i++) {
                         Movie movie = remoteMovies.get(i);
-                        movie.setVideoUrl(removeDomain(movie.getVideoUrl()));
+                        String videoUrl = isIpTv ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
+                        movie.setVideoUrl(videoUrl);
                         Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
 
                         if (existingMovie == null) {
@@ -146,6 +150,27 @@ public class MovieRepository {
                 });
             }
         });
+    }
+
+    public void saveIptvMovies(HashMap<String, ArrayList<Movie>> iptvMovies, final IptvMovieListCallback callback) {
+        new Thread(() -> {
+            for (Map.Entry<String, ArrayList<Movie>> entry : iptvMovies.entrySet()) {
+                ArrayList<Movie> movies = entry.getValue();
+                for (int i = 0; i < movies.size(); i++) {
+                    Movie movie = movies.get(i);
+                    Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
+                    if (existingMovie == null) {
+                        long newId = movieDao.insert(movie);
+                        movie.setId(newId);
+                    } else {
+                        movies.set(i, existingMovie);
+                    }
+                }
+            }
+            new Handler(Looper.getMainLooper()).post(() -> {
+                callback.onIptvMovieListFetched(iptvMovies);
+            });
+        }).start();
     }
 
     public void fetchNextPage(String url, final MovieListCallback callback) {
@@ -389,5 +414,9 @@ public class MovieRepository {
 
     public interface MovieListCallback {
         void onMovieListFetched(String category, ArrayList<Movie> movies);
+    }
+
+    public interface IptvMovieListCallback {
+        void onIptvMovieListFetched(HashMap<String, ArrayList<Movie>> movies);
     }
 }

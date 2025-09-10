@@ -464,6 +464,7 @@ public class CimaNowServer extends AbstractServer{
                 if(hrefDomain.equals(movieReferer)){
                     continue;
                 }
+//                referer = href + "|Referer="+ movieReferer;
                 referer = href;
                 Log.d(TAG, "fetchItem: referer : "+ referer);
 
@@ -905,66 +906,67 @@ headers.put("Referer", ogUrl);
                         "       iframe.scrollIntoView({behavior: 'smooth'});" +
                         "    }" +
                         "" +
-//                        "" +
-//                        "// Create an array to collect movies\n" +
-//                        "let moviesList = [];\n" +
-//                        "\n" +
-//                        "// Main movie object\n" +
-//                        "let movie = {};\n" +
-//                        "\n" +
-//                        "// Find the img element inside the figure\n" +
-//                        "let img = document.querySelector(\"figure img\");\n" +
-//                        "\n" +
-//                        "if (img) {\n" +
-//                        "  let cardImageUrl = img.getAttribute(\"src\");\n" +
-//                        "  movie.bgImageUrl = cardImageUrl;\n" +
-//                        "  movie.backgroundImageUrl = cardImageUrl;\n" +
-//                        "  movie.cardImageUrl = cardImageUrl;\n" +
-//                        "\n" +
-//                        "  console.log(\"fetchItem: cardImageUrl =\", cardImageUrl);\n" +
-//                        "} else {\n" +
-//                        "  console.log(\"No img element found.\");\n" +
-//                        "}\n" +
-//                        "\n" +
-//                        "// Select the <li> element with the attribute aria-label=\"story\" and its <p>\n" +
-//                        "let storyElement = document.querySelector(\"li[aria-label=story] p\");\n" +
-//                        "\n" +
-//                        "if (storyElement) {\n" +
-//                        "  let des = storyElement.textContent.trim();\n" +
-//                        "  console.log(\"Description:\", des);\n" +
-//                        "  movie.description = des;\n" +
-//                        "} else {\n" +
-//                        "  console.log(\"fetchItem: No story element found.\");\n" +
-//                        "}\n" +
-//                        "\n" +
-//                        "// Select all <li> elements that have a data-index attribute\n" +
-//                        "let movieElements = document.querySelectorAll(\"li[data-index]\");\n" +
-//                        "console.log(\"movieElements:\", movieElements.length);\n" +
-//                        "\n" +
-//                        "movieElements.forEach(movieElement => {\n" +
-//                        "  let dataIndex = movieElement.getAttribute(\"data-index\");\n" +
-//                        "  let title = movieElement.textContent.trim();\n" +
-//                        "\n" +
-//                        "  // Create a new server item (sub-movie)\n" +
-//                        "  let serverItem = {};\n" +
-//                        "  serverItem.parentId = \""+movie.getId()+"\";\n" +
-//                        "  serverItem.title = title;\n" +
-//                        "  serverItem.videoUrl = dataIndex;\n" +
-//                        "  serverItem.state = \""+Movie.RESOLUTION_STATE+"\";   // mimic Movie.RESOLUTION_STATE\n" +
-//                        "  serverItem.type = \""+MovieType.RESOLUTION+"\";          // mimic MovieType.RESOLUTION\n" +
-//                        "\n" +
-//                        "  // Add to parent movie and moviesList\n" +
-//                        "  moviesList.push(serverItem);\n" +
-//                        "\n" +
-//                        "  console.log(\"fetchItem: serverItem:\", serverItem.videoUrl);\n" +
-//                        "});\n" +
-//                        "\n" +
-//                        "// Finally, add the main movie itself to the moviesList\n" +
-//                        "moviesList.push(movie);\n" +
-//                        "if (moviesList.length > 1) {\n" +
-//                        "    MyJavaScriptInterface.myMethod(JSON.stringify(moviesList));\n" +
-//                        "}" +
-//                        "" +
+                        "" +
+                        "// Create an array to collect movies\n" +
+                        "let moviesList = [];\n" +
+                        "\n" +
+                        "// Main movie object\n" +
+                        "let movie = {};\n" +
+                        "\n" +
+                        "// Find the img element inside the figure\n" +
+                        "let img = document.querySelector(\"figure img\");\n" +
+                        "\n" +
+                        "if (img) {\n" +
+                        "  let cardImageUrl = img.getAttribute(\"src\");\n" +
+                        "  movie.bgImageUrl = cardImageUrl;\n" +
+                        "  movie.backgroundImageUrl = cardImageUrl;\n" +
+                        "  movie.cardImageUrl = cardImageUrl;\n" +
+                        "\n" +
+                        "  console.log(\"fetchItem: cardImageUrl =\", cardImageUrl);\n" +
+                        "} else {\n" +
+                        "  console.log(\"No img element found.\");\n" +
+                        "}\n" +
+                        "\n" +
+                        "// Select the <li> element with the attribute aria-label=\"story\" and its <p>\n" +
+                        "let storyElement = document.querySelector(\"li[aria-label=story] p\");\n" +
+                        "\n" +
+                        "if (storyElement) {\n" +
+                        "  let des = storyElement.textContent.trim();\n" +
+                        "  console.log(\"Description:\", des);\n" +
+                        "  movie.description = des;\n" +
+                        "} else {\n" +
+                        "  console.log(\"fetchItem: No story element found.\");\n" +
+                        "}\n" +
+                        "\n" +
+                        "// Select all <li> elements that have a data-index attribute\n" +
+                        "let movieElements = document.querySelectorAll(\"li[data-index]\");\n" +
+                        "console.log(\"movieElements:\", movieElements.length);\n" +
+                        "\n" +
+                        "movieElements.forEach(movieElement => {\n" +
+                        "  let dataIndex = movieElement.getAttribute(\"data-index\");\n" +
+                        "  let dataId = movieElement.getAttribute(\"data-id\");\n" +
+                        "  let title = movieElement.textContent.trim();\n" +
+                        "\n" +
+                        "  // Create a new server item (sub-movie)\n" +
+                        "  let serverItem = {};\n" +
+                        "  serverItem.parentId = \""+movie.getId()+"\";\n" +
+                        "  serverItem.title = title;\n" +
+                        "  serverItem.videoUrl = " + getConfig().getUrl() + " \"/wp-content/themes/Cima%20Now%20New/core.php?action=switch&index=\" + dataIndex + \"&id=\"+dataId;\n"+
+                        "  serverItem.state = \""+Movie.RESOLUTION_STATE+"\";   // mimic Movie.RESOLUTION_STATE\n" +
+                        "  serverItem.type = \""+MovieType.RESOLUTION+"\";          // mimic MovieType.RESOLUTION\n" +
+                        "\n" +
+                        "  // Add to parent movie and moviesList\n" +
+                        "  moviesList.push(serverItem);\n" +
+                        "\n" +
+                        "  console.log(\"fetchItem: serverItem:\", serverItem.videoUrl);\n" +
+                        "});\n" +
+                        "\n" +
+                        "// Finally, add the main movie itself to the moviesList\n" +
+                        "moviesList.push(movie);\n" +
+                        "if (moviesList.length > 1) {\n" +
+                        "    MyJavaScriptInterface.myMethod(JSON.stringify(moviesList));\n" +
+                        "}" +
+                        "" +
                         "});\n";
             }
 

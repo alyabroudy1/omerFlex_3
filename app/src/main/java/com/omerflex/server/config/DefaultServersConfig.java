@@ -46,13 +46,13 @@ public class DefaultServersConfig {
 //        scm.updateConfig(faselConfig);
 //
 //        //         ### laroza ###
-        ServerConfig larozaConfig = new ServerConfig();
-        larozaConfig.setName(Movie.SERVER_LAROZA);
-        larozaConfig.setActive(true);
-        larozaConfig.setUrl("https://www.laroza.now");
-        larozaConfig.setReferer("https://www.laroza.now/");
-
-        scm.updateConfig(larozaConfig);
+//        ServerConfig larozaConfig = new ServerConfig();
+//        larozaConfig.setName(Movie.SERVER_LAROZA);
+//        larozaConfig.setActive(true);
+//        larozaConfig.setUrl("https://www.laroza.now");
+//        larozaConfig.setReferer("https://www.laroza.now/");
+//
+//        scm.updateConfig(larozaConfig);
 //
 //         ### akwam ###
 //        ServerConfig akwamConfig = new ServerConfig();
@@ -67,19 +67,20 @@ public class DefaultServersConfig {
 //        ServerConfig oldAkwamConfig = new ServerConfig();
 //        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
 //        oldAkwamConfig.setActive(true);
-//        oldAkwamConfig.setUrl("https://www.ak.sv/old");
-//        oldAkwamConfig.setReferer("https://www.ak.sv/old/");
+//        oldAkwamConfig.setUrl("https://www.ak.sv");
+//        oldAkwamConfig.setReferer("https://www.ak.sv/");
 //
 //        scm.updateConfig(oldAkwamConfig);
 //
 //        //### iptv ###
-//        ServerConfig iptvConfig = new ServerConfig();
-//        iptvConfig.setName(Movie.SERVER_IPTV);
+        ServerConfig iptvConfig = new ServerConfig();
+        iptvConfig.setName(Movie.SERVER_IPTV);
+        iptvConfig.setUrl("https://drive.google.com");
 //        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
-//        iptvConfig.setReferer("https://drive.google.com/");
-//        iptvConfig.setActive(true);
-//
-//        scm.updateConfig(iptvConfig);
+        iptvConfig.setReferer("https://drive.google.com/");
+        iptvConfig.setActive(true);
+
+        scm.updateConfig(iptvConfig);
 //
 //        // ### omar ###
 //        ServerConfig omarConfig = new ServerConfig();

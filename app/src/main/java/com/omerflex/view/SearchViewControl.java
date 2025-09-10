@@ -247,7 +247,7 @@ public abstract class SearchViewControl {
     }
 
     private <T> void handleIptvClickedItem(Movie movie, int position, T rowsAdapter, int defaultHeadersCounter) {
-        if (movie.getState() != Movie.PLAYLIST_STATE) {
+        if (movie.getState() != Movie.IPTV_PLAY_LIST_STATE) {
             Log.d(TAG, "handleIptvClickedItem: not PLAYLIST_STATE but: " + movie.getState());
             Util.openExoPlayer(movie, activity, true);
             return;
@@ -292,7 +292,7 @@ public abstract class SearchViewControl {
 //                    adapter.remove(
 //                            adapter.get((rowSize--)
 //                            ));
-                    removeRow(adapter, rowSize--);
+//                    removeRow(adapter, row_size--);
                 } catch (Exception exception) {
                     Log.d(TAG, "handleItemClicked: error deleting iptv header on main fragment: " + exception.getMessage());
                 }
@@ -324,7 +324,7 @@ public abstract class SearchViewControl {
 //                HashMap<String, ArrayList<Movie>> futureGroupedMovies = iptvServer.fetchAndGroupM3U8ContentAsync(movie, dbHelper);
 //                Log.d(TAG, "generateIptvRows: " + futureGroupedMovies.size());
 
-                M3U8ContentFetcher.fetchAndStoreM3U8Content(movie, dbHelper, result -> {
+                M3U8ContentFetcher.fetchAndStoreM3U8Content(movie, result -> {
                     // Update UI with the result
 //                updateChannelGroups(result);
                     // Print grouped movies

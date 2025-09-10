@@ -265,7 +265,7 @@ public class M3U8ContentFetcher_2 {
                     movie.setCardImageUrl(movieLogo);
                     movie.setGroup("google");
                     movie.setStudio(Movie.SERVER_IPTV);
-                    movie.setState(Movie.PLAYLIST_STATE);
+                    movie.setState(Movie.IPTV_PLAY_LIST_STATE);
                     movieList.add(movie);
                 }
             }
@@ -334,7 +334,7 @@ public class M3U8ContentFetcher_2 {
                     movie.setCardImageUrl(movieLogo);
                     movie.setGroup("google");
                     movie.setStudio(Movie.SERVER_IPTV);
-                    movie.setState(Movie.PLAYLIST_STATE);
+                    movie.setState(Movie.IPTV_PLAY_LIST_STATE);
                     movieList.add(movie);
                 }
             }

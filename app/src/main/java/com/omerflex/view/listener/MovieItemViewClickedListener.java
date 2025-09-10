@@ -1,10 +1,12 @@
 package com.omerflex.view.listener;
 
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.HeaderItem;
@@ -22,9 +24,11 @@ import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
 import com.omerflex.server.config.ServerConfigRepository;
+import com.omerflex.service.M3U8ContentFetcher;
 import com.omerflex.view.CardPresenter;
 import com.omerflex.view.VideoDetailsFragment;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +50,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
     Fragment mFragment;
     ArrayObjectAdapter mRowsAdapter;
     private final MovieRepository movieRepository;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     // A single, shared executor service for all background tasks
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -107,7 +112,9 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
                 break;
             case Movie.IPTV_PLAY_LIST_STATE:
                 // fetch iptv categories
-                handleIptvPlayListState(movie);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    handleIptvPlayListState(movie);
+                }
                 break;
             default:
                 // The default case handles all other states,
@@ -118,21 +125,67 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void handleIptvPlayListState(Movie movie) {
-        Log.d(TAG, "handleIptvPlayListState: list size: "+ mRowsAdapter.size());
-        // remove iptv created rows first
-        removeIpTvRows();
+        Log.d(TAG, "handleIptvPlayListState: list size: " + mRowsAdapter.size());
         // fetch iptv movies
-        for (int i = 0; i < 350; i++) {
-            movieRepository.getHomepageMovies(false, (category, movieList) -> {
-                if (movieList != null) {
-                    Log.d("Movie", "Fetched movie33: " + movieList.toString());
-                    HeaderItem header = new HeaderItem(Movie.IPTV_PLAY_LIST_STATE, category);
-                    addMovieRow(header, movieList);
-                } else {
-                    Log.d("Movie", "movieList not found.");
+        try {
+
+            executorService.submit(() -> {
+                // remove iptv created rows first
+
+                mainHandler.post(this::removeIpTvRows);
+                    M3U8ContentFetcher.fetchIpTvPlayList(movie, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                        @Override
+                        public void onSuccess(ArrayList<Movie> result, String title) {
+                            Log.d(TAG, "onSuccess: "+ title+ ", "+ result.size());
+//                            mainHandler.post(()-> generateCategory(title, result));
+
+                            generateCategory(title, result);
+                        }
+
+                        @Override
+                        public void onInvalidCookie(ArrayList<Movie> result, String title) {
+                            Log.d(TAG, "onInvalidCookie: ");
+                        }
+
+                        @Override
+                        public void onInvalidLink(ArrayList<Movie> result) {
+                            Log.d(TAG, "onInvalidLink: ");
+                        }
+
+                        @Override
+                        public void onInvalidLink(String message) {
+                            Log.d(TAG, "onInvalidLink: "+ message);
+                        }
+                    });
+            });
+
+//            executorService.submit(() -> {
+//                M3U8ContentFetcher.fetchAndStoreM3U8Content(movie, result -> {
+////                    Log.d(TAG, "handleIptvPlayListState: movies: "+ result.size());
+////                    Log.d(TAG, "handleIptvPlayListState: movies: "+ result.toString());
+////                    movieRepository.saveIptvMovies(result, movies -> {
+////                        movies.entrySet().stream()
+////                                .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
+////                                .forEach(
+////                                        entry -> mainHandler.post(()
+////                                                -> generateCategory(entry.getKey(), entry.getValue(), false)
+////                                        )
+////                                );
+////                        Log.d(TAG, "movies: " + movies.size());
+////                    });
+////                });
+////            });
+
+            mainHandler.post(() -> {
+                if (mFragment.getActivity() != null) {
+                    Toast.makeText(mFragment.getActivity(), "الرجاء الانتظار...", Toast.LENGTH_LONG).show();
                 }
             });
+
+        } catch (Exception e) {
+            Log.d(TAG, "handleIptvClickedItem: " + e.getMessage());
         }
     }
 
@@ -140,10 +193,10 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         // loop over listRows of the mRowsAdapter and delete rows of header id = Movie.IPTV_PLAY_LIST_STATE
         for (int i = 0; i < mRowsAdapter.size(); i++) {
             ListRow row = (ListRow) mRowsAdapter.get(i);
-            Log.d(TAG, "removeIpTvRows: " + row.getHeaderItem().getId() + ", " + row.getHeaderItem().getName());
+            Log.d(TAG, "removeIpTvRows: " + row.getHeaderItem().getId() );
             if (row.getHeaderItem().getId() == Movie.IPTV_PLAY_LIST_STATE) {
                 Log.d(TAG, "removeIpTvRows: removing row: " + row.getHeaderItem().getName());
-                mRowsAdapter.remove(row);
+                mainHandler.post(() ->mRowsAdapter.remove(row));
             }
         }
     }
@@ -152,6 +205,11 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(new CardPresenter());
         listRowAdapter.addAll(0, movies);
         mRowsAdapter.add(new ListRow(header, listRowAdapter));
+    }
+
+    private void generateCategory(String group, ArrayList<Movie> groupMovies) {
+        HeaderItem header = new HeaderItem(Movie.IPTV_PLAY_LIST_STATE, group);
+        addMovieRow(header, groupMovies);
     }
 
 

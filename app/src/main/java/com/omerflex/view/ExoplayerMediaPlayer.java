@@ -288,7 +288,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
             public void onTimelineChanged(Timeline timeline, int reason) {
                 Log.d(TAG, "onTimelineChanged: " + reason);
                 if (player.getDuration() != C.TIME_UNSET) {
-                    if (!hasSeekedToWatchedPosition) {
+                    if (!hasSeekedToWatchedPosition && movie.getParentId() != null) {
                         long movieLength = player.getDuration();
                         hasSeekedToWatchedPosition = true; // Set it here to only try once.
                         new Thread(() -> {

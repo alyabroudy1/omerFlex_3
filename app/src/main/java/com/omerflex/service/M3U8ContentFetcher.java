@@ -10,8 +10,8 @@ import androidx.annotation.RequiresApi;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.dto.GoogleFile;
 import com.omerflex.entity.dto.IptvSegmentDTO;
+import com.omerflex.server.ServerInterface;
 import com.omerflex.server.Util;
-import com.omerflex.service.database.MovieDbHelper;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -46,13 +46,12 @@ public class M3U8ContentFetcher {
     private static final OkHttpClient httpClient = new OkHttpClient();
     private static final ExecutorService dbExecutor =
             Executors.newFixedThreadPool(MAX_CONCURRENT_DB_THREADS);
-    MovieDbHelper dbHelper;
 
-    public static void fetchAndStoreM3U8Content(Movie iptvList, MovieDbHelper dbHelper,
+    public static void fetchAndStoreM3U8Content(Movie iptvList,
                                                 Consumer<HashMap<String, ArrayList<Movie>>> callback) {
         dbExecutor.execute(() -> {
             try {
-                HashMap<String, ArrayList<Movie>> result = fetchAndProcessContent(iptvList, dbHelper);
+                HashMap<String, ArrayList<Movie>> result = fetchAndProcessContent(iptvList);
                 new Handler(Looper.getMainLooper()).post(() -> callback.accept(result));
             } catch (Exception e) {
                 Log.e(TAG, "Fetch failed", e);
@@ -61,9 +60,60 @@ public class M3U8ContentFetcher {
         });
     }
 
+    public static void fetchIpTvPlayList(Movie iptvList, ServerInterface.ActivityCallback<ArrayList<Movie>> callback) {
+        dbExecutor.execute(() -> {
+            try {
+                Log.d(TAG, "fetchIpTvPlayList: ");
+                String contentsBody = fetchLinkContent(iptvList.getVideoUrl());
+                if (contentsBody == null) {
+                    Log.d(TAG, "fetchIpTvPlayList: contentsBody is null");
+                    callback.onInvalidLink("contentsBody is null: " + iptvList.getVideoUrl());
+                    return;
+                }
+                String hash = String.valueOf(contentsBody.hashCode());  // Convert long to String;
+                // todo find a way to delete ole iptv movies if the movie is updated
+                HashMap<String, ArrayList<Movie>> parsedContent = parseContentWithStreaming(contentsBody, hash);
+                Log.d(TAG, "fetchAndProcessContent: parsedContent: "+ parsedContent);
+                Log.d(TAG, "fetchAndProcessContent: parsedContent: "+ parsedContent.size());
+                // for key and value in parsedContent
+                for (String key : parsedContent.keySet()) {
+                    Log.d(TAG, "fetchAndProcessContent: key: "+ key);
+                    callback.onSuccess(parsedContent.get(key), key);
+                }
+                return;
+//                return parsedContent;
 
-    public static HashMap<String, ArrayList<Movie>> fetchAndProcessContent(Movie iptvList, MovieDbHelper dbHelper)
+            } catch (Exception e) {
+                Log.e(TAG, "Fetch failed", e);
+                new Handler(Looper.getMainLooper()).post(() -> callback.onInvalidLink(e.getMessage()));
+            }
+        });
+    }
+
+    public static String fetchLinkContent(String link)
             throws IOException {
+        Log.d(TAG, "fetchLinkContent: "+ link);
+        Request request = new Request.Builder()
+                .url(link)
+                .build();
+
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                Log.w(TAG, "Empty response or unsuccessful request");
+                return null;
+            }
+
+            //            String hash = calculateHash(body.getBytes(DEFAULT_CHARSET), "SHA-256");
+//            String hash = String.valueOf(body.hashCode());  // Convert long to String;
+            Log.d(TAG, "fetchLinkContent: success fetching the contents");
+            return response.body().string();
+        }
+    }
+
+
+    public static HashMap<String, ArrayList<Movie>> fetchAndProcessContent(Movie iptvList)
+            throws IOException {
+        Log.d(TAG, "fetchAndProcessContent: "+ iptvList.getVideoUrl());
         Request request = new Request.Builder()
                 .url(iptvList.getVideoUrl())
                 .build();
@@ -77,36 +127,30 @@ public class M3U8ContentFetcher {
             String body = response.body().string();
 //            String hash = calculateHash(body.getBytes(DEFAULT_CHARSET), "SHA-256");
             String hash = String.valueOf(body.hashCode());  // Convert long to String;
-//            HashMap<String, ArrayList<Movie>> cached = dbHelper.getMovieListByHash(hash);
-//
-//            if (!cached.isEmpty()) {
-//                Log.d(TAG, "Using cached content");
-//                return cached;
-//            }
 
             HashMap<String, ArrayList<Movie>> parsedContent = parseContentWithStreaming(body, hash);
-//            persistContent(parsedContent, dbHelper);
+            Log.d(TAG, "fetchAndProcessContent: parsedContent: "+ parsedContent.size());
             return parsedContent;
         }
     }
 
 
-    private static void persistContent(HashMap<String, ArrayList<Movie>> content, MovieDbHelper dbHelper) {
-        ArrayList<Movie> allMovies = new ArrayList<>();
-        for (ArrayList<Movie> group : content.values()) {
-            allMovies.addAll(group);
-        }
-
-//        dbExecutor.execute(() -> {
-//            try {
-//                dbHelper.beginTransaction();
-//                dbHelper.bulkInsertMovies(allMovies);
-//                dbHelper.setTransactionSuccessful();
-//            } finally {
-//                dbHelper.endTransaction();
-//            }
-//        });
-    }
+//    private static void persistContent(HashMap<String, ArrayList<Movie>> content, MovieDbHelper dbHelper) {
+//        ArrayList<Movie> allMovies = new ArrayList<>();
+//        for (ArrayList<Movie> group : content.values()) {
+//            allMovies.addAll(group);
+//        }
+//
+////        dbExecutor.execute(() -> {
+////            try {
+////                dbHelper.beginTransaction();
+////                dbHelper.bulkInsertMovies(allMovies);
+////                dbHelper.setTransactionSuccessful();
+////            } finally {
+////                dbHelper.endTransaction();
+////            }
+////        });
+//    }
 
     public static HashMap<String, ArrayList<Movie>> parseContentWithStreaming(String content, String hash) {
         HashMap<String, ArrayList<Movie>> groupedMovies = new LinkedHashMap<>();
@@ -310,22 +354,24 @@ public class M3U8ContentFetcher {
     public static CompletableFuture<List<Movie>> fetchDriveFilesAsync(String m3u8Url) {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                List<Movie> tempList = fetchDriveFiles(m3u8Url);
+//            try {
+//                List<Movie> tempList = fetchDriveFiles(m3u8Url);
+                List<Movie> tempList = new ArrayList<>();
                 return tempList;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return new ArrayList<>();
-            }
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//                return new ArrayList<>();
+//            }
         }, executor);
     }
 
-    public static List<Movie> fetchDriveFiles(String folderUrl) throws IOException {
+    public static void fetchDriveFiles(String folderUrl, ServerInterface.ActivityCallback<ArrayList<Movie>> activityCallback) throws IOException {
+        Log.d(TAG, "fetchDriveFiles: "+folderUrl);
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(folderUrl)
                 .build();
-        List<Movie> movieList = new ArrayList<>();
+        ArrayList<Movie> movieList = new ArrayList<>();
 
         try (Response response = client.newCall(request).execute()) {
             if (response.isSuccessful()) {
@@ -379,15 +425,19 @@ public class M3U8ContentFetcher {
                     movie.setCardImageUrl(movieLogo);
                     movie.setGroup("google");
                     movie.setStudio(Movie.SERVER_IPTV);
-                    movie.setState(Movie.PLAYLIST_STATE);
+                    movie.setState(Movie.IPTV_PLAY_LIST_STATE);
                     movieList.add(movie);
                 }
+                activityCallback.onSuccess(movieList, "google");
+            }else {
+                Log.d(TAG, "fetchDriveFiles: error:"+ response.body());
             }
         } catch (IOException e) {
+            Log.d(TAG, "fetchDriveFiles: error: "+ e.getMessage());
             e.printStackTrace();
         }
         Log.d("TAG", "fetchDriveFiles: " + movieList);
-        return movieList;
+        activityCallback.onInvalidLink("empty list");
     }
 
 
@@ -485,7 +535,7 @@ public class M3U8ContentFetcher {
 
     // Method to extract a VLC option from a line in Android Java
     private static String extractVlcOpt(String line, String option) {
-        // Create the regex pattern to find the option and everything after '='
+        // Create the regex pattern to find the option and everything after "="
         String pattern = option + "=(.*)";
 
         Pattern regex = Pattern.compile(pattern);
@@ -532,27 +582,27 @@ public class M3U8ContentFetcher {
 //            String fileName = null;
 //            String credentialUrl = null;
 //
-//            try {
-//                URL parsedUrl = new URL(url);
-//                String host = parsedUrl.getHost();
-//
-//                if (host != null && host.contains("airmax")) {
-//                    String[] pathParts = parsedUrl.getPath().split("/");
-//                    String domain = parsedUrl.getProtocol() + "://" + host + (parsedUrl.getPort() != -1 ? ":" + parsedUrl.getPort() : "") + "/";
-//                    String username = pathParts.length > 0 ? pathParts[0] : "";
-//                    String password = pathParts.length > 1 ? pathParts[1] : "";
-//                    fileName = pathParts.length > 0 ? pathParts[pathParts.length - 1] : "";
-//
-//                    // Extract part after the last occurrence of '|'
-//                    if (fileName.contains("|")) {
-//                        fileName = fileName.split("\\|")[0];
-//                    }
-//                    credentialUrl = domain + username + "/" + password + "/";
-//                }
-//            } catch (MalformedURLException e) {
-//                e.printStackTrace();
-//                return null;  // Return null in case of URL parsing error
-//            }
+////            try {
+////                URL parsedUrl = new URL(url);
+////                String host = parsedUrl.getHost();
+////
+////                if (host != null && host.contains("airmax")) {
+////                    String[] pathParts = parsedUrl.getPath().split("/");
+////                    String domain = parsedUrl.getProtocol() + "://" + host + (parsedUrl.getPort() != -1 ? ":" + parsedUrl.getPort() : "") + "/";
+////                    String username = pathParts.length > 0 ? pathParts[0] : "";
+////                    String password = pathParts.length > 1 ? pathParts[1] : "";
+////                    fileName = pathParts.length > 0 ? pathParts[pathParts.length - 1] : "";
+////
+////                    // Extract part after the last occurrence of '|'
+////                    if (fileName.contains("|")) {
+////                        fileName = fileName.split("\\|")[0];
+////                    }
+////                    credentialUrl = domain + username + "/" + password + "/";
+////                }
+////            } catch (MalformedURLException e) {
+////                e.printStackTrace();
+////                return null;  // Return null in case of URL parsing error
+////            }
 
             // Extract attributes from the infoLine
 
@@ -614,7 +664,7 @@ public class M3U8ContentFetcher {
                 return null;
             }
 
-            // Replace '#http' with 'http' in the URL
+            // Replace "#http" with "http" in the URL
             url = url.replace("#http", "http");
         }
 

@@ -409,7 +409,7 @@ public class MobileHomepageActivity extends AppCompatActivity {
         }
 
         private void handleIptvClickedItem(Movie movie, int position, HorizontalMovieAdapter horizontalMovieAdapter) {
-            if (movie.getState() == Movie.PLAYLIST_STATE) {
+            if (movie.getState() == Movie.IPTV_PLAY_LIST_STATE) {
                 // Todo: generateCategories for a specific iptv list
             } else {
                 Util.openExoPlayer(movie, activity, true);
