@@ -1,6 +1,8 @@
 package com.omerflex.server.config;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.lifecycle.LiveData;
@@ -10,22 +12,25 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.omerflex.entity.Movie;
-import com.omerflex.entity.MovieRepository;
+import com.omerflex.dao.ServerConfigDao;
+import com.omerflex.db.AppDatabase;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.ServerFactory;
-import com.omerflex.dao.ServerConfigDao;
-import com.omerflex.db.AppDatabase;
+import com.omerflex.service.UpdateService;
+
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -38,11 +43,22 @@ public class ServerConfigRepository {
     private final ServerConfigDao serverConfigDao;
     private final ConcurrentHashMap<String, ServerConfig> cache = new ConcurrentHashMap<>();
     private final MutableLiveData<Boolean> isInitialized = new MutableLiveData<>(false);
+    private final Context appContext;
+
+    // A more robust date format that handles ISO 8601 with 'Z' for UTC.
+    private static final SimpleDateFormat remoteDateFormatWithZ;
+    static {
+        remoteDateFormatWithZ = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+        remoteDateFormatWithZ.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
+    // Fallback for the old format without timezone.
+    private static final SimpleDateFormat remoteDateFormatLegacy = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
 
 
     private ServerConfigRepository(Context context) {
         AppDatabase db = AppDatabase.getDatabase(context.getApplicationContext());
         this.serverConfigDao = db.serverConfigDao();
+        this.appContext = context.getApplicationContext();
     }
 
     public static synchronized void initialize(Context context) {
@@ -81,11 +97,11 @@ public class ServerConfigRepository {
         if (existingConfig != null) {
             newConfig.setId(existingConfig.getId());
             serverConfigDao.update(newConfig);
-            cache.put(newConfig.getName(), newConfig);
         } else {
             serverConfigDao.insert(newConfig);
-            cache.remove(newConfig.getName());
         }
+        // Corrected cache logic: always cache the latest version.
+        cache.put(newConfig.getName(), newConfig);
     }
 
     public LiveData<List<ServerConfig>> getAllConfigs() {
@@ -107,7 +123,7 @@ public class ServerConfigRepository {
         isInitialized.postValue(true);
     }
 
-    public void checkForRemoteUpdates() {
+    public void checkForRemoteUpdates(UpdateService updateService) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
             try {
@@ -115,21 +131,53 @@ public class ServerConfigRepository {
                 Request request = new Request.Builder().url(REMOTE_CONFIG_URL).build();
                 try (Response response = client.newCall(request).execute()) {
                     if (response.isSuccessful() && response.body() != null) {
+                        String responseBody = response.body().string();
                         Gson gson = new Gson();
-                        JsonObject jsonObject = gson.fromJson(response.body().string(), JsonObject.class);
+                        JsonObject jsonObject = gson.fromJson(responseBody, JsonObject.class);
                         JsonArray serversArray = jsonObject.getAsJsonArray("servers");
+
+                        Log.d(TAG, "Number of servers found in remote config: " + serversArray.size());
+
                         for (JsonElement serverElement : serversArray) {
-                            JsonObject serverObject = serverElement.getAsJsonObject();
-                            ServerConfigDTO serverConfigDTO = gson.fromJson(serverObject, ServerConfigDTO.class);
-                            updateServerConfigIfNeeded(serverConfigDTO);
+                            try {
+                                JsonObject serverObject = serverElement.getAsJsonObject();
+                                ServerConfigDTO serverConfigDTO = gson.fromJson(serverObject, ServerConfigDTO.class);
+
+                                if (serverConfigDTO == null || serverConfigDTO.name == null) {
+                                    Log.w(TAG, "Skipping server with null DTO or name in object: " + serverObject);
+                                    continue;
+                                }
+
+                                Log.d(TAG, "Processing remote config for: " + serverConfigDTO.name);
+
+                                if ("app".equals(serverConfigDTO.name)) {
+                                    handleAppUpdate(updateService, serverConfigDTO);
+                                } else {
+                                    updateServerConfigIfNeeded(serverConfigDTO);
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Failed to process a server element: " + serverElement.toString(), e);
+                                // Continue to the next element
+                            }
                         }
+                    } else {
+                        Log.e(TAG, "Remote config fetch failed: " + response.code() + " " + response.message());
                     }
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "Error fetching remote server configs", e);
+            } catch (IOException | com.google.gson.JsonSyntaxException e) {
+                Log.e(TAG, "Error fetching or parsing remote server configs", e);
             }
         });
         executor.shutdown();
+    }
+
+    private void handleAppUpdate(UpdateService updateService, ServerConfigDTO appConfigDto) {
+        if (updateService != null) {
+            Log.d(TAG, "Checking for app updates...");
+            new Handler(Looper.getMainLooper()).post(() -> {
+                updateService.checkForUpdates(appConfigDto);
+            });
+        }
     }
 
     private void updateServerConfigIfNeeded(ServerConfigDTO githubServerConfigDTO) {
@@ -137,36 +185,47 @@ public class ServerConfigRepository {
             return;
         }
 
+        Date githubDate;
+        try {
+            // Try parsing with the timezone format first
+            githubDate = remoteDateFormatWithZ.parse(githubServerConfigDTO.date);
+        } catch (ParseException e) {
+            // Fallback to the legacy format
+            try {
+                githubDate = remoteDateFormatLegacy.parse(githubServerConfigDTO.date);
+            } catch (ParseException pe) {
+                Log.e(TAG, "Error parsing date from remote config for " + githubServerConfigDTO.name, pe);
+                return; // Skip update if date is unparseable
+            }
+        }
+
         ServerConfig existingConfig = serverConfigDao.findByName(githubServerConfigDTO.name);
         if (existingConfig == null) {
             // This is a new server, add it.
-            ServerConfig newConfig = new ServerConfig();
-            newConfig.setName(githubServerConfigDTO.name);
-            newConfig.setUrl(githubServerConfigDTO.url);
-            newConfig.setReferer(githubServerConfigDTO.referer);
-            newConfig.setLabel(githubServerConfigDTO.label);
-            newConfig.setActive(githubServerConfigDTO.isActive);
-            try {
-                newConfig.setCreatedAt(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(githubServerConfigDTO.date));
-            } catch (ParseException e) {
-                newConfig.setCreatedAt(new Date());
-            }
-            updateConfig(newConfig);
-            return;
-        }
-
-        try {
-            Date githubDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(githubServerConfigDTO.date);
-            if (githubDate.getTime() > existingConfig.getCreatedAt().getTime()) {
+            Log.d(TAG, "updateServerConfigIfNeeded: existingConfig == null skipping");
+//            Log.d(TAG, "Adding new server: " + githubServerConfigDTO.name);
+//            ServerConfig newConfig = new ServerConfig();
+//            newConfig.setName(githubServerConfigDTO.name);
+//            newConfig.setUrl(githubServerConfigDTO.url);
+//            newConfig.setReferer(githubServerConfigDTO.referer);
+//            newConfig.setLabel(githubServerConfigDTO.label);
+//            newConfig.setActive(githubServerConfigDTO.isActive);
+//            newConfig.setCreatedAt(githubDate); // Set date from remote
+//            updateConfig(newConfig);
+        } else {
+            // Existing server, check if update is needed
+            Date localDate = existingConfig.getCreatedAt();
+            if (localDate == null || githubDate.after(localDate)) {
+                Log.d(TAG, "Updating existing server: " + githubServerConfigDTO.name + (localDate == null ? " (local date was null)" : ""));
                 existingConfig.setCreatedAt(githubDate);
                 existingConfig.setUrl(githubServerConfigDTO.url);
                 existingConfig.setReferer(githubServerConfigDTO.referer);
                 existingConfig.setLabel(githubServerConfigDTO.label);
                 existingConfig.setActive(githubServerConfigDTO.isActive);
                 updateConfig(existingConfig);
+            } else {
+                Log.d(TAG, "Server " + githubServerConfigDTO.name + " is already up to date.");
             }
-        } catch (ParseException e) {
-            Log.e(TAG, "Error parsing date from remote config", e);
         }
     }
 

@@ -106,7 +106,7 @@ public class OmerFlexApplication extends Application {
                 try {
                     ServerConfigRepository.initialize(getApplicationContext());
                     ServerConfigRepository.getInstance().initializeDbWithDefaults();
-                    ServerConfigRepository.getInstance().checkForRemoteUpdates();
+                    ServerConfigRepository.getInstance().checkForRemoteUpdates(null);
                     Log.i(TAG, "ServerConfigRepository initialized");
                 } catch (Exception e) {
                     Log.e(TAG, "Error initializing ServerConfigRepository", e);

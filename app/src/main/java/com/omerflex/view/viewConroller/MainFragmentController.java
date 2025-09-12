@@ -10,6 +10,7 @@ import android.util.Log;
 import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
+import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.UpdateService;
 
 import java.util.ArrayList;
@@ -37,6 +38,12 @@ public class MainFragmentController extends BaseFragmentController {
             movieRepository.getWatchedChannels(this::onMoviesLoaded);
             movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
         });
+        try {
+            Log.d(TAG, "loadData: try to check for update");
+            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
+        }catch (Exception e){
+            Log.e(TAG, "checkForRemoteUpdates: "+e.getMessage());
+        }
     }
 
     private void onHomepageMoviesLoaded(String category, ArrayList<Movie> movieList) {

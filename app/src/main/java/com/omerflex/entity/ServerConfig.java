@@ -31,6 +31,7 @@ public class ServerConfig {
 
     public ServerConfig (){
         headers = new HashMap<>();
+        this.createdAt = new Date();
     }
 
     // Add update method
