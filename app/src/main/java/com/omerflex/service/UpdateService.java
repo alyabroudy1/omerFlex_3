@@ -45,7 +45,7 @@ public class UpdateService {
     private static final int REQUEST_CODE_INSTALL_PERMISSION = 100;
     private static final int REQUEST_CODE_STORAGE_PERMISSION = 101;
     private boolean permissionRequested = false;
-    private static String APK_URL = "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/omerFlex.apk";
+    private static String APK_URL = "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile-4/app/omerFlex.apk";
     private static String APK_NAME = "omerFlex";
 
     private long downloadId;
