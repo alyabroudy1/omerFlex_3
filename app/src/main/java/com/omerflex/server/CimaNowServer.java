@@ -64,8 +64,8 @@ public class CimaNowServer extends AbstractServer{
         }
         ArrayList<Movie> movieList = new ArrayList<>();
 
-//        if (doc.title().contains("moment")) {
-        if (!handleCookie) {
+        if (doc.title().contains("moment")) {
+//        if (!handleCookie) {
 //            setCookieRefreshed(false);
             //**** default
             // String title = "ابحث في موقع فاصل ..";

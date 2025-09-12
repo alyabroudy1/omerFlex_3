@@ -102,7 +102,7 @@ public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> 
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
         ArrayList<Movie> iptvList = new ArrayList<>();
-        activityCallback.onSuccess(iptvList, getLabel());
+        activityCallback.onInvalidLink("nothing to show");
 
         // fetch google drive iptv playlists
 //        try {

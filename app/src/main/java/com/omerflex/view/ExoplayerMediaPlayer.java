@@ -417,6 +417,11 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
                     if (parentMovie.getType() == MovieType.FILM) {
                         movieRepository.setMovieIsHistory(parentMovie.getId());
                     } else if (parentMovie.getType() == MovieType.EPISODE) {
+                        if (parentMovie.getParentId() == null)
+                        {
+                            movieRepository.setMovieIsHistory(parentMovie.getId());
+                            return;
+                        }
                         Movie season = movieRepository.getMovieByIdSync(parentMovie.getParentId());
                         if (season != null) {
                             if (season.getParentId() != null) {

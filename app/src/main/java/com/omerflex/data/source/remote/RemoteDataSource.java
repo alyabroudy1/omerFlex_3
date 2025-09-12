@@ -35,55 +35,96 @@ public class RemoteDataSource {
 //        callback.onMovieFetched(generateDummyMovies().get(0));
     }
 
-    public void fetchHomepageMovies(boolean handleCookie, MovieRepository.MovieListCallback callback) {
+    public interface AllMoviesCallback {
+        void onAllMoviesFetched();
+    }
+
+    public void fetchHomepageMovies(boolean handleCookie, MovieRepository.MovieListCallback callback, AllMoviesCallback allMoviesCallback) {
         ServerConfigRepository repository = ServerConfigRepository.getInstance();
         Log.d(TAG, "fetchHomepageMovies: ");
-        // LiveData must be observed from the main thread.
-        // We post the observer attachment to the main looper.
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             repository.getIsInitialized().observeForever(new androidx.lifecycle.Observer<Boolean>() {
                 @Override
                 public void onChanged(Boolean isInitialized) {
                     if (isInitialized != null && isInitialized) {
-                        // The configuration is ready. We can now fetch the movies.
-                        // It's important to remove the observer to avoid memory leaks.
                         repository.getIsInitialized().removeObserver(this);
 
-                        ExecutorService executor = Executors.newSingleThreadExecutor();
+                        ExecutorService executor = Executors.newCachedThreadPool();
                         executor.submit(() -> {
                             List<ServerConfig> configs = repository.getAllActiveConfigsList();
+                            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(configs.size());
+                            Log.d(TAG, "fetchHomepageMovies: Starting fetch for " + configs.size() + " servers.");
+
                             for (ServerConfig config : configs) {
-                                AbstractServer server = ServerFactory.createServer(config.getName());
-                                Log.d(TAG, "fetchHomepageMovies: config: " + config.getName() + ", "+ server.getLabel());
+                                AbstractServer server = null;
+                                try {
+                                    server = ServerFactory.createServer(config.getName());
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Failed to create server: " + config.getName(), e);
+                                    latch.countDown(); // countDown even if server creation fails
+                                    continue;
+                                }
+
                                 if (server != null) {
+                                    final String serverName = server.getLabel();
+                                    Log.d(TAG, "fetchHomepageMovies: config: " + config.getName() + ", " + serverName);
                                     server.getHomepageMovies(handleCookie, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                                         @Override
                                         public void onSuccess(ArrayList<Movie> result, String title) {
-                                            if (result.isEmpty()){
-                                                Log.d(TAG, "onSuccess: "+ title + " is empty");
+                                            Log.d(TAG, "onSuccess from " + serverName);
+                                            if (result.isEmpty()) {
+                                                Log.d(TAG, "onSuccess: " + title + " is empty");
                                             }
-                                            Log.d(TAG, "onSuccess: "+ title);
                                             callback.onMovieListFetched(title, result);
-                                            return;
+                                            latch.countDown();
+                                            Log.d(TAG, "Latch count: " + latch.getCount());
                                         }
 
                                         @Override
                                         public void onInvalidCookie(ArrayList<Movie> result, String title) {
-                                            Log.d(TAG, "onInvalidCookie: ");
+                                            Log.d(TAG, "onInvalidCookie from " + serverName);
                                             callback.onMovieListFetched(title, result);
+                                            latch.countDown();
+                                            Log.d(TAG, "Latch count: " + latch.getCount());
                                         }
 
                                         @Override
                                         public void onInvalidLink(ArrayList<Movie> result) {
-                                            Log.d(TAG, "onInvalidLink: ");
+                                            Log.d(TAG, "onInvalidLink from " + serverName);
+                                            latch.countDown();
+                                            Log.d(TAG, "Latch count: " + latch.getCount());
                                         }
 
                                         @Override
                                         public void onInvalidLink(String message) {
-                                            Log.d(TAG, "onInvalidLink: ");
+                                            Log.d(TAG, "onInvalidLink from " + serverName + ": " + message);
+                                            latch.countDown();
+                                            Log.d(TAG, "Latch count: " + latch.getCount());
                                         }
                                     });
+                                } else {
+                                    latch.countDown();
+                                    Log.d(TAG, "Server is null. Latch count: " + latch.getCount());
                                 }
+                            }
+
+                            try {
+                                Log.d(TAG, "Waiting for latch...");
+                                boolean completed = latch.await(30, java.util.concurrent.TimeUnit.SECONDS);
+                                if (!completed) {
+                                    Log.e(TAG, "Latch timed out. Not all servers responded in time. Latch count: " + latch.getCount());
+                                }
+                                if (allMoviesCallback != null) {
+                                    Log.d(TAG, "All servers responded or timed out. Calling onAllMoviesFetched.");
+                                    new android.os.Handler(android.os.Looper.getMainLooper()).post(allMoviesCallback::onAllMoviesFetched);
+                                } else {
+                                    Log.d(TAG, "allMoviesCallback is null. Not calling onAllMoviesFetched.");
+                                }
+                            } catch (InterruptedException e) {
+                                Log.e(TAG, "Latch await interrupted", e);
+                                Thread.currentThread().interrupt(); // Preserve the interrupted status
+                            } catch (Exception e) {
+                                Log.e(TAG, "Exception while waiting for latch", e);
                             }
                         });
                         executor.shutdown();

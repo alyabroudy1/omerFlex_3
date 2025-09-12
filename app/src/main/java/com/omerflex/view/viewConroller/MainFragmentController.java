@@ -20,7 +20,7 @@ public class MainFragmentController extends BaseFragmentController {
     private MovieRepository movieRepository;
     UpdateService updateService;
     public static String TAG = "MainFragmentController";
-    private final AtomicBoolean subsequentCallsInitiated = new AtomicBoolean(false);
+    
 
     public MainFragmentController(BrowseSupportFragment fragment, ArrayObjectAdapter rowsAdapter, Drawable defaultBackground) {
         super(fragment, rowsAdapter, defaultBackground);
@@ -31,23 +31,20 @@ public class MainFragmentController extends BaseFragmentController {
     @Override
     public void loadData() {
         Log.d(TAG, "loadData: ");
-        subsequentCallsInitiated.set(false);
-        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded);
+        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded, () -> {
+            Log.d(TAG, "All homepage movies fetched. Loading subsequent data.");
+            movieRepository.getWatchedMovies(this::onMoviesLoaded);
+            movieRepository.getWatchedChannels(this::onMoviesLoaded);
+            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
+        });
     }
 
     private void onHomepageMoviesLoaded(String category, ArrayList<Movie> movieList) {
         if (movieList != null && !movieList.isEmpty()) {
-            Log.d("Movie", "Fetched movie33: " + movieList.toString());
             HeaderItem header = new HeaderItem(1, category);
             addMovieRow(header, movieList);
         } else {
-            Log.d("Movie", "movieList not found.");
-        }
-
-        if (subsequentCallsInitiated.compareAndSet(false, true)) {
-            movieRepository.getWatchedMovies(this::onMoviesLoaded);
-            movieRepository.getWatchedChannels(this::onMoviesLoaded);
-            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
+            Log.d(TAG, "movieList not found.");
         }
     }
 

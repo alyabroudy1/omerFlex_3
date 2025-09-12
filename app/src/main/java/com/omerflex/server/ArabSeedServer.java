@@ -1424,10 +1424,10 @@ public class ArabSeedServer extends AbstractServer {
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
 //        return search("la casa", activityCallback, handleCookie);
-        return search("sonic", activityCallback, handleCookie);
-        //        return search(
+//        return search("sonic", activityCallback, handleCookie);
+                return search(
 ////                config.url +"/category/netfilx/");
-//                getConfig().getUrl() + "/latest1/", activityCallback, handleCookie);
+                getConfig().getUrl() + "/latest1/", activityCallback, handleCookie);
     }
 
     @Override

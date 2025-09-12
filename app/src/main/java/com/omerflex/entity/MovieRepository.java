@@ -121,6 +121,10 @@ public class MovieRepository {
     }
 
     public void getHomepageMovies(boolean handleCookie, final MovieListCallback callback) {
+        getHomepageMovies(handleCookie, callback, null);
+    }
+
+    public void getHomepageMovies(boolean handleCookie, final MovieListCallback callback, final RemoteDataSource.AllMoviesCallback allMoviesCallback) {
         Log.d(TAG, "getHomepageMovies: ");
         remoteDataSource.fetchHomepageMovies(handleCookie, (remoteCategory, remoteMovies) -> {
             Log.d(TAG, "getHomepageMovies: remote: " + remoteMovies.size());
@@ -150,7 +154,7 @@ public class MovieRepository {
                     callback.onMovieListFetched(remoteCategory, remoteMovies);
                 });
             }
-        });
+        }, allMoviesCallback);
     }
 
     public void saveIptvMovies(HashMap<String, ArrayList<Movie>> iptvMovies, final IptvMovieListCallback callback) {
@@ -172,17 +176,6 @@ public class MovieRepository {
                 callback.onIptvMovieListFetched(iptvMovies);
             });
         }).start();
-    }
-
-    public void fetchNextPage(String url, final MovieListCallback callback) {
-        localDataSource.getHomepageMovies((localCategory, movies) -> {
-            if (movies != null && !movies.isEmpty()) {
-                reAddDomainToMovies(movies);
-                callback.onMovieListFetched(localCategory, movies);
-            } else {
-                remoteDataSource.fetchHomepageMovies(false, callback);
-            }
-        });
     }
 
     public void fetchMovieDetails(Movie mSelectedMovie, ServerInterface.ActivityCallback<Movie> callback) {

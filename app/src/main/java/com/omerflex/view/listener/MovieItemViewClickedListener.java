@@ -321,7 +321,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         }
 
         // Call the MovieRepository to fetch the next page.
-        movieRepository.fetchNextPage(movie.getVideoUrl(), (category, movieList) -> {
+        movieRepository.getSearchMovies(movie.getVideoUrl(), (category, movieList) -> {
                 if (movieList != null) {
                     Log.d("Movie", "fetchNextPage movie33: " + movieList.toString());
                     updateAdapterOnMainThread(movieList, clickedRow, movie);
