@@ -6,12 +6,16 @@ import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.RawQuery;
 import androidx.room.Update;
+import androidx.sqlite.db.SimpleSQLiteQuery;
+import androidx.sqlite.db.SupportSQLiteQuery;
 
 import com.omerflex.entity.Movie;
 
 import com.omerflex.entity.MovieType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Dao
@@ -31,8 +35,11 @@ public interface MovieDao {
     @Query("SELECT * FROM movies ORDER BY updatedAt DESC")
     LiveData<List<Movie>> getAllMovies();
 
-    @Query("SELECT * FROM movies WHERE isHistory = 1 ORDER BY updatedAt DESC")
-    LiveData<List<Movie>> getHistory();
+    @Query("SELECT * FROM movies WHERE isHistory = 1 AND studio != :iptvStudioName ORDER BY updatedAt DESC")
+    List<Movie> getWatchedMovies(String iptvStudioName);
+
+    @Query("SELECT * FROM movies WHERE isHistory = 1 AND studio = :iptvStudioName ORDER BY updatedAt DESC")
+    List<Movie> getWatchedChannels(String iptvStudioName);
 
     @Query("SELECT * FROM movies WHERE videoUrl = :videoUrl")
     LiveData<Movie> getMovieByVideoUrl(String videoUrl);
@@ -60,4 +67,34 @@ public interface MovieDao {
 
     @Query("UPDATE movies SET movieLength = :movieLength WHERE id = :id")
     void updateMovieLength(long id, long movieLength);
+
+    @Query("UPDATE movies SET isHistory = 1 WHERE id = :id")
+    void setMovieIsHistory(long id);
+
+    @RawQuery
+    List<Movie> getMoviesByStudioAndGroupsRaw(SupportSQLiteQuery query);
+
+    default List<Movie> getMoviesByStudioAndGroups(String studio, List<String> groups) {
+        if (groups == null || groups.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+
+        StringBuilder queryBuilder = new StringBuilder();
+        queryBuilder.append("SELECT * FROM movies WHERE studio = ? AND (");
+
+        Object[] args = new Object[groups.size() + 1];
+        args[0] = studio;
+
+        for (int i = 0; i < groups.size(); i++) {
+            if (i > 0) {
+                queryBuilder.append(" OR ");
+            }
+            queryBuilder.append("LOWER(`group`) LIKE ?");
+            args[i + 1] = "%" + groups.get(i).toLowerCase() + "%";
+        }
+        queryBuilder.append(")");
+
+        SimpleSQLiteQuery simpleSQLiteQuery = new SimpleSQLiteQuery(queryBuilder.toString(), args);
+        return getMoviesByStudioAndGroupsRaw(simpleSQLiteQuery);
+    }
 }

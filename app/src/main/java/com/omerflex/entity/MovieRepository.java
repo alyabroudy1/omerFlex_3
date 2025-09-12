@@ -15,6 +15,7 @@ import com.omerflex.db.AppDatabase;
 import com.omerflex.db.MovieDao;
 import com.omerflex.db.MovieHistoryDao;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.IptvServer;
 import com.omerflex.server.ServerFactory;
 import com.omerflex.server.ServerInterface;
 import com.omerflex.server.config.ServerConfigRepository;
@@ -383,11 +384,31 @@ public class MovieRepository {
         return movieHistoryDao.getMovieHistoryByMovieIdSync(movieId);
     }
 
-    public LiveData<List<Movie>> getHistory() {
-        return Transformations.map(movieDao.getHistory(), movies -> {
-            reAddDomainToMovies(movies);
-            return movies;
-        });
+    public Movie getMovieByIdSync(long id) {
+        return movieDao.getMovieById(id);
+    }
+
+    public void setMovieIsHistory(long movieId) {
+        new Thread(() -> {
+            movieDao.setMovieIsHistory(movieId);
+        }).start();
+    }
+
+    public void getWatchedMovies(MovieListCallback callback) {
+        ArrayList<Movie> movies = (ArrayList<Movie>)movieDao.getWatchedMovies(Movie.SERVER_IPTV);
+        reAddDomainToMovies(movies);
+        callback.onMovieListFetched(
+                "المحفوظات",
+                movies
+        );
+    }
+
+    public void getWatchedChannels(MovieListCallback callback) {
+        ArrayList<Movie> movies = (ArrayList<Movie>)movieDao.getWatchedChannels(Movie.SERVER_IPTV);
+        callback.onMovieListFetched(
+                "محفوظات القنوات",
+                movies
+        );
     }
 
     public void deleteMovie(Movie movie) {
@@ -405,6 +426,92 @@ public class MovieRepository {
                 }
             }
         }).start();
+    }
+
+    public void getHomepageChannels(MovieListCallback callback) {
+        Log.d(TAG, "getHomepageChannels: Started.");
+        new Thread(() -> {
+            List<String> groups = new ArrayList<>();
+            groups.add("الاخبار");
+            groups.add("أطفال");
+            groups.add("أم بي سي");
+            groups.add("سورية");
+            groups.add("shahid");
+
+            List<Movie> movies = movieDao.getMoviesByStudioAndGroups(Movie.SERVER_IPTV, groups);
+            Log.d(TAG, "getHomepageChannels: Found " + (movies == null ? "null" : movies.size()) + " movies in DB.");
+
+            if (movies == null || movies.isEmpty()) {
+//            if (true) {
+                Log.d(TAG, "getHomepageChannels: DB is empty, calling loadDefaultChannels.");
+                loadDefaultChannels((category, fetchedMovies) -> {
+                    if (fetchedMovies == null || fetchedMovies.isEmpty()) {
+                        return; // Nothing to do
+                    }
+                    Log.d(TAG, "getHomepageChannels: movies fetched, next is to save to db");
+                    // Save movies to DB
+                    for (int i = 0; i < fetchedMovies.size(); i++) {
+                        Movie movie = fetchedMovies.get(i);
+                        Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
+                        if (existingMovie == null) {
+                            long newId = movieDao.insert(movie);
+                            movie.setId(newId);
+                        } else {
+                            fetchedMovies.set(i, existingMovie);
+                        }
+                    }
+
+                    Log.d(TAG, "getHomepageChannels: saved to db next update ui");
+
+                    // Group and post to UI
+                    Map<String, List<Movie>> moviesByGroup = new HashMap<>();
+                    for (Movie movie : fetchedMovies) {
+                        if (movie.getGroup() != null && groups.contains(movie.getGroup())) {
+                            if (!moviesByGroup.containsKey(movie.getGroup())) {
+                                moviesByGroup.put(movie.getGroup(), new ArrayList<>());
+                            }
+                            moviesByGroup.get(movie.getGroup()).add(movie);
+                        }
+                    }
+
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        for (Map.Entry<String, List<Movie>> entry : moviesByGroup.entrySet()) {
+                            callback.onMovieListFetched(entry.getKey(), new ArrayList<>(entry.getValue()));
+                        }
+                    });
+                });
+            }
+            else {
+                // DB has movies, just group and post
+                Log.d(TAG, "getHomepageChannels: grouping movies ");
+                Map<String, List<Movie>> moviesByGroup = new HashMap<>();
+                for (Movie movie : movies) {
+                    if (movie.getGroup() != null) {
+                        if (!moviesByGroup.containsKey(movie.getGroup())) {
+                            moviesByGroup.put(movie.getGroup(), new ArrayList<>());
+                        }
+                        moviesByGroup.get(movie.getGroup()).add(movie);
+                    }
+                }
+                Log.d(TAG, "getHomepageChannels: movies are grouped in :"+ moviesByGroup.size());
+                    for (Map.Entry<String, List<Movie>> entry : moviesByGroup.entrySet()) {
+                        Log.d(TAG, "getHomepageChannels: updating ui: "+ entry.getKey());
+                        callback.onMovieListFetched(entry.getKey(), new ArrayList<>(entry.getValue()));
+                    }
+            }
+        }).start();
+    }
+
+    private interface OnMoviesFetchedCallback {
+        void onFetched(List<Movie> movies);
+    }
+
+    private void loadDefaultChannels(MovieListCallback callback) {
+        Log.d(TAG, "loadDefaultChannels: Started.");
+        AbstractServer server = ServerFactory.createServer(Movie.SERVER_IPTV);
+
+        IptvServer iptvServer = (IptvServer) server;
+        iptvServer.loadDefaultChannels(callback);
     }
 
 

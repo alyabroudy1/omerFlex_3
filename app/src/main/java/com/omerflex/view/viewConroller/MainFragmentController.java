@@ -8,14 +8,19 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
 import com.omerflex.OmerFlexApplication;
+import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
 import com.omerflex.service.UpdateService;
+
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainFragmentController extends BaseFragmentController {
 
     private MovieRepository movieRepository;
     UpdateService updateService;
     public static String TAG = "MainFragmentController";
+    private final AtomicBoolean subsequentCallsInitiated = new AtomicBoolean(false);
 
     public MainFragmentController(BrowseSupportFragment fragment, ArrayObjectAdapter rowsAdapter, Drawable defaultBackground) {
         super(fragment, rowsAdapter, defaultBackground);
@@ -26,17 +31,46 @@ public class MainFragmentController extends BaseFragmentController {
     @Override
     public void loadData() {
         Log.d(TAG, "loadData: ");
-        movieRepository.getHomepageMovies( false, (category, movieList) -> {
-            if (movieList != null) {
-                Log.d("Movie", "Fetched movie33: " + movieList.toString());
-                // todo let the id be the studio name
-                HeaderItem header = new HeaderItem(1, category);
-                addMovieRow(header, movieList);
-            } else {
-                Log.d("Movie", "movieList not found.");
-            }
-        });
+        subsequentCallsInitiated.set(false);
+        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded);
     }
+
+    private void onHomepageMoviesLoaded(String category, ArrayList<Movie> movieList) {
+        if (movieList != null && !movieList.isEmpty()) {
+            Log.d("Movie", "Fetched movie33: " + movieList.toString());
+            HeaderItem header = new HeaderItem(1, category);
+            addMovieRow(header, movieList);
+        } else {
+            Log.d("Movie", "movieList not found.");
+        }
+
+        if (subsequentCallsInitiated.compareAndSet(false, true)) {
+            movieRepository.getWatchedMovies(this::onWatchedMoviesLoaded);
+            movieRepository.getWatchedChannels(this::onWatchedMoviesLoaded);
+            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
+        }
+    }
+
+    private void onWatchedMoviesLoaded(String category, ArrayList<Movie> movieList) {
+        if (movieList != null) {
+            Log.d(TAG, "Fetched getWatchedMovies: " + movieList.size());
+            HeaderItem header = new HeaderItem(1, category);
+            addMovieRow(header, movieList);
+        } else {
+            Log.d(TAG, "getWatchedMovies: movieList not found.");
+        }
+    }
+
+    private void onHomepageChannelsLoaded(String category, ArrayList<Movie> movieList) {
+        if (movieList != null) {
+            Log.d(TAG, "Fetched getHomepageChannels: " + movieList.size());
+            HeaderItem header = new HeaderItem(1, category);
+            addMovieRow(header, movieList);
+        } else {
+            Log.d(TAG, "getHomepageChannels: movieList not found.");
+        }
+    }
+
 
     @Override
     public void handleActivityResult(int requestCode, int resultCode, Intent data) {

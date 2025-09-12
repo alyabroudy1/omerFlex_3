@@ -37,10 +37,10 @@ public class LocalDataSource {
     }
 
     public void getHomepageMovies(MovieRepository.MovieListCallback callback) {
-        LiveData<List<Movie>> historyMovies = movieDao.getHistory();
-        historyMovies.observeForever(movies -> {
-            callback.onMovieListFetched("History", (ArrayList<Movie>) movies);
-        });
+//        LiveData<List<Movie>> historyMovies = movieDao.getWatchedMovies(Movie.SERVER_IPTV);
+//        historyMovies.observeForever(movies -> {
+//            callback.onMovieListFetched("History", (ArrayList<Movie>) movies);
+//        });
     }
 
     public void saveMovie(Movie movie) {

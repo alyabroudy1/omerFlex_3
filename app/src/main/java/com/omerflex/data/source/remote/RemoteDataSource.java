@@ -37,7 +37,7 @@ public class RemoteDataSource {
 
     public void fetchHomepageMovies(boolean handleCookie, MovieRepository.MovieListCallback callback) {
         ServerConfigRepository repository = ServerConfigRepository.getInstance();
-        
+        Log.d(TAG, "fetchHomepageMovies: ");
         // LiveData must be observed from the main thread.
         // We post the observer attachment to the main looper.
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
@@ -53,18 +53,18 @@ public class RemoteDataSource {
                         executor.submit(() -> {
                             List<ServerConfig> configs = repository.getAllActiveConfigsList();
                             for (ServerConfig config : configs) {
-                                Log.d(TAG, "fetchHomepageMovies: " + config.getName());
                                 AbstractServer server = ServerFactory.createServer(config.getName());
+                                Log.d(TAG, "fetchHomepageMovies: config: " + config.getName() + ", "+ server.getLabel());
                                 if (server != null) {
                                     server.getHomepageMovies(handleCookie, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                                         @Override
                                         public void onSuccess(ArrayList<Movie> result, String title) {
                                             if (result.isEmpty()){
                                                 Log.d(TAG, "onSuccess: "+ title + " is empty");
-                                                return;
                                             }
                                             Log.d(TAG, "onSuccess: "+ title);
                                             callback.onMovieListFetched(title, result);
+                                            return;
                                         }
 
                                         @Override

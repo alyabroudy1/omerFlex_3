@@ -24,6 +24,7 @@ import androidx.leanback.widget.Presenter;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.Util;
+import com.omerflex.service.M3U8ContentFetcher;
 import com.omerflex.view.viewConroller.MainFragmentController;
 import com.omerflex.viewmodel.SharedViewModel;
 
@@ -35,6 +36,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -129,6 +131,162 @@ public class MainFragment extends BrowseSupportFragment {
 //            e.printStackTrace();
 //        }
 
+//        String iptvContents = "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 1\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221028428011214video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 2\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221029156447666video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 3\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221029774417256video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 4\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221030235980459video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 5\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221030732387163video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 6\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221031752858904video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 7\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221032284440635video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 8\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221032854988105video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 9\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221033332742077video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 10\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221034082239145video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 11\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221034632309962video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 12\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221035300843886video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 13\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221035818855909video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 14\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221036383632554video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 15\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221036874307057video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 16\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221037394019645video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 17\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221037850480752video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 18\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221038328802864video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 19\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221038825848845video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 20\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221039410396424video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 21\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221040689689875video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 22\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221041105635110video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 23\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221041606824897video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 24\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221042008755900video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 25\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221042974598774video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 26\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221043997819691video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 27\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221044410706023video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 28\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221044751013351video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 29\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221045408874445video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 30\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221045949026833video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 31\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221046412305279video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 32\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221046901681887video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 33\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221047294647163video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 34\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221047769021667video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 35\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221048165585008video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 36\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221048790741789video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 37\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221049610465519video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 38\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221050092281177video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 39\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221051264534699video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 40\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221051666255207video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 41\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221052358063874video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 42\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221052807621276video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 43\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221053721328336video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 44\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221056220055440video.mp4\n" +
+//                "#EXTINF:-1 tvg-id=\"\" tvg-logo=\"https://github.com/6j9/mych/blob/master/img/ysf.jpg?raw=true\" group-title=\"مسلسل يوسف الصديق\",يوسف الصديق 45\n" +
+//                "https://video.alkawthartv.ir/original/2023/06/11/638221057628550200video.mp4\n" +
+//                "\n" +
+//                "\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 1\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep1/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 2\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep2/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 3\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep3/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 4\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep4/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 5\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep5/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 6\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep6/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 7\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep7/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 8\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep8/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 9\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep9/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 10\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep10/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 11\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep11/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 12\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep12/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 13\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep13/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 14\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep14/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 15\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep15/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 16\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep16/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 17\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep17/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 18\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep18/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 19\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep19/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 20\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep20/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 21\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep21/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 22\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep22/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 23\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep23/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 24\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep24/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 25\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep25/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 26\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep26/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 27\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep27/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 28\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep28/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 29\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep29/720p/index.m3u8?//\n" +
+//                "#EXTINF:-1 tvg-id=\"ext\"tvg-logo=\"https://bit.ly/3bVgIx1\" group-title=\"مسلسل قصص الأنبياء\",محمد الحلقة 30 و الأخيرة\n" +
+//                "https://shoofmax.b-cdn.net/habib-allah/ep30/720p/index.m3u8?//";
+//
+//        ArrayList<Movie> movies = M3U8ContentFetcher.parseContentWithStreamingToList(iptvContents, "dd");
+//        Log.d(TAG, "onActivityCreated: movies: "+ movies.size());
+//        Log.d(TAG, "onActivityCreated: movies: "+ movies);
 
         // The controller is now responsible for loading data.
         mController.loadData();

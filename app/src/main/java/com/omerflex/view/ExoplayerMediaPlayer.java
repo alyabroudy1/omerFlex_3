@@ -43,6 +43,7 @@ import com.omerflex.db.AppDatabase;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieHistory;
 import com.omerflex.entity.MovieRepository;
+import com.omerflex.entity.MovieType;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -288,6 +289,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
             public void onTimelineChanged(Timeline timeline, int reason) {
                 Log.d(TAG, "onTimelineChanged: " + reason);
                 if (player.getDuration() != C.TIME_UNSET) {
+                    updateHistoryPlayback();
                     if (!hasSeekedToWatchedPosition && movie.getParentId() != null) {
                         long movieLength = player.getDuration();
                         hasSeekedToWatchedPosition = true; // Set it here to only try once.
@@ -397,6 +399,36 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         player.play();
         //   player.play();
 
+    }
+
+    private void updateHistoryPlayback() {
+        new Thread(() -> {
+            if (movie != null) {
+                Log.d(TAG, "updateHistoryPlayback: "+movie.getStudio()+ " "+movie.getId());
+                if (movie.getStudio().equals(Movie.SERVER_IPTV)){
+                    movieRepository.setMovieIsHistory(movie.getId());
+                    return;
+                }
+                if (movie.getParentId() == null){
+                    return;
+                }
+                Movie parentMovie = movieRepository.getMovieByIdSync(movie.getParentId());
+                if (parentMovie != null) {
+                    if (parentMovie.getType() == MovieType.FILM) {
+                        movieRepository.setMovieIsHistory(parentMovie.getId());
+                    } else if (parentMovie.getType() == MovieType.EPISODE) {
+                        Movie season = movieRepository.getMovieByIdSync(parentMovie.getParentId());
+                        if (season != null) {
+                            if (season.getParentId() != null) {
+                                movieRepository.setMovieIsHistory(season.getParentId());
+                            } else {
+                                movieRepository.setMovieIsHistory(season.getId());
+                            }
+                        }
+                    }
+                }
+            }
+        }).start();
     }
 
 

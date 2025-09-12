@@ -7,6 +7,7 @@ import androidx.annotation.RequiresApi;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
+import com.omerflex.entity.MovieRepository;
 import com.omerflex.entity.MovieType;
 import com.omerflex.service.M3U8ContentFetcher;
 import com.omerflex.service.database.MovieDbHelper;
@@ -23,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 public class IptvServer extends AbstractServer {
 
     static String TAG = "iptv";
+    static String MAIN_IPTV_PLAYLIST_URL = "https://drive.google.com/u/0/uc?id=1IdSILICjk5BE6WggZEuIAKrZxQPZFMb2&export=download";
     M3U8ContentFetcher contentFetcher;
 
     public IptvServer() {
@@ -89,14 +91,17 @@ public class IptvServer extends AbstractServer {
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
         ArrayList<Movie> iptvList = new ArrayList<>();
-        try {
-            Log.d(TAG, "getHomepageMovies: a");
-            String m3u8Url = "https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing";
-            fetchDriveFiles(m3u8Url, activityCallback);
-        } catch (Exception exception) {
-            Log.d(TAG, "getHomepageMovies: error c: "+exception.getMessage());
-            activityCallback.onInvalidLink(exception.getMessage());
-        }
+        activityCallback.onSuccess(iptvList, getLabel());
+
+        // fetch google drive iptv playlists
+//        try {
+//            Log.d(TAG, "getHomepageMovies: a");
+//            String m3u8Url = "https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing";
+//            fetchDriveFiles(m3u8Url, activityCallback);
+//        } catch (Exception exception) {
+//            Log.d(TAG, "getHomepageMovies: error c: "+exception.getMessage());
+//            activityCallback.onInvalidLink(exception.getMessage());
+//        }
         return iptvList;
     }
 
@@ -177,5 +182,9 @@ public class IptvServer extends AbstractServer {
 
     public boolean shouldUpdateDomainOnSearchResult(){
         return false;
+    }
+
+    public void loadDefaultChannels(MovieRepository.MovieListCallback callback) {
+        contentFetcher.fetchDefaultChannels(MAIN_IPTV_PLAYLIST_URL, callback);
     }
 }

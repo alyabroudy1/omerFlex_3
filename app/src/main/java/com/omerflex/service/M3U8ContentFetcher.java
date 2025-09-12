@@ -8,6 +8,7 @@ import android.util.Log;
 import androidx.annotation.RequiresApi;
 
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieRepository;
 import com.omerflex.entity.dto.GoogleFile;
 import com.omerflex.entity.dto.IptvSegmentDTO;
 import com.omerflex.server.ServerInterface;
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 public class M3U8ContentFetcher {
 
@@ -52,10 +54,14 @@ public class M3U8ContentFetcher {
         dbExecutor.execute(() -> {
             try {
                 HashMap<String, ArrayList<Movie>> result = fetchAndProcessContent(iptvList);
-                new Handler(Looper.getMainLooper()).post(() -> callback.accept(result));
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    new Handler(Looper.getMainLooper()).post(() -> callback.accept(result));
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Fetch failed", e);
-                new Handler(Looper.getMainLooper()).post(() -> callback.accept(new HashMap<>()));
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    new Handler(Looper.getMainLooper()).post(() -> callback.accept(new HashMap<>()));
+                }
             }
         });
     }
@@ -64,15 +70,16 @@ public class M3U8ContentFetcher {
         dbExecutor.execute(() -> {
             try {
                 Log.d(TAG, "fetchIpTvPlayList: ");
-                String contentsBody = fetchLinkContent(iptvList.getVideoUrl());
-                if (contentsBody == null) {
-                    Log.d(TAG, "fetchIpTvPlayList: contentsBody is null");
-                    callback.onInvalidLink("contentsBody is null: " + iptvList.getVideoUrl());
+                HashMap<String, ArrayList<Movie>> parsedContent;
+                String contents = fetchLinkContent(iptvList.getVideoUrl());
+                if (contents == null) {
+                    Log.d(TAG, "fetchIpTvPlayList: contents is null");
+                    callback.onInvalidLink("contents is null: " + iptvList.getVideoUrl());
                     return;
                 }
-                String hash = String.valueOf(contentsBody.hashCode());  // Convert long to String;
+                String hash = String.valueOf(contents.hashCode());  // Convert long to String;
                 // todo find a way to delete ole iptv movies if the movie is updated
-                HashMap<String, ArrayList<Movie>> parsedContent = parseContentWithStreaming(contentsBody, hash);
+                parsedContent = parseContentWithStreaming(contents, hash);
                 Log.d(TAG, "fetchAndProcessContent: parsedContent: "+ parsedContent);
                 Log.d(TAG, "fetchAndProcessContent: parsedContent: "+ parsedContent.size());
                 // for key and value in parsedContent
@@ -210,6 +217,104 @@ public class M3U8ContentFetcher {
         return groupedMovies;
     }
 
+    public static ArrayList<Movie> parseContentWithStreamingToList(String content, String hash) {
+        ArrayList<Movie> movies = new ArrayList<>();
+        IptvSegmentDTO currentSegment = null;
+
+        try (BufferedReader reader = new BufferedReader(new StringReader(content))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isEmpty()) {
+                    // ignore empty lines
+                    continue;
+                }
+                line = line.trim();
+                try {
+                    if (line.startsWith("#EXTINF:")) {
+                        // save old segment and
+
+                        if (currentSegment != null && currentSegment.url != null) {
+                            // save the current segmentDto
+                            movies.add(saveCurrentIptvSegmentToList(currentSegment, hash));
+//                        addToGroup(groupedMovies, currentGroupTitle, currentChannel);
+                        }
+                        // manage new segment
+//                        currentSegment = new IptvSegmentDTO();
+                        currentSegment = parseCurrentIptvSegment(line);
+                    }
+
+                    // continue if now data filled in EXTINF
+                    if (currentSegment == null){
+                        continue;
+                    }
+
+                    currentSegment = parseCurrentIptvSegmentExtraInfo(line, currentSegment);
+                }catch (Exception e){
+                    System.out.println("Error: " +e.getMessage());
+                }
+
+
+
+//                else if (line.startsWith("#EXTGRP:")) {
+//                    currentGroupTitle = parseGroupTitle(line);
+//                }
+//                else if (
+//                        !line.startsWith("#") &&
+//                         currentChannel != null &&
+//                         line.startsWith("http")
+//                ) {
+//                    currentChannel.setVideoUrl(line);
+//                    addToGroup(groupedMovies, currentGroupTitle, currentChannel);
+//                    currentChannel = null;
+//                }
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Stream parsing failed", e);
+        }
+
+        return movies;
+    }
+
+    private static Movie saveCurrentIptvSegmentToList(IptvSegmentDTO currentSegment, String hash) {
+        String groupTitle = currentSegment.groupTitle;
+        if (groupTitle == null || groupTitle.isEmpty()) {
+            groupTitle = currentSegment.id;
+        }
+        if (groupTitle == null) {
+            groupTitle = "default";
+        }
+
+        Movie channel = new Movie();
+        channel.setTitle(currentSegment.name);
+        channel.setVideoUrl(currentSegment.url);
+//            channel.setTvgName(segmentDTO.getTvgName());
+        channel.setCardImageUrl(currentSegment.tvgLogo);
+//            channel.setFileName(segmentDTO.getFileName());
+//            channel.setCredentialUrl(segmentDTO.getCredentialUrl());
+
+
+//            if(groupTitle == null) {
+//                movieGroupName = "undefined";
+//                channel.setTitle(movieGroupName +"-"+ movieNameCounter++);
+//            }
+
+        channel.setGroup(groupTitle);
+        channel.setStudio(Movie.SERVER_IPTV);
+        channel.setMainMovieTitle(hash);
+        channel.setState(Movie.VIDEO_STATE);
+
+//        Log.d(TAG, "saveCurrentIptvSegment: " + groupTitle + ": " + currentSegment);
+//        System.out.println("group: " + groupTitle);
+//        System.out.println("id: " + currentSegment.id);
+//        System.out.println("name: " + currentSegment.name);
+//        System.out.println("tvgName: " + currentSegment.tvgName);
+//        System.out.println("gTitle: " + currentSegment.groupTitle);
+//        System.out.println("tvgLogo: " + currentSegment.tvgLogo);
+//        System.out.println("url: " + currentSegment.url);
+//        System.out.println("headers: " + currentSegment.httpHeaders.toString());
+//        System.out.println("=================================");
+        return channel;
+    }
     private static void saveCurrentIptvSegment(HashMap<String, ArrayList<Movie>> groupedMovies, IptvSegmentDTO currentSegment, String hash) {
         String groupTitle = currentSegment.groupTitle;
         if (groupTitle == null || groupTitle.isEmpty()) {
@@ -266,7 +371,9 @@ public class M3U8ContentFetcher {
             String userAgent = "airmaxtv"; // Default user-agent
             if (line.contains("http-user-agent=")) {
                 userAgent = extractVlcOpt(line, "http-user-agent");
-                currentSegment.httpHeaders.replace("user-agent", userAgent);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    currentSegment.httpHeaders.replace("user-agent", userAgent);
+                }
             } else if (line.contains("http-referrer=")) {
                 referrer = extractVlcOpt(line, "http-referrer");
                 currentSegment.httpHeaders.put("referrer", referrer);
@@ -429,6 +536,7 @@ public class M3U8ContentFetcher {
                     movieList.add(movie);
                 }
                 activityCallback.onSuccess(movieList, "google");
+                return;
             }else {
                 Log.d(TAG, "fetchDriveFiles: error:"+ response.body());
             }
@@ -694,5 +802,35 @@ public class M3U8ContentFetcher {
             return matcher.group(1);
         }
         return null;
+    }
+
+    public void fetchDefaultChannels(String mainIptvPlaylistUrl, MovieRepository.MovieListCallback callback) {
+        Log.d(TAG, "fetchDefaultChannels: " + mainIptvPlaylistUrl);
+        dbExecutor.execute(() -> {
+            try {
+                Log.d(TAG, "fetchIpTvPlayList: ");
+                ArrayList<Movie> parsedContent;
+                String contents = fetchLinkContent(mainIptvPlaylistUrl);
+                if (contents == null) {
+                    Log.d(TAG, "fetchIpTvPlayList: error: contents is null");
+                    callback.onMovieListFetched("Default", new ArrayList<>());
+                    return;
+                }
+                String hash = String.valueOf(contents.hashCode());  // Convert long to String;
+                // todo find a way to delete ole iptv movies if the movie is updated
+                parsedContent = parseContentWithStreamingToList(contents, hash);
+                Log.d(TAG, "fetchAndProcessContent: parsedContent: "+ parsedContent.size());
+                // for key and value in parsedContent
+
+                callback.onMovieListFetched("Default", parsedContent);
+
+                return;
+//                return parsedContent;
+
+            } catch (Exception e) {
+                Log.e(TAG, "error: Fetch failed", e);
+                new Handler(Looper.getMainLooper()).post(() -> callback.onMovieListFetched(e.getMessage(), new ArrayList<>()));
+            }
+        });
     }
 }
