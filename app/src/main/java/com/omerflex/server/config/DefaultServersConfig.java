@@ -9,68 +9,68 @@ public class DefaultServersConfig {
         ServerConfigRepository scm = ServerConfigRepository.getInstance();
 
         //### mycima ###
-//        ServerConfig mycimaConfig = new ServerConfig();
-//        mycimaConfig.setName(Movie.SERVER_MyCima);
-//        mycimaConfig.setUrl("https://mycima.io");
-//        mycimaConfig.setReferer("https://mycima.io/");
-//        mycimaConfig.setActive(true);
-//
-//        scm.updateConfig(mycimaConfig);
+        ServerConfig mycimaConfig = new ServerConfig();
+        mycimaConfig.setName(Movie.SERVER_MyCima);
+        mycimaConfig.setUrl("https://mycima.io");
+        mycimaConfig.setReferer("https://mycima.io/");
+        mycimaConfig.setActive(true);
+
+        scm.updateConfig(mycimaConfig);
 
 //        //         ### cimaNow ###
-//        ServerConfig cimaNowConfig = new ServerConfig();
-//        cimaNowConfig.setName(Movie.SERVER_CimaNow);
-//        cimaNowConfig.setActive(true);
-//        cimaNowConfig.setUrl("https://cimanow.cc");
-//        cimaNowConfig.setReferer("https://cimanow.cc/");
-//
-//        scm.updateConfig(cimaNowConfig);
+        ServerConfig cimaNowConfig = new ServerConfig();
+        cimaNowConfig.setName(Movie.SERVER_CimaNow);
+        cimaNowConfig.setActive(true);
+        cimaNowConfig.setUrl("https://cimanow.cc");
+        cimaNowConfig.setReferer("https://cimanow.cc/");
+
+        scm.updateConfig(cimaNowConfig);
 //
 //
 //        //### arabseed ###
-//        ServerConfig arabseedConfig = new ServerConfig();
-//        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
-//        arabseedConfig.setUrl("https://arabseed.show");
-//        arabseedConfig.setReferer("https://arabseed.show/");
-//        arabseedConfig.setActive(true);
-//
-//        scm.updateConfig(arabseedConfig);
+        ServerConfig arabseedConfig = new ServerConfig();
+        arabseedConfig.setName(Movie.SERVER_ARAB_SEED);
+        arabseedConfig.setUrl("https://arabseed.show");
+        arabseedConfig.setReferer("https://arabseed.show/");
+        arabseedConfig.setActive(true);
+
+        scm.updateConfig(arabseedConfig);
 //
         //        ### fasel ###
-//        ServerConfig faselConfig = new ServerConfig();
-//        faselConfig.setActive(true);
-//        faselConfig.setName(Movie.SERVER_FASELHD);
-//        faselConfig.setUrl("https://www.faselhds.center");
-//        faselConfig.setReferer("https://www.faselhds.center/");
-//
-//        scm.updateConfig(faselConfig);
+        ServerConfig faselConfig = new ServerConfig();
+        faselConfig.setActive(true);
+        faselConfig.setName(Movie.SERVER_FASELHD);
+        faselConfig.setUrl("https://www.faselhds.center");
+        faselConfig.setReferer("https://www.faselhds.center/");
+
+        scm.updateConfig(faselConfig);
 //
 //        //         ### laroza ###
-//        ServerConfig larozaConfig = new ServerConfig();
-//        larozaConfig.setName(Movie.SERVER_LAROZA);
-//        larozaConfig.setActive(true);
-//        larozaConfig.setUrl("https://www.laroza.now");
-//        larozaConfig.setReferer("https://www.laroza.now/");
-//
-//        scm.updateConfig(larozaConfig);
+        ServerConfig larozaConfig = new ServerConfig();
+        larozaConfig.setName(Movie.SERVER_LAROZA);
+        larozaConfig.setActive(true);
+        larozaConfig.setUrl("https://www.laroza.now");
+        larozaConfig.setReferer("https://www.laroza.now/");
+
+        scm.updateConfig(larozaConfig);
 //
 //         ### akwam ###
-//        ServerConfig akwamConfig = new ServerConfig();
-//        akwamConfig.setName(Movie.SERVER_AKWAM);
-//        akwamConfig.setActive(true);
-//        akwamConfig.setUrl("https://ak.sv");
-//        akwamConfig.setReferer("https://ak.sv/");
-//
-//        scm.updateConfig(akwamConfig);
+        ServerConfig akwamConfig = new ServerConfig();
+        akwamConfig.setName(Movie.SERVER_AKWAM);
+        akwamConfig.setActive(true);
+        akwamConfig.setUrl("https://ak.sv");
+        akwamConfig.setReferer("https://ak.sv/");
+
+        scm.updateConfig(akwamConfig);
 //
 //        //### old_Akwam ###
-//        ServerConfig oldAkwamConfig = new ServerConfig();
-//        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
-//        oldAkwamConfig.setActive(true);
-//        oldAkwamConfig.setUrl("https://www.ak.sv");
-//        oldAkwamConfig.setReferer("https://www.ak.sv/");
-//
-//        scm.updateConfig(oldAkwamConfig);
+        ServerConfig oldAkwamConfig = new ServerConfig();
+        oldAkwamConfig.setName(Movie.SERVER_OLD_AKWAM);
+        oldAkwamConfig.setActive(true);
+        oldAkwamConfig.setUrl("https://www.ak.sv");
+        oldAkwamConfig.setReferer("https://www.ak.sv/");
+
+        scm.updateConfig(oldAkwamConfig);
 //
 //        //### iptv ###
         ServerConfig iptvConfig = new ServerConfig();

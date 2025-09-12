@@ -97,4 +97,13 @@ public interface MovieDao {
         SimpleSQLiteQuery simpleSQLiteQuery = new SimpleSQLiteQuery(queryBuilder.toString(), args);
         return getMoviesByStudioAndGroupsRaw(simpleSQLiteQuery);
     }
+
+    default List<Movie> getSearchIptvMovies(String query) {
+        String q = "%" + query.toLowerCase() + "%";
+        SimpleSQLiteQuery simpleSQLiteQuery = new SimpleSQLiteQuery(
+                "SELECT * FROM movies WHERE studio = '"+Movie.SERVER_IPTV+"' AND (LOWER(title) LIKE ? OR LOWER(`group`) LIKE ?)",
+                new Object[]{q, q}
+        );
+        return getMoviesByStudioAndGroupsRaw(simpleSQLiteQuery);
+    }
 }

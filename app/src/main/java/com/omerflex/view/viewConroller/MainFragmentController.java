@@ -45,19 +45,19 @@ public class MainFragmentController extends BaseFragmentController {
         }
 
         if (subsequentCallsInitiated.compareAndSet(false, true)) {
-            movieRepository.getWatchedMovies(this::onWatchedMoviesLoaded);
-            movieRepository.getWatchedChannels(this::onWatchedMoviesLoaded);
+            movieRepository.getWatchedMovies(this::onMoviesLoaded);
+            movieRepository.getWatchedChannels(this::onMoviesLoaded);
             movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
         }
     }
 
-    private void onWatchedMoviesLoaded(String category, ArrayList<Movie> movieList) {
+    private void onMoviesLoaded(String category, ArrayList<Movie> movieList) {
         if (movieList != null) {
-            Log.d(TAG, "Fetched getWatchedMovies: " + movieList.size());
+            Log.d(TAG, "Fetched onMoviesLoaded: " + movieList.size());
             HeaderItem header = new HeaderItem(1, category);
             addMovieRow(header, movieList);
         } else {
-            Log.d(TAG, "getWatchedMovies: movieList not found.");
+            Log.d(TAG, "onMoviesLoaded: movieList not found.");
         }
     }
 
@@ -84,5 +84,10 @@ public class MainFragmentController extends BaseFragmentController {
 
     public void handleOnDestroy() {
         updateService.handleOnDestroy();
+    }
+
+    public void loadSearchData(String query) {
+        Log.d(TAG, "loadSearchData: " + query);
+        movieRepository.getSearchMovies(query, this::onMoviesLoaded);
     }
 }

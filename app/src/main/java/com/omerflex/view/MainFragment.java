@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.widget.TextView;
@@ -336,8 +337,13 @@ public class MainFragment extends BrowseSupportFragment {
 
     private void setupEventListeners() {
         // The fragment only handles simple UI events, delegating complex logic.
-        setOnSearchClickedListener(view ->
-                Toast.makeText(getActivity(), "Implement your own in-app search", Toast.LENGTH_LONG).show()
-        );
+        setOnSearchClickedListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                Intent getQueryIntent = new Intent(getActivity(), GetSearchQueryActivity.class);
+                startActivity(getQueryIntent);
+            }
+        });
     }
 }

@@ -502,6 +502,47 @@ public class MovieRepository {
         }).start();
     }
 
+    public void getSearchMovies(String query, MovieListCallback callback) {
+        Log.d(TAG, "getHomepageMovies: ");
+        remoteDataSource.getSearchMovies(true, query, (remoteCategory, remoteMovies) -> {
+            Log.d(TAG, "getHomepageMovies: remote: " + remoteMovies.size());
+            if (remoteMovies != null && !remoteMovies.isEmpty()) {
+                new Thread(() -> {
+                    boolean isIpTv = remoteMovies.get(0).getStudio().equals(Movie.SERVER_IPTV);
+                    for (int i = 0; i < remoteMovies.size(); i++) {
+                        Movie movie = remoteMovies.get(i);
+                        String videoUrl = isIpTv ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
+                        movie.setVideoUrl(videoUrl);
+                        Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
+
+                        if (existingMovie == null) {
+                            long newId = movieDao.insert(movie);
+                            movie.setId(newId);
+                        } else {
+                            remoteMovies.set(i, existingMovie);
+                        }
+                    }
+                    reAddDomainToMovies(remoteMovies);
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        callback.onMovieListFetched(remoteCategory, remoteMovies);
+                    });
+                }).start();
+            } else {
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    callback.onMovieListFetched(remoteCategory, remoteMovies);
+                });
+            }
+        });
+    }
+
+    public void getSearchIptvMovies(String query, MovieListCallback callback) {
+        ArrayList<Movie> movies = (ArrayList<Movie>)movieDao.getSearchIptvMovies(query);
+        callback.onMovieListFetched(
+                "القنوات",
+                movies
+        );
+    }
+
     private interface OnMoviesFetchedCallback {
         void onFetched(List<Movie> movies);
     }

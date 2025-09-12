@@ -229,4 +229,61 @@ public class RemoteDataSource {
        AbstractServer server = ServerConfigRepository.getInstance().getServer(mSelectedMovie.getStudio());
        server.fetch(mSelectedMovie, mSelectedMovie.getState(), callback);
     }
+
+    public void getSearchMovies(boolean handleCookie, String query, MovieRepository.MovieListCallback callback) {
+        ServerConfigRepository repository = ServerConfigRepository.getInstance();
+        Log.d(TAG, "getSearchMovies: ");
+        // LiveData must be observed from the main thread.
+        // We post the observer attachment to the main looper.
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            repository.getIsInitialized().observeForever(new androidx.lifecycle.Observer<Boolean>() {
+                @Override
+                public void onChanged(Boolean isInitialized) {
+                    if (isInitialized != null && isInitialized) {
+                        // The configuration is ready. We can now fetch the movies.
+                        // It's important to remove the observer to avoid memory leaks.
+                        repository.getIsInitialized().removeObserver(this);
+
+                        ExecutorService executor = Executors.newSingleThreadExecutor();
+                        executor.submit(() -> {
+                            List<ServerConfig> configs = repository.getAllActiveConfigsList();
+                            for (ServerConfig config : configs) {
+                                AbstractServer server = ServerFactory.createServer(config.getName());
+                                Log.d(TAG, "getSearchMovies: config: " + config.getName() + ", "+ server.getLabel());
+                                    server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                                        @Override
+                                        public void onSuccess(ArrayList<Movie> result, String title) {
+                                            if (result.isEmpty()){
+                                                Log.d(TAG, "onSuccess: "+ title + " is empty");
+                                            }
+                                            Log.d(TAG, "onSuccess: "+ title);
+                                            callback.onMovieListFetched(title, result);
+                                            return;
+                                        }
+
+                                        @Override
+                                        public void onInvalidCookie(ArrayList<Movie> result, String title) {
+                                            Log.d(TAG, "onInvalidCookie: ");
+                                            callback.onMovieListFetched(title, result);
+                                        }
+
+                                        @Override
+                                        public void onInvalidLink(ArrayList<Movie> result) {
+                                            Log.d(TAG, "onInvalidLink: ");
+                                        }
+
+                                        @Override
+                                        public void onInvalidLink(String message) {
+                                            Log.d(TAG, "onInvalidLink: ");
+                                        }
+                                    },
+                                            handleCookie);
+                            }
+                        });
+                        executor.shutdown();
+                    }
+                }
+            });
+        });
+    }
 }

@@ -5,6 +5,7 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
+import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.MovieRepository;
@@ -25,10 +26,14 @@ public class IptvServer extends AbstractServer {
 
     static String TAG = "iptv";
     static String MAIN_IPTV_PLAYLIST_URL = "https://drive.google.com/u/0/uc?id=1IdSILICjk5BE6WggZEuIAKrZxQPZFMb2&export=download";
+
+    private MovieRepository movieRepository;
     M3U8ContentFetcher contentFetcher;
 
     public IptvServer() {
+
         this.contentFetcher = new M3U8ContentFetcher();
+        this.movieRepository = MovieRepository.getInstance(OmerFlexApplication.getAppContext(), OmerFlexApplication.getInstance().getDatabase().movieDao());
     }
 
 //    @Override
@@ -79,6 +84,12 @@ public class IptvServer extends AbstractServer {
 //    public Movie fetch(Movie movie) {
 //        return null;
 //    }
+public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> activityCallback, boolean handleCookie) {
+        movieRepository.getSearchIptvMovies(query, (category, movies) -> {
+            activityCallback.onSuccess(movies, category);
+        });
+        return null;
+}
 
     @Override
     public Movie updateMovieState(Movie movie) {
