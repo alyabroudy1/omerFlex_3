@@ -328,7 +328,7 @@ public class MainFragment extends BrowseSupportFragment {
     }
 
     private void setupUIElements() {
-        setTitle(getString(R.string.browse_title));
+//        setTitle(getString(R.string.browse_title));
         setHeadersState(HEADERS_ENABLED);
         setHeadersTransitionOnBackEnabled(true);
         setBrandColor(ContextCompat.getColor(getContext(), R.color.fastlane_background));
