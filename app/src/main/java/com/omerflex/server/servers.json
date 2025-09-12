@@ -93,11 +93,11 @@
     {
       "name": "app",
       "displayName": "app",
-      "url": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/omerFlex.apk",
-      "webName": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile/app/",
+      "url": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile-4/app/omerFlex.apk",
+      "webName": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile-4/app/",
       "isActive": true,
-      "description": "7",
-      "date": "2025-03-26T12:30:00"
+      "description": "8",
+      "date": "2025-09-12T12:30:00"
     }
   ]
 }
