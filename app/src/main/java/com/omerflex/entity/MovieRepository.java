@@ -497,7 +497,7 @@ public class MovieRepository {
 
     public void getSearchMovies(String query, MovieListCallback callback) {
         Log.d(TAG, "getHomepageMovies: ");
-        remoteDataSource.getSearchMovies(true, query, (remoteCategory, remoteMovies) -> {
+        remoteDataSource.getSearchMovies(false, query, (remoteCategory, remoteMovies) -> {
             Log.d(TAG, "getHomepageMovies: remote: " + remoteMovies.size());
             if (remoteMovies != null && !remoteMovies.isEmpty()) {
                 new Thread(() -> {

@@ -318,7 +318,7 @@ public class RemoteDataSource {
                                             Log.d(TAG, "onInvalidLink: ");
                                         }
                                     },
-                                            handleCookie);
+                                            false);
                             }
                         });
                         executor.shutdown();

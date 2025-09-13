@@ -40,7 +40,7 @@ public class MainFragmentController extends BaseFragmentController {
         });
         try {
             Log.d(TAG, "loadData: try to check for update");
-            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
+//            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
         }catch (Exception e){
             Log.e(TAG, "checkForRemoteUpdates: "+e.getMessage());
         }

@@ -181,37 +181,38 @@ public class ServerConfigRepository {
     }
 
     private void updateServerConfigIfNeeded(ServerConfigDTO githubServerConfigDTO) {
-        if (githubServerConfigDTO == null || githubServerConfigDTO.name == null) {
+        if (githubServerConfigDTO == null || githubServerConfigDTO.name == null || githubServerConfigDTO.date == null) {
             return;
         }
 
         Date githubDate;
+        String dateStr = githubServerConfigDTO.date.trim(); // Trim the date string
         try {
             // Try parsing with the timezone format first
-            githubDate = remoteDateFormatWithZ.parse(githubServerConfigDTO.date);
+            githubDate = remoteDateFormatWithZ.parse(dateStr);
         } catch (ParseException e) {
             // Fallback to the legacy format
             try {
-                githubDate = remoteDateFormatLegacy.parse(githubServerConfigDTO.date);
+                githubDate = remoteDateFormatLegacy.parse(dateStr);
             } catch (ParseException pe) {
-                Log.e(TAG, "Error parsing date from remote config for " + githubServerConfigDTO.name, pe);
+                Log.e(TAG, "Error parsing date from remote config for " + githubServerConfigDTO.name + ". Date string was: '" + dateStr + "'", pe);
                 return; // Skip update if date is unparseable
             }
+            Log.d(TAG, "updateServerConfigIfNeeded:Error parsing ", e);
         }
 
         ServerConfig existingConfig = serverConfigDao.findByName(githubServerConfigDTO.name);
         if (existingConfig == null) {
             // This is a new server, add it.
-            Log.d(TAG, "updateServerConfigIfNeeded: existingConfig == null skipping");
-//            Log.d(TAG, "Adding new server: " + githubServerConfigDTO.name);
-//            ServerConfig newConfig = new ServerConfig();
-//            newConfig.setName(githubServerConfigDTO.name);
-//            newConfig.setUrl(githubServerConfigDTO.url);
-//            newConfig.setReferer(githubServerConfigDTO.referer);
-//            newConfig.setLabel(githubServerConfigDTO.label);
-//            newConfig.setActive(githubServerConfigDTO.isActive);
-//            newConfig.setCreatedAt(githubDate); // Set date from remote
-//            updateConfig(newConfig);
+            Log.d(TAG, "Adding new server: " + githubServerConfigDTO.name);
+            ServerConfig newConfig = new ServerConfig();
+            newConfig.setName(githubServerConfigDTO.name);
+            newConfig.setUrl(githubServerConfigDTO.url);
+            newConfig.setReferer(githubServerConfigDTO.referer);
+            newConfig.setLabel(githubServerConfigDTO.label);
+            newConfig.setActive(githubServerConfigDTO.isActive);
+            newConfig.setCreatedAt(githubDate); // Set date from remote
+            updateConfig(newConfig);
         } else {
             // Existing server, check if update is needed
             Date localDate = existingConfig.getCreatedAt();

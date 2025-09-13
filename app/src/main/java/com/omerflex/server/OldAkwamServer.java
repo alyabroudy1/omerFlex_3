@@ -208,7 +208,7 @@ public class OldAkwamServer extends AbstractServer {
         if (query.contains("http")) {
             return query;
         }
-        String searchPart = "old/advanced-search/";
+        String searchPart = "/old/advanced-search/";
         ServerConfig config = getConfig();
         if (config.getUrl() == null || config.getUrl().isEmpty()) {
             return WEBSITE_URL + searchPart + query;
