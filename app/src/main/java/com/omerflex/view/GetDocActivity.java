@@ -113,11 +113,17 @@ public class GetDocActivity extends AppCompatActivity {
                 try {
                     URI originalUri = new URI(GetDocActivity.this.url);
                     URI finalUri = new URI(url);
+                    URI configUri = new URI(config.getUrl());
 
                     String originalHost = originalUri.getHost();
                     String finalHost = finalUri.getHost();
+                    String configHost = configUri.getHost();
+                    Log.d(TAG, "onPageFinished: originalHost:"+originalHost+", config: "+configHost);
 
-                    if (config != null && originalHost != null && finalHost != null && !originalHost.equalsIgnoreCase(finalHost)) {
+                    if (config != null &&
+                            originalHost != null &&
+                            originalHost.equals(configHost) && // avoid updating when url is not from the same server
+                            finalHost != null && !originalHost.equalsIgnoreCase(finalHost)) {
                         // Heuristic: if original path was not root, and final path is root, it might be a generic redirect.
                         if (!"/".equals(originalUri.getPath()) && "/".equals(finalUri.getPath())) {
                             Log.w(TAG, "Domain changed, but redirected to root of new domain. Not updating server URL to be safe.");
