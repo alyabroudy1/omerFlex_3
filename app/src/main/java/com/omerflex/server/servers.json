@@ -98,6 +98,15 @@
       "isActive": true,
       "description": "7",
       "date": "2025-02-12T12:30:00"
+    },
+    {
+      "name": "Iptv",
+      "displayName": "Iptv",
+      "url": "https://drive.google.com/u/0/uc?id=1IdSILICjk5BE6WggZEuIAKrZxQPZFMb2&export=download",
+      "webName": "https://drive.google.com/u/0/uc?id=1IdSILICjk5BE6WggZEuIAKrZxQPZFMb2&export=download",
+      "isActive": true,
+      "description": "7",
+      "date": "2025-02-12T12:30:00"
     }
   ]
 }
