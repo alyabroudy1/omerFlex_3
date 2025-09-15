@@ -2,11 +2,18 @@ package com.omerflex.server.config;
 
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
+import com.omerflex.server.IptvServer;
+
+import java.util.Calendar;
+import java.util.Date;
 
 public class DefaultServersConfig {
     public static void initializeDefaultServers(){
 
         ServerConfigRepository scm = ServerConfigRepository.getInstance();
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(2020, Calendar.JANUARY, 1); // year, month (0-based), day
+        Date date = calendar.getTime();
 
         //### mycima ###
         ServerConfig mycimaConfig = new ServerConfig();
@@ -14,6 +21,7 @@ public class DefaultServersConfig {
         mycimaConfig.setUrl("https://mycima.io");
         mycimaConfig.setReferer("https://mycima.io/");
         mycimaConfig.setActive(true);
+        mycimaConfig.setCreatedAt(date);
 
         scm.updateConfig(mycimaConfig);
 
@@ -23,6 +31,7 @@ public class DefaultServersConfig {
         cimaNowConfig.setActive(true);
         cimaNowConfig.setUrl("https://cimanow.cc");
         cimaNowConfig.setReferer("https://cimanow.cc/");
+        cimaNowConfig.setCreatedAt(date);
 
         scm.updateConfig(cimaNowConfig);
 //
@@ -33,6 +42,7 @@ public class DefaultServersConfig {
         arabseedConfig.setUrl("https://arabseed.show");
         arabseedConfig.setReferer("https://arabseed.show/");
         arabseedConfig.setActive(true);
+        arabseedConfig.setCreatedAt(date);
 
         scm.updateConfig(arabseedConfig);
 //
@@ -42,6 +52,7 @@ public class DefaultServersConfig {
         faselConfig.setName(Movie.SERVER_FASELHD);
         faselConfig.setUrl("https://www.faselhds.center");
         faselConfig.setReferer("https://www.faselhds.center/");
+        faselConfig.setCreatedAt(date);
 
         scm.updateConfig(faselConfig);
 //
@@ -51,6 +62,7 @@ public class DefaultServersConfig {
         larozaConfig.setActive(true);
         larozaConfig.setUrl("https://www.laroza.now");
         larozaConfig.setReferer("https://www.laroza.now/");
+        larozaConfig.setCreatedAt(date);
 
         scm.updateConfig(larozaConfig);
 //
@@ -60,6 +72,7 @@ public class DefaultServersConfig {
         akwamConfig.setActive(true);
         akwamConfig.setUrl("https://ak.sv");
         akwamConfig.setReferer("https://ak.sv/");
+        akwamConfig.setCreatedAt(date);
 
         scm.updateConfig(akwamConfig);
 //
@@ -69,16 +82,18 @@ public class DefaultServersConfig {
         oldAkwamConfig.setActive(true);
         oldAkwamConfig.setUrl("https://www.ak.sv");
         oldAkwamConfig.setReferer("https://www.ak.sv/");
+        oldAkwamConfig.setCreatedAt(date);
 
         scm.updateConfig(oldAkwamConfig);
 //
 //        //### iptv ###
         ServerConfig iptvConfig = new ServerConfig();
         iptvConfig.setName(Movie.SERVER_IPTV);
-        iptvConfig.setUrl("https://drive.google.com");
+        iptvConfig.setUrl(IptvServer.MAIN_IPTV_PLAYLIST_URL);
 //        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
         iptvConfig.setReferer("https://drive.google.com/");
         iptvConfig.setActive(true);
+        iptvConfig.setCreatedAt(date);
 
         scm.updateConfig(iptvConfig);
 //
@@ -88,6 +103,7 @@ public class DefaultServersConfig {
 //        omarConfig.setActive(true);
 //        omarConfig.setUrl("http://194.164.53.40/movie");
 //        omarConfig.setReferer("http://194.164.53.40/");
+//        omarConfig.setCreatedAt(date);
 //
 //        scm.updateConfig(omarConfig);
 //
@@ -98,6 +114,7 @@ public class DefaultServersConfig {
 //        imdbConfig.setActive(true);
 //        imdbConfig.setUrl("https://api.themoviedb.org/3/");
 //        imdbConfig.setReferer("https://api.themoviedb.org/3/");
+//        imdbConfig.setCreatedAt(date);
 //
 //        scm.updateConfig(imdbConfig);
 

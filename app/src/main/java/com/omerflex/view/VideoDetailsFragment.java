@@ -29,6 +29,7 @@ import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.omerflex.R;
 import com.omerflex.entity.Movie;
+import com.omerflex.entity.MovieType;
 import com.omerflex.server.Util;
 import com.omerflex.view.listener.MovieItemViewClickedListener;
 import com.omerflex.view.viewConroller.VideoDetailsFragmentController;
@@ -151,9 +152,14 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 
     private void setupRelatedMovieListRow() {
         String headerTitle = getResources().getString(R.string.related_movie_row_header_resolutions);
-        if (mSelectedMovie.getState() == Movie.GROUP_OF_GROUP_STATE) {
+//        if (mSelectedMovie.getState() == Movie.GROUP_OF_GROUP_STATE) {
+//            headerTitle = getResources().getString(R.string.related_movie_row_header_session);
+//        } else if (mSelectedMovie.getState() == Movie.GROUP_STATE) {
+//            headerTitle = getResources().getString(R.string.related_movie_row_header_series);
+//        }
+        if (mSelectedMovie.getType() == MovieType.SERIES) {
             headerTitle = getResources().getString(R.string.related_movie_row_header_session);
-        } else if (mSelectedMovie.getState() == Movie.GROUP_STATE) {
+        } else if (mSelectedMovie.getType() == MovieType.SEASON) {
             headerTitle = getResources().getString(R.string.related_movie_row_header_series);
         }
         HeaderItem header = new HeaderItem(0, headerTitle);

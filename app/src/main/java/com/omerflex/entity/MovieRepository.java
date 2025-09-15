@@ -25,6 +25,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MovieRepository {
     private static final String TAG = "MovieRepository";
@@ -496,36 +498,83 @@ public class MovieRepository {
     }
 
     public void getSearchMovies(String query, MovieListCallback callback) {
-        Log.d(TAG, "getHomepageMovies: ");
-        remoteDataSource.getSearchMovies(false, query, (remoteCategory, remoteMovies) -> {
-            Log.d(TAG, "getHomepageMovies: remote: " + remoteMovies.size());
-            if (remoteMovies != null && !remoteMovies.isEmpty()) {
-                new Thread(() -> {
-                    boolean isIpTv = remoteMovies.get(0).getStudio().equals(Movie.SERVER_IPTV);
-                    for (int i = 0; i < remoteMovies.size(); i++) {
-                        Movie movie = remoteMovies.get(i);
-                        String videoUrl = isIpTv ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
-                        movie.setVideoUrl(videoUrl);
-                        Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
+        Log.d(TAG, "getSearchMovies: ");
+        ServerConfigRepository repository = ServerConfigRepository.getInstance();
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            repository.getIsInitialized().observeForever(new androidx.lifecycle.Observer<Boolean>() {
+                @Override
+                public void onChanged(Boolean isInitialized) {
+                    if (isInitialized != null && isInitialized) {
+                        repository.getIsInitialized().removeObserver(this);
 
-                        if (existingMovie == null) {
-                            long newId = movieDao.insert(movie);
-                            movie.setId(newId);
-                        } else {
-                            remoteMovies.set(i, existingMovie);
-                        }
+                        ExecutorService executor = Executors.newCachedThreadPool();
+                        executor.submit(() -> {
+                            List<ServerConfig> configs = repository.getAllActiveConfigsList();
+                            for (ServerConfig config : configs) {
+                                getSearchMoviesOfServer(false, config, query, callback);
+                            }
+                        });
+                        executor.shutdown();
                     }
-                    reAddDomainToMovies(remoteMovies);
-                    new Handler(Looper.getMainLooper()).post(() -> {
+                }
+            });
+        });
+    }
+
+    public void getSearchMoviesOfServer(boolean handleCookie, ServerConfig config, String query, MovieListCallback callback) {
+        AbstractServer server = ServerFactory.createServer(config.getName());
+        if (server == null) {
+            return;
+        }
+        Log.d(TAG, "getSearchMoviesOfServer: config: " + config.getName() + ", " + server.getLabel());
+        server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+            @Override
+            public void onSuccess(ArrayList<Movie> remoteMovies, String remoteCategory) {
+                Log.d(TAG, "onSuccess: " + remoteCategory);
+                if (remoteMovies != null && !remoteMovies.isEmpty()) {
+                    new Thread(() -> {
+                        boolean isIpTv = remoteMovies.get(0).getStudio().equals(Movie.SERVER_IPTV);
+                        for (int i = 0; i < remoteMovies.size(); i++) {
+                            Movie movie = remoteMovies.get(i);
+                            String videoUrl = isIpTv ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
+                            movie.setVideoUrl(videoUrl);
+                            Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
+
+                            if (existingMovie == null) {
+                                long newId = movieDao.insert(movie);
+                                movie.setId(newId);
+                            } else {
+                                remoteMovies.set(i, existingMovie);
+                            }
+                        }
+                        reAddDomainToMovies(remoteMovies);
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            callback.onMovieListFetched(remoteCategory, remoteMovies);
+                        });
+                    }).start();
+                } else {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                         callback.onMovieListFetched(remoteCategory, remoteMovies);
                     });
-                }).start();
-            } else {
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                    callback.onMovieListFetched(remoteCategory, remoteMovies);
-                });
+                }
             }
-        });
+
+            @Override
+            public void onInvalidCookie(ArrayList<Movie> result, String title) {
+                Log.d(TAG, "onInvalidCookie: from " + config.getName());
+                callback.onMovieListFetched(title, result);
+            }
+
+            @Override
+            public void onInvalidLink(ArrayList<Movie> result) {
+                Log.d(TAG, "onInvalidLink: from " + config.getName());
+            }
+
+            @Override
+            public void onInvalidLink(String message) {
+                Log.d(TAG, "onInvalidLink from " + config.getName() + ": " + message);
+            }
+        }, handleCookie);
     }
 
     public void getSearchIptvMovies(String query, MovieListCallback callback) {

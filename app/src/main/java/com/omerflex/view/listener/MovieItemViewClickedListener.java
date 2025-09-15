@@ -216,16 +216,24 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
     private void handleCookieState(Movie movie, ListRow clickedRow) {
         // to update the row with new result after fetching the cookie, setFetch to REQUEST_CODE_MOVIE_LIST
         Log.d(TAG, "handleCookieState: ");
+        if (movie.getFetch() == Movie.NO_FETCH_MOVIE_AT_START) {
+            Log.d(TAG, "handleNextPageState: This Next page is already fetched...");
+            return;
+        }
 //        movie.setFetch(Movie.REQUEST_CODE_EXTEND_MOVIE_SUB_LIST);
 //        if (mFragment != null) {
 //            Util.openBrowserIntent(movie, mFragment, true, true, true, selectedRowIndex, selectedItemIndex);
 //            return;
 //        }
 //        Util.openBrowserIntent(movie, mFragment.getActivity(), true, true, true, selectedRowIndex, selectedItemIndex);
-        movieRepository.getHomepageMovies(true, (category, movieList) -> {
+        movieRepository.getSearchMoviesOfServer(
+                true,
+                ServerConfigRepository.getInstance().getConfig(movie.getStudio()),
+                movie.getVideoUrl(), (category, movieList) -> {
             if (movieList != null) {
                 Log.d("Movie", "Fetched movie33: " + movieList.toString());
                 updateAdapterOnMainThread(movieList, clickedRow, movie);
+                movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START);
             } else {
                 Log.d("Movie", "movieList not found.");
             }

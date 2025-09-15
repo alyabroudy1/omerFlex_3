@@ -27,6 +27,7 @@ import com.omerflex.view.CursorLayout;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
@@ -108,6 +109,32 @@ public class GetDocActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 Log.d(TAG, "onPageFinished for URL: " + url);
+
+                try {
+                    URI originalUri = new URI(GetDocActivity.this.url);
+                    URI finalUri = new URI(url);
+
+                    String originalHost = originalUri.getHost();
+                    String finalHost = finalUri.getHost();
+
+                    if (config != null && originalHost != null && finalHost != null && !originalHost.equalsIgnoreCase(finalHost)) {
+                        // Heuristic: if original path was not root, and final path is root, it might be a generic redirect.
+                        if (!"/".equals(originalUri.getPath()) && "/".equals(finalUri.getPath())) {
+                            Log.w(TAG, "Domain changed, but redirected to root of new domain. Not updating server URL to be safe.");
+                        } else {
+                            String newBaseUrl = finalUri.getScheme() + "://" + finalUri.getHost();
+                            if (finalUri.getPort() != -1 && finalUri.getPort() != 80 && finalUri.getPort() != 443) {
+                                newBaseUrl += ":" + finalUri.getPort();
+                            }
+                            Log.i(TAG, "Domain change detected for " + config.getName() + ". Updating URL from " + config.getUrl() + " to " + newBaseUrl);
+                            config.setUrl(newBaseUrl);
+                            config.setReferer(newBaseUrl+"/");
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error during domain change detection.", e);
+                }
+
                 updateCookies(url);
                 view.evaluateJavascript("document.title", title -> {
                     Log.d(TAG, "Page title: " + title);

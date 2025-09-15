@@ -12,6 +12,8 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
 import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.UpdateService;
+import com.omerflex.view.GetSearchQueryActivity;
+import com.omerflex.view.SearchResultActivity;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,18 +34,24 @@ public class MainFragmentController extends BaseFragmentController {
     @Override
     public void loadData() {
         Log.d(TAG, "loadData: ");
+        try {
+            Log.d(TAG, "loadData: try to check for update");
+            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
+        }catch (Exception e){
+            Log.e(TAG, "checkForRemoteUpdates: "+e.getMessage());
+        }
         movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded, () -> {
             Log.d(TAG, "All homepage movies fetched. Loading subsequent data.");
             movieRepository.getWatchedMovies(this::onMoviesLoaded);
             movieRepository.getWatchedChannels(this::onMoviesLoaded);
             movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
         });
-        try {
-            Log.d(TAG, "loadData: try to check for update");
-//            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
-        }catch (Exception e){
-            Log.e(TAG, "checkForRemoteUpdates: "+e.getMessage());
-        }
+
+//        Intent searchResultIntent = new Intent(mFragment.getActivity(), SearchResultActivity.class);
+//        searchResultIntent.putExtra("query", "اسر");
+//        // setResult(Activity.RESULT_OK,returnIntent);
+//        //  finish();
+//        mFragment.startActivity(searchResultIntent);
     }
 
     private void onHomepageMoviesLoaded(String category, ArrayList<Movie> movieList) {

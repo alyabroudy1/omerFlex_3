@@ -32,6 +32,9 @@ public interface MovieDao {
     @Query("DELETE FROM movies")
     void deleteAllMovies();
 
+    @Query("DELETE FROM movies WHERE studio = :studio")
+    void deleteByStudio(String studio);
+
     @Query("SELECT * FROM movies ORDER BY updatedAt DESC")
     LiveData<List<Movie>> getAllMovies();
 

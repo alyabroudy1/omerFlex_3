@@ -171,6 +171,7 @@ public abstract class AbstractServer implements ServerInterface {
                     redirectCount++;
                 } else {
                     Log.e(TAG, "Unexpected status " + response.statusCode() + " for " + currentUrl);
+//                    Log.e(TAG, "Unexpected status " + response.body());
                     return statusCode == HttpURLConnection.HTTP_NOT_FOUND ? null : response.parse();
                 }
             }

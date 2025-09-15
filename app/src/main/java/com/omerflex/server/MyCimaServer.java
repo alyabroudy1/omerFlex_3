@@ -38,7 +38,7 @@ public class MyCimaServer extends AbstractServer {
         Log.i(getLabel(), "search: " + query);
         String searchContext = query;
         String url = query;
-        boolean multiSearch = handleCookie;
+        boolean multiSearch = false;
         if (!query.contains("http")) {
             url = this.getSearchUrl(query);
             multiSearch = true;
@@ -70,7 +70,8 @@ public class MyCimaServer extends AbstractServer {
             m.setTitle(title);
             m.setDescription("نتائج البحث في الاسفل...");
             m.setStudio(Movie.SERVER_MyCima);
-            m.setVideoUrl(doc.location());
+            m.setVideoUrl(query);
+//            m.setVideoUrl(doc.location());
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
             m.setType(MovieType.COOKIE);
@@ -106,7 +107,9 @@ public class MyCimaServer extends AbstractServer {
             }
         }
         if (multiSearch) {
-            this.getExtraSearchMovieList(doc.baseUri().isEmpty() ? url : doc.baseUri(), movieList);
+            String extraUrl = query.startsWith("http") ? query : (doc.baseUri().isEmpty() ? url : doc.baseUri());
+            Log.d(TAG, "search: extraUrl: "+extraUrl);
+            this.getExtraSearchMovieList(extraUrl, movieList);
         }
 
         Movie nextPage = this.generateNextPageMovie(doc);
@@ -149,7 +152,7 @@ public class MyCimaServer extends AbstractServer {
         Log.d(TAG, "getExtraSearchMovieList: lis2: " + lis2.size());
         for (Element li : lis2) {
             Movie movie = generateMovieFromDocElement(li);
-            if (movie != null) {
+            if (movie != null && !movies.contains(movie)) {
                 movies.add(movie);
             }
         }

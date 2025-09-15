@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 public class IptvServer extends AbstractServer {
 
     static String TAG = "iptv";
-    static String MAIN_IPTV_PLAYLIST_URL = "https://drive.google.com/u/0/uc?id=1IdSILICjk5BE6WggZEuIAKrZxQPZFMb2&export=download";
+    public static String MAIN_IPTV_PLAYLIST_URL = "https://drive.google.com/u/0/uc?id=1IdSILICjk5BE6WggZEuIAKrZxQPZFMb2&export=download";
 
     private MovieRepository movieRepository;
     M3U8ContentFetcher contentFetcher;
@@ -197,5 +197,9 @@ public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> 
 
     public void loadDefaultChannels(MovieRepository.MovieListCallback callback) {
         contentFetcher.fetchDefaultChannels(MAIN_IPTV_PLAYLIST_URL, callback);
+    }
+
+    public void loadChannelsFromUrl(String url, MovieRepository.MovieListCallback callback) {
+        contentFetcher.fetchDefaultChannels(url, callback);
     }
 }

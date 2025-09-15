@@ -14,9 +14,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.omerflex.dao.ServerConfigDao;
 import com.omerflex.db.AppDatabase;
+import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
+import com.omerflex.server.IptvServer;
 import com.omerflex.server.ServerFactory;
 import com.omerflex.service.UpdateService;
 
@@ -45,6 +47,7 @@ public class ServerConfigRepository {
     private final MutableLiveData<Boolean> isInitialized = new MutableLiveData<>(false);
     private final Context appContext;
 
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     // A more robust date format that handles ISO 8601 with 'Z' for UTC.
     private static final SimpleDateFormat remoteDateFormatWithZ;
     static {
@@ -149,10 +152,11 @@ public class ServerConfigRepository {
                                 }
 
                                 Log.d(TAG, "Processing remote config for: " + serverConfigDTO.name);
-
+                                System.out.println("config for: " + serverConfigDTO);
                                 if ("app".equals(serverConfigDTO.name)) {
                                     handleAppUpdate(updateService, serverConfigDTO);
-                                } else {
+                                }
+                                else {
                                     updateServerConfigIfNeeded(serverConfigDTO);
                                 }
                             } catch (Exception e) {
@@ -171,6 +175,21 @@ public class ServerConfigRepository {
         executor.shutdown();
     }
 
+    private void handleIptvPlayListUpdate(ServerConfigDTO serverConfigDTO) {
+        // clean old iptv list  and add new one
+        Log.d(TAG, "handleIptvPlayListUpdate: deleting old iptv movies");
+        AppDatabase.getDatabase(appContext).movieDao().deleteByStudio(Movie.SERVER_IPTV);
+        Log.d(TAG, "handleIptvPlayListUpdate: old iptv movies deleted");
+
+        IptvServer iptvServer = (IptvServer) ServerFactory.createServer(Movie.SERVER_IPTV);
+        if (iptvServer != null) {
+            Log.d(TAG, "handleIptvPlayListUpdate: loading new movies from: " + serverConfigDTO.url);
+            iptvServer.loadChannelsFromUrl(serverConfigDTO.url, (category, movies) -> {
+                Log.d(TAG, "handleIptvPlayListUpdate: loaded " + movies.size() + " movies");
+            });
+        }
+    }
+
     private void handleAppUpdate(UpdateService updateService, ServerConfigDTO appConfigDto) {
         if (updateService != null) {
             Log.d(TAG, "Checking for app updates...");
@@ -185,11 +204,13 @@ public class ServerConfigRepository {
             return;
         }
 
+
         Date githubDate;
         String dateStr = githubServerConfigDTO.date.trim(); // Trim the date string
+
         try {
             // Try parsing with the timezone format first
-            githubDate = remoteDateFormatWithZ.parse(dateStr);
+             githubDate = dateFormat.parse(githubServerConfigDTO.date);
         } catch (ParseException e) {
             // Fallback to the legacy format
             try {
@@ -204,20 +225,26 @@ public class ServerConfigRepository {
         ServerConfig existingConfig = serverConfigDao.findByName(githubServerConfigDTO.name);
         if (existingConfig == null) {
             // This is a new server, add it.
-            Log.d(TAG, "Adding new server: " + githubServerConfigDTO.name);
-            ServerConfig newConfig = new ServerConfig();
-            newConfig.setName(githubServerConfigDTO.name);
-            newConfig.setUrl(githubServerConfigDTO.url);
-            newConfig.setReferer(githubServerConfigDTO.referer);
-            newConfig.setLabel(githubServerConfigDTO.label);
-            newConfig.setActive(githubServerConfigDTO.isActive);
-            newConfig.setCreatedAt(githubDate); // Set date from remote
-            updateConfig(newConfig);
+            Log.d(TAG, "Server config not found locally: " + githubServerConfigDTO.name);
+//            Log.d(TAG, "Adding new server: " + githubServerConfigDTO.name);
+//            ServerConfig newConfig = new ServerConfig();
+//            newConfig.setName(githubServerConfigDTO.name);
+//            newConfig.setUrl(githubServerConfigDTO.url);
+//            newConfig.setReferer(githubServerConfigDTO.referer);
+//            newConfig.setLabel(githubServerConfigDTO.label);
+//            newConfig.setActive(githubServerConfigDTO.isActive);
+//            newConfig.setCreatedAt(githubDate); // Set date from remote
+//            updateConfig(newConfig);
         } else {
             // Existing server, check if update is needed
             Date localDate = existingConfig.getCreatedAt();
+//                Log.d(TAG, "updateServerConfigIfNeeded: githubServerConfigDTO: "+githubServerConfigDTO);
             if (localDate == null || githubDate.after(localDate)) {
                 Log.d(TAG, "Updating existing server: " + githubServerConfigDTO.name + (localDate == null ? " (local date was null)" : ""));
+                if (Movie.SERVER_IPTV.equals(githubServerConfigDTO.name)) {
+                    handleIptvPlayListUpdate(githubServerConfigDTO);
+                }
+
                 existingConfig.setCreatedAt(githubDate);
                 existingConfig.setUrl(githubServerConfigDTO.url);
                 existingConfig.setReferer(githubServerConfigDTO.referer);
