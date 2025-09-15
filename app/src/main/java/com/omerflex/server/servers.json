@@ -14,7 +14,7 @@
       "displayName": "akwam",
       "url": "https://ak.sv",
       "webName": "https://www.akwam.cc",
-      "isActive": false,
+      "isActive": true,
       "description": "description",
       "date": "2025-09-12T12:34:00"
     },
@@ -59,7 +59,7 @@
       "displayName": "cimaclub",
       "url": "https://cimaclub.top",
       "webName": "https://cimaclub.skin",
-      "isActive": true,
+      "isActive": false,
       "description": "description",
       "date": "2024-02-22T12:30:00"
     },
@@ -68,7 +68,7 @@
       "displayName": "watanflix",
       "url": "https://watanflix.com",
       "webName": "https://watanflix.com",
-      "isActive": true,
+      "isActive": false,
       "description": "description",
       "date": "2024-02-22T12:30:00"
     },
@@ -77,7 +77,7 @@
       "displayName": "cimaNow",
       "url": "https://cimanow.cc",
       "webName": "https://cimanow.cc",
-      "isActive": true,
+      "isActive": false,
       "description": "description",
       "date": "2024-10-18T12:30:00"
     },
@@ -86,7 +86,7 @@
       "displayName": "koora",
       "url": "https://www.as-goal.cc",
       "webName": "https://www.as-goal.cc",
-      "isActive": true,
+      "isActive": false,
       "description": "description",
       "date": "2025-01-25T12:30:00"
     },
