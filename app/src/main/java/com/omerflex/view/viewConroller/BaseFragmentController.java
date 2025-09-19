@@ -23,6 +23,7 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
+import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.transition.Transition;
 import com.omerflex.entity.Movie;
 import com.omerflex.server.Util;
@@ -47,9 +48,9 @@ public abstract class BaseFragmentController {
     protected ArrayObjectAdapter mRowsAdapter;
     protected BackgroundManager mBackgroundManager;
     protected DisplayMetrics mMetrics;
+    private Target<Drawable> backgroundTarget;
     protected Drawable mDefaultBackground;
     protected final Handler mHandler = new Handler(Looper.myLooper());
-    private Timer mBackgroundTimer;
     private String mBackgroundUri;
     private ActivityResultHandler activityResultHandler;
     // A single, shared executor service for all background tasks
@@ -86,40 +87,66 @@ public abstract class BaseFragmentController {
     // Method to update the background image.
     protected void updateBackground(String uri) {
         if (mFragment == null || !mFragment.isAdded() || mFragment.getActivity() == null) {
-            if (mBackgroundTimer != null) {
-                mBackgroundTimer.cancel();
-            }
             return;
         }
+
+        // First, clear any previous Glide request that might be in progress.
+        if (backgroundTarget != null) {
+            Glide.with(mFragment.getActivity()).clear(backgroundTarget);
+        }
+
         int width = mMetrics.widthPixels;
         int height = mMetrics.heightPixels;
+
+        // Create a mutable copy of the default background to avoid recycled bitmap issues
+        Drawable errorDrawable = mDefaultBackground.getConstantState().newDrawable().mutate();
+
+        // Create and store the new target.
+        backgroundTarget = new SimpleTarget<Drawable>(width, height) {
+            @Override
+            public void onResourceReady(@NonNull Drawable drawable, @Nullable Transition<? super Drawable> transition) {
+                if (mFragment != null && mFragment.isAdded() && mFragment.getActivity() != null) {
+                    mBackgroundManager.setDrawable(drawable);
+                }
+            }
+        };
+
+        // Start the new Glide request with the new target.
         Glide.with(mFragment.getActivity())
                 .load(uri)
                 .centerCrop()
-                .error(mDefaultBackground)
-                .into(new SimpleTarget<Drawable>(width, height) {
-                    @Override
-                    public void onResourceReady(@NonNull Drawable drawable, @Nullable Transition<? super Drawable> transition) {
-                        if (mFragment != null && mFragment.isAdded() && mFragment.getActivity() != null) {
-                            mBackgroundManager.setDrawable(drawable);
-                        }
-                    }
-                });
-        if (mBackgroundTimer != null) {
-            mBackgroundTimer.cancel();
-        }
+                .error(errorDrawable)
+                .into(backgroundTarget); // Use the member variable here
     }
 
     protected void startBackgroundTimer() {
-        if (null != mBackgroundTimer) {
-            mBackgroundTimer.cancel();
-        }
-        mBackgroundTimer = new Timer();
-        mBackgroundTimer.schedule(new UpdateBackgroundTask(), BACKGROUND_UPDATE_DELAY);
+// Remove any pending update tasks
+        mHandler.removeCallbacks(updateBackgroundTask);
+        // Post a new update task with a delay
+        mHandler.postDelayed(updateBackgroundTask, BACKGROUND_UPDATE_DELAY);
     }
 
     public void handleActivityResult(int requestCode, int resultCode, Intent data) {
         activityResultHandler.handleResult(requestCode, resultCode, data, mRowsAdapter, null);
+    }
+
+    // A new Runnable object to perform the background update
+    private final Runnable updateBackgroundTask = new Runnable() {
+        @Override
+        public void run() {
+            if (mBackgroundUri != null) {
+                updateBackground(mBackgroundUri);
+            }
+        }
+    };
+
+    public void handleOnDetach(){
+        // Clear the final Glide request
+        if (backgroundTarget != null && mFragment != null && mFragment.getActivity() != null) {
+            Glide.with(mFragment.getActivity()).clear(backgroundTarget);
+        }
+        mHandler.removeCallbacks(updateBackgroundTask);
+        mFragment = null; // Nullify the reference
     }
 
 
@@ -130,13 +157,6 @@ public abstract class BaseFragmentController {
                 mBackgroundUri = ((Movie) item).getBackgroundImageUrl();
                 startBackgroundTimer();
             }
-        }
-    }
-
-    private class UpdateBackgroundTask extends TimerTask {
-        @Override
-        public void run() {
-            mHandler.post(() -> updateBackground(mBackgroundUri));
         }
     }
 }

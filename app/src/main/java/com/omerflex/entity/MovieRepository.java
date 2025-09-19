@@ -37,6 +37,11 @@ public class MovieRepository {
     private final MovieDao movieDao;
     private final MovieHistoryDao movieHistoryDao;
 
+    // Centralized executor for all database operations
+    private static final int DATABASE_THREAD_POOL_SIZE = 4;
+    private static final ExecutorService databaseExecutor = Executors.newFixedThreadPool(DATABASE_THREAD_POOL_SIZE);
+
+
     private MovieRepository(Context context, MovieDao movieDao) {
         localDataSource = LocalDataSource.getInstance(context);
         remoteDataSource = RemoteDataSource.getInstance();
@@ -92,7 +97,7 @@ public class MovieRepository {
     }
 
     public void saveMovie(Movie movie) {
-        new Thread(() -> {
+        databaseExecutor.execute(() -> {
             movie.setVideoUrl(removeDomain(movie.getVideoUrl()));
             long id = movieDao.insert(movie);
             movie.setId(id);
@@ -100,7 +105,7 @@ public class MovieRepository {
                 movie.getMovieHistory().setMovieId(movie.getId());
                 movieHistoryDao.insert(movie.getMovieHistory());
             }
-        }).start();
+        });
     }
 
     public void getMovieByUrl(String videoUrl, MovieCallback callback) {
@@ -131,7 +136,7 @@ public class MovieRepository {
         remoteDataSource.fetchHomepageMovies(handleCookie, (remoteCategory, remoteMovies) -> {
             Log.d(TAG, "getHomepageMovies: remote: " + remoteMovies.size());
             if (remoteMovies != null && !remoteMovies.isEmpty()) {
-                new Thread(() -> {
+                databaseExecutor.execute(() -> {
                     boolean isIpTv = remoteMovies.get(0).getStudio().equals(Movie.SERVER_IPTV);
                     for (int i = 0; i < remoteMovies.size(); i++) {
                         Movie movie = remoteMovies.get(i);
@@ -150,7 +155,7 @@ public class MovieRepository {
                     new Handler(Looper.getMainLooper()).post(() -> {
                         callback.onMovieListFetched(remoteCategory, remoteMovies);
                     });
-                }).start();
+                });
             } else {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                     callback.onMovieListFetched(remoteCategory, remoteMovies);
@@ -160,7 +165,7 @@ public class MovieRepository {
     }
 
     public void saveIptvMovies(HashMap<String, ArrayList<Movie>> iptvMovies, final IptvMovieListCallback callback) {
-        new Thread(() -> {
+        databaseExecutor.execute(() -> {
             for (Map.Entry<String, ArrayList<Movie>> entry : iptvMovies.entrySet()) {
                 ArrayList<Movie> movies = entry.getValue();
                 for (int i = 0; i < movies.size(); i++) {
@@ -177,11 +182,11 @@ public class MovieRepository {
             new Handler(Looper.getMainLooper()).post(() -> {
                 callback.onIptvMovieListFetched(iptvMovies);
             });
-        }).start();
+        });
     }
 
     public void fetchMovieDetails(Movie mSelectedMovie, ServerInterface.ActivityCallback<Movie> callback) {
-        new Thread(() -> {
+        databaseExecutor.execute(() -> {
             reAddDomainToMovie(mSelectedMovie);
             boolean saveCond = mSelectedMovie.getType() == MovieType.SERIES ||
                     mSelectedMovie.getType() == MovieType.SEASON;
@@ -223,7 +228,7 @@ public class MovieRepository {
                 @Override
                 public void onSuccess(Movie remoteMovie, String title) {
                     if (remoteMovie != null) {
-                        new Thread(() -> {
+                        databaseExecutor.execute(() -> {
                             remoteMovie.setVideoUrl(removeDomain(remoteMovie.getVideoUrl()));
                             movieDao.update(remoteMovie);
                             if (saveCond && remoteMovie.getSubList() != null && !remoteMovie.getSubList().isEmpty()) {
@@ -252,7 +257,7 @@ public class MovieRepository {
                             reAddDomainToMovie(remoteMovie);
                             reAddDomainToMovies(remoteMovie.getSubList());
                             new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(remoteMovie, title));
-                        }).start();
+                        });
                     } else {
                         new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(mSelectedMovie, mSelectedMovie.getTitle()));
                     }
@@ -274,7 +279,7 @@ public class MovieRepository {
                     new Handler(Looper.getMainLooper()).post(() -> callback.onInvalidLink(message));
                 }
             });
-        }).start();
+        });
     }
 
     public LiveData<List<Movie>> getMoviesByType(MovieType type) {
@@ -292,7 +297,7 @@ public class MovieRepository {
     }
 
     public void updateWatchedTime(Long movieId, long watchedTime) {
-        new Thread(() -> {
+        databaseExecutor.execute(() -> {
             if (movieId == null || movieId == 0) {
                 Log.d(TAG, "updateWatchedTime: Error invalid movie with id: " + movieId);
                 return;
@@ -353,7 +358,7 @@ public class MovieRepository {
                     }
                 }
             }
-        }).start();
+        });
     }
 
     private void updateMovieHistory(Movie movie, long watchedTime) {
@@ -368,7 +373,7 @@ public class MovieRepository {
     }
 
     public void saveMovieHistory(MovieHistory movieHistory) {
-        new Thread(() -> movieHistoryDao.insert(movieHistory)).start();
+        databaseExecutor.execute(() -> movieHistoryDao.insert(movieHistory));
     }
 
     public LiveData<MovieHistory> getMovieHistoryByMovieIdLive(long movieId) {
@@ -384,9 +389,9 @@ public class MovieRepository {
     }
 
     public void setMovieIsHistory(long movieId) {
-        new Thread(() -> {
+        databaseExecutor.execute(() -> {
             movieDao.setMovieIsHistory(movieId);
-        }).start();
+        });
     }
 
     public void getWatchedMovies(MovieListCallback callback) {
@@ -407,11 +412,11 @@ public class MovieRepository {
     }
 
     public void deleteMovie(Movie movie) {
-        new Thread(() -> movieDao.delete(movie)).start();
+        databaseExecutor.execute(() -> movieDao.delete(movie));
     }
 
     public void updateMovieLength(long id, long movieLength) {
-        new Thread(() -> {
+        databaseExecutor.execute(() -> {
             movieDao.updateMovieLength(id, movieLength);
             Movie movie = movieDao.getMovieById(id);
             if (movie != null && movie.getType() == MovieType.RESOLUTION) {
@@ -420,12 +425,12 @@ public class MovieRepository {
                     movieDao.updateMovieLength(parentId, movieLength);
                 }
             }
-        }).start();
+        });
     }
 
     public void getHomepageChannels(MovieListCallback callback) {
         Log.d(TAG, "getHomepageChannels: Started.");
-        new Thread(() -> {
+        databaseExecutor.execute(() -> {
             List<String> groups = new ArrayList<>();
             groups.add("الاخبار");
             groups.add("أطفال");
@@ -494,7 +499,7 @@ public class MovieRepository {
                         callback.onMovieListFetched(entry.getKey(), new ArrayList<>(entry.getValue()));
                     }
             }
-        }).start();
+        });
     }
 
     public void getSearchMovies(String query, MovieListCallback callback) {
@@ -532,7 +537,7 @@ public class MovieRepository {
             public void onSuccess(ArrayList<Movie> remoteMovies, String remoteCategory) {
                 Log.d(TAG, "onSuccess: " + remoteCategory);
                 if (remoteMovies != null && !remoteMovies.isEmpty()) {
-                    new Thread(() -> {
+                    databaseExecutor.execute(() -> {
                         boolean isIpTv = remoteMovies.get(0).getStudio().equals(Movie.SERVER_IPTV);
                         for (int i = 0; i < remoteMovies.size(); i++) {
                             Movie movie = remoteMovies.get(i);
@@ -551,7 +556,7 @@ public class MovieRepository {
                         new Handler(Looper.getMainLooper()).post(() -> {
                             callback.onMovieListFetched(remoteCategory, remoteMovies);
                         });
-                    }).start();
+                    });
                 } else {
                     new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                         callback.onMovieListFetched(remoteCategory, remoteMovies);

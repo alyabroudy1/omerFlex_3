@@ -27,7 +27,7 @@ public class OldAkwamServer extends AbstractServer {
     TextView descriptionTextView;
     static String TAG = "Old_Akwam";
     static String WEBSITE_NAME = "akwam";
-    public static String WEBSITE_URL = "https://www.akwam.cc/old";
+    public static String WEBSITE_URL = "https://www.akwam.cc/";
     static int GOO_FETCH_PAGE_REQUEST = 1;
     static int VIDEO_LINK_FETCH_PAGE_REQUEST = 2;
     static boolean STOP_BROWSER = false;
@@ -71,7 +71,7 @@ public class OldAkwamServer extends AbstractServer {
             m.setTitle(title);
             m.setDescription("نتائج البحث في الاسفل...");
             m.setStudio(Movie.SERVER_OLD_AKWAM);
-            m.setVideoUrl(url);
+            m.setVideoUrl(query);
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
             m.setType(MovieType.COOKIE);

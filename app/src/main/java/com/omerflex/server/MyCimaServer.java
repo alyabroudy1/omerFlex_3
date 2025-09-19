@@ -6,6 +6,7 @@ import com.omerflex.entity.MovieType;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Base64;
 import android.util.Log;
 
 import com.omerflex.entity.Movie;
@@ -25,6 +26,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class MyCimaServer extends AbstractServer {
     static String TAG = "MyCima";
@@ -70,7 +72,7 @@ public class MyCimaServer extends AbstractServer {
             m.setTitle(title);
             m.setDescription("نتائج البحث في الاسفل...");
             m.setStudio(Movie.SERVER_MyCima);
-            m.setVideoUrl(query);
+            m.setVideoUrl(url);
 //            m.setVideoUrl(doc.location());
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
@@ -90,35 +92,44 @@ public class MyCimaServer extends AbstractServer {
         Elements lis = null;
         if (query.contains("http")) {
             Elements box = doc.getElementsByClass("Grid--WecimaPosts");
-            if (box.size() > 0) {
-                Elements boxItems = box.first().getElementsByClass("GridItem");
-                if (boxItems.size() > 0) {
+            if (!box.isEmpty()) {
+                Elements boxItems = Objects.requireNonNull(box.first()).getElementsByClass("GridItem");
+                if (!boxItems.isEmpty()) {
                     lis = boxItems;
                 }
             }
         }
         if (lis == null) {
             lis = doc.getElementsByClass("GridItem");
+
+            if (lis.isEmpty()) {
+                // Select elements with class containing "media-card"
+                lis = doc.select("[class*=media-card]");
+            }
         }
+        Log.d(TAG, "search: lis size: "+lis.size());
         for (Element li : lis) {
             Movie movie = this.generateMovieFromDocElement(li);
             if (movie != null) {
+                Log.d(TAG, "search: mov: "+movie.getCardImageUrl());
                 movieList.add(movie);
             }
         }
-        if (multiSearch) {
-            String extraUrl = query.startsWith("http") ? query : (doc.baseUri().isEmpty() ? url : doc.baseUri());
-            Log.d(TAG, "search: extraUrl: "+extraUrl);
-            this.getExtraSearchMovieList(extraUrl, movieList);
-        }
-
-        Movie nextPage = this.generateNextPageMovie(doc);
-
-        Log.d(TAG, "search: nextPage: " + nextPage);
-
-        if (nextPage != null) {
-            movieList.add(nextPage);
-        }
+//        if (multiSearch) {
+//            String extraUrl = query.startsWith("http") ? query : (doc.baseUri().isEmpty() ? url : doc.baseUri());
+//            Log.d(TAG, "search: extraUrl: "+extraUrl);
+//            this.getExtraSearchMovieList(extraUrl, movieList);
+//        }
+//
+//        if (!movieList.isEmpty()){
+//            Movie nextPage = this.generateNextPageMovie(doc);
+//
+//            Log.d(TAG, "search: nextPage: " + nextPage);
+//
+//            if (nextPage != null) {
+//                movieList.add(nextPage);
+//            }
+//        }
 
         activityCallback.onSuccess(movieList, getLabel());
         return movieList;
@@ -149,6 +160,9 @@ public class MyCimaServer extends AbstractServer {
         Document doc = getRequestDoc(seriesSearch);
         Log.d(TAG, "getExtraSearchMovieList: doc: " + doc.title());
         Elements lis2 = doc.getElementsByClass("GridItem");
+        if (lis2.isEmpty()){
+            lis2 =  doc.select("[class*=media][class*=card]");
+        }
         Log.d(TAG, "getExtraSearchMovieList: lis2: " + lis2.size());
         for (Element li : lis2) {
             Movie movie = generateMovieFromDocElement(li);
@@ -162,6 +176,9 @@ public class MyCimaServer extends AbstractServer {
         doc = getRequestDoc(animeSearch);
         Log.d(TAG, "getExtraSearchMovieList: doc anime: " + doc.title());
         Elements lis3 = doc.getElementsByClass("GridItem");
+        if (lis3.isEmpty()){
+            lis3 =  doc.select("[class*=media][class*=card]");
+        }
         Log.d(TAG, "getExtraSearchMovieList: lis3 anime: " + lis3.size());
         for (Element li : lis3) {
             //              Log.i(TAG, "element found: ");
@@ -223,6 +240,9 @@ public class MyCimaServer extends AbstractServer {
 
                 Element imageElem = li.getElementsByAttribute("style").first();
                 String image = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
+                if (imageElem == null){
+                    imageElem = li.select("[class*=media][class*=card]").first();
+                }
                 if (imageElem != null) {
                     image = imageElem.attr("style");
                 }
@@ -245,7 +265,7 @@ public class MyCimaServer extends AbstractServer {
                 if (image.contains("(") && image.contains(")")) {
                     image = image.substring(image.indexOf('(') + 1, image.indexOf(')'));
                 }
-
+                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
 //                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
                 movie.setTitle(title);
                 movie.setVideoUrl(Util.getUrlPathOnly(videoUrl));
@@ -346,9 +366,13 @@ public class MyCimaServer extends AbstractServer {
         String u = movie.getVideoUrl();
         String n = movie.getTitle();
 
-        boolean seriesCase = n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
-                || u.contains("series") || n.contains("فلام");
-
+        boolean seriesCase = u.contains("/series") || (!u.contains("/watch") &&
+        (!(n.contains("حلقة") || n.contains("حلقه")) &&
+                        n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
+                ));
+//        boolean seriesCase = n.contains("انمي") || n.contains("برنامج") || n.contains("مسلسل")
+//                || u.contains("series") || n.contains("فلام");
+//        Log.d(TAG, "updateMovieState: is series :"+seriesCase+ ", "+u);
         if (seriesCase){
             movie.setState(Movie.GROUP_OF_GROUP_STATE);
             movie.setType(MovieType.SERIES);
@@ -421,6 +445,11 @@ public class MyCimaServer extends AbstractServer {
 
         //fetch session
         Elements boxs = doc.getElementsByClass("List--Seasons--Episodes");
+        if (boxs.isEmpty()) {
+            // Select elements whose class attribute contains both "seasons" and "list"
+            boxs = doc.select("[class*=seasons][class*=list]");
+        }
+        Log.d(TAG, "generateGroupOfGroupMovie: boxes size: "+boxs.size());
 
         if (boxs.isEmpty()) {
             movie.setState(Movie.GROUP_STATE);
@@ -505,6 +534,10 @@ public class MyCimaServer extends AbstractServer {
 
         //fetch session
         Elements boxs = doc.getElementsByClass("Episodes--Seasons--Episodes");
+        if (boxs.isEmpty()){
+            boxs = doc.select("[class*=episodes][class*=list]");
+        }
+        Log.d(TAG, "generateGroupMovie: episodes list: "+boxs.size());
         for (Element box : boxs) {
 
             Elements lis = box.getElementsByTag("a");
@@ -1100,6 +1133,9 @@ public class MyCimaServer extends AbstractServer {
         }
         //get link of episodes page
         Element descElem = doc.getElementsByClass("StoryMovieContent").first();
+        if (descElem == null) {
+            descElem = doc.select("[class*=story][class*=content]").first();
+        }
         String desc = "";
         if (descElem != null) {
             desc = descElem.text();
@@ -1107,6 +1143,10 @@ public class MyCimaServer extends AbstractServer {
         }
         String referer = Util.extractDomain(url, true, true);
         Elements uls = doc.getElementsByClass("List--Download--Wecima--Single");
+
+        if (uls.isEmpty()) {
+            uls = doc.select("[class*=downloads][class*=list]");
+        }
 //        Log.d(TAG, "generateItemMovie: html: " + doc.html());
 //        Log.d(TAG, "generateItemMovie: title: " + doc.title());
 //        Log.d(TAG, "generateItemMovie: uls: " + uls.size());
@@ -1144,6 +1184,9 @@ public class MyCimaServer extends AbstractServer {
         }
 
         uls = doc.getElementsByClass("WatchServersList");
+        if (uls.isEmpty()) {
+            uls = doc.select("[class*=watch][class*=list]");
+        }
         for (Element ul : uls) {
             Elements lis = ul.getElementsByAttribute("data-url");
             for (Element li : lis) {
@@ -1151,6 +1194,22 @@ public class MyCimaServer extends AbstractServer {
 
                 if (videoUrl == null || videoUrl.equals("")) {
                     continue;
+                }
+                if (!videoUrl.startsWith("http")){
+                    // Your encoded string from the data-url attribute
+// Decode the Base64 string into a byte array
+// The NO_WRAP flag ensures no extra line breaks are added
+                    byte[] decodedBytes = Base64.decode(videoUrl, Base64.NO_WRAP);
+
+// Convert the byte array to a UTF-8 string
+                    videoUrl = new String(decodedBytes, StandardCharsets.UTF_8);
+                    if (videoUrl.contains(getConfig().getUrl())){
+                        //ignore mycima server
+                        continue;
+                    }
+                    // Now 'decodedUrl' holds the final, readable URL
+//                     System.out.println(videoUrl);
+//                    videoUrl = Util.extractDomain(movie.getVideoUrl(), true, true) + videoUrl;
                 }
                 videoUrl = videoUrl + "|referer=" + referer;
                 Log.d(TAG, "generateItemMovie: "+ videoUrl);
@@ -1190,7 +1249,7 @@ public class MyCimaServer extends AbstractServer {
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
 //        return search("la casa", activityCallback, handleCookie);
-//        return search("اسر", activityCallback);
+//        return search("اسر", activityCallback,handleCookie);
 //        return search("ratched");
         return search(getConfig().getUrl() + "/movies/recent/", activityCallback, handleCookie);
 //   hhhhh     return search(getConfig().getUrl() + "/", activityCallback);

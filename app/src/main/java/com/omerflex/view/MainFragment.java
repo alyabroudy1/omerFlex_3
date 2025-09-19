@@ -346,4 +346,11 @@ public class MainFragment extends BrowseSupportFragment {
             }
         });
     }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        // The controller is now responsible for loading data.
+        mController.handleOnDetach();
+    }
 }

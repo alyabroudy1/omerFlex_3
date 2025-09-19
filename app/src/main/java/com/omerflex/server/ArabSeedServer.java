@@ -27,6 +27,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * from SearchActivity or MainActivity -> item -> resolutions
@@ -95,7 +96,7 @@ public class ArabSeedServer extends AbstractServer {
             m.setTitle(query);
             m.setDescription("نتائج البحث في الاسفل...");
             m.setStudio(Movie.SERVER_ARAB_SEED);
-            m.setVideoUrl(doc.location());
+            m.setVideoUrl(url);
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
             m.setType(MovieType.COOKIE);
@@ -830,6 +831,10 @@ public class ArabSeedServer extends AbstractServer {
 
             }
 
+            if (movie.getSubList() == null) {
+                movie.setSubList(new ArrayList<>());
+            }
+
 
             Log.d(TAG, "fetchServers:serverElems: "+serverElems.size());
             if (serverElems.isEmpty()) {
@@ -859,10 +864,11 @@ public class ArabSeedServer extends AbstractServer {
                     server.setType(MovieType.RESOLUTION);
 //                    String link = movie.getVideoUrl() + "??"+(counter++)+"||referer="+ referer;
                     String link = listElem.attr("data-link");
+                    Log.d(TAG, "fetchServers: data-link:"+link);
                     if (link.isEmpty()) {
 //                            link = movie.getVideoUrl() + "||Referer=" + domain;
                         link = "#"+listElem.attr("data-server");
-                        if (link.isEmpty()) {
+                        if (listElem.attr("data-server").isEmpty()) {
                             link = "#"+counter++;
                         }
                     }
@@ -887,12 +893,12 @@ public class ArabSeedServer extends AbstractServer {
                     server.setVideoUrl(link);
                     Log.d(TAG, "fetchServers:link:  "+link);
                     Elements titleElems = listElem.getElementsByTag("span");
-                    if (titleElems.size() > 0) {
+                    if (!titleElems.isEmpty()) {
                         if (titleElems.first() != null) {
-                            String titleText = titleElems.first().text();
-//                            if (titleText.contains("عرب سيد")) {
-//                                continue;
-//                            }
+                            String titleText = Objects.requireNonNull(titleElems.first()).text();
+                            if (titleText.contains("عرب سيد")) {
+                                server.setVideoUrl(movie.getVideoUrl()+ "|Referer=" + referer+"&User-Agent="+getCustomUserAgent(movie.getState()));
+                            }
 
                             server.setTitle(titleText);
                         }
@@ -901,13 +907,9 @@ public class ArabSeedServer extends AbstractServer {
                     }
                     Log.d(TAG, "fetchServers:title:  "+titleElems);
                     Log.d(TAG, "fetchServers: servers: " + server);
-                    if (movie.getSubList() == null) {
-                        movie.setSubList(new ArrayList<>());
-                    }
+
                     movie.addSubList(server);
                 }
-
-                break;
             }
 
         } catch (IOException e) {

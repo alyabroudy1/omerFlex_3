@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.core.util.Consumer;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -47,6 +48,8 @@ public class ServerConfigRepository {
     private final MutableLiveData<Boolean> isInitialized = new MutableLiveData<>(false);
     private final Context appContext;
 
+    private static final ExecutorService databaseExecutor = Executors.newSingleThreadExecutor();
+
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     // A more robust date format that handles ISO 8601 with 'Z' for UTC.
     private static final SimpleDateFormat remoteDateFormatWithZ;
@@ -81,6 +84,11 @@ public class ServerConfigRepository {
         return isInitialized;
     }
 
+    /**
+     * @deprecated This is a synchronous, blocking call and should not be used from the main thread.
+     * Use {@link #getConfigAsync(String, Consumer)} instead for safety.
+     */
+    @Deprecated
     public ServerConfig getConfig(String serverName) {
         if (cache.containsKey(serverName)) {
             return cache.get(serverName);
@@ -90,6 +98,28 @@ public class ServerConfigRepository {
             cache.put(serverName, config);
         }
         return config;
+    }
+
+    /**
+     * Asynchronously retrieves a ServerConfig from the cache or database.
+     * The callback is executed on the main thread.
+     *
+     * @param serverName The name of the server to retrieve.
+     * @param callback   The callback to be invoked with the result.
+     */
+    public void getConfigAsync(String serverName, Consumer<ServerConfig> callback) {
+        databaseExecutor.execute(() -> {
+            ServerConfig config;
+            if (cache.containsKey(serverName)) {
+                config = cache.get(serverName);
+            } else {
+                config = serverConfigDao.findByName(serverName);
+                if (config != null) {
+                    cache.put(serverName, config);
+                }
+            }
+            new Handler(Looper.getMainLooper()).post(() -> callback.accept(config));
+        });
     }
 
     public void updateConfig(ServerConfig newConfig) {
@@ -175,7 +205,7 @@ public class ServerConfigRepository {
         executor.shutdown();
     }
 
-    private void handleIptvPlayListUpdate(ServerConfigDTO serverConfigDTO) {
+    public void handleIptvPlayListUpdate(ServerConfigDTO serverConfigDTO) {
         // clean old iptv list  and add new one
         Log.d(TAG, "handleIptvPlayListUpdate: deleting old iptv movies");
         AppDatabase.getDatabase(appContext).movieDao().deleteByStudio(Movie.SERVER_IPTV);
@@ -257,6 +287,11 @@ public class ServerConfigRepository {
         }
     }
 
+    /**
+     * @deprecated This is a synchronous, blocking call and should not be used from the main thread.
+     * Use {@link #getServerAsync(String, Consumer)} instead for safety.
+     */
+    @Deprecated
     public AbstractServer getServer(String serverName) {
        ServerConfig config = getConfig(serverName);
        if (config == null) {
@@ -264,6 +299,18 @@ public class ServerConfigRepository {
            return null;
        }
        return ServerFactory.createServer(config.getName());
+    }
+
+    public void getServerAsync(String serverName, Consumer<AbstractServer> callback) {
+        getConfigAsync(serverName, config -> {
+            if (config == null) {
+                Log.d(TAG, "server not found: "+ serverName);
+                callback.accept(null);
+                return;
+            }
+            AbstractServer server = ServerFactory.createServer(config.getName());
+            callback.accept(server);
+        });
     }
 
 

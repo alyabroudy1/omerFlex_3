@@ -62,8 +62,19 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
 
     @Override
     public void onItemClicked(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder, Row row) {
+        Log.d(TAG, "onItemClicked: item:"+item);
         if (!(item instanceof Movie)) {
             // return to delegate handling
+            Log.d(TAG, "onItemClicked: return item not instance of movie");
+            return;
+        }
+        selectedRowIndex = mRowsAdapter.indexOf(row);
+        if (row instanceof ListRow){
+            ArrayObjectAdapter adapter = (ArrayObjectAdapter) ((ListRow)  row).getAdapter();
+            selectedItemIndex = adapter.indexOf(item);
+        }
+        else{
+            Log.d(TAG, "onItemClicked: row is not instanceof ListRow");
             return;
         }
         Movie movie = (Movie) item;
@@ -72,7 +83,6 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
             Toast.makeText(mFragment.getActivity(), "Unknown movie or server: " + movie.getStudio(), Toast.LENGTH_SHORT).show();
             return;
         }
-        selectedRowIndex = mRowsAdapter.indexOf(row);
         // Submit the heavy lifting to a background thread
         executorService.submit(() -> processMovieClick(movie, (ListRow) row));
     }
@@ -81,15 +91,16 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
      * Handles the actual click processing logic on a background thread.
      */
     private void processMovieClick(Movie movie, ListRow clickedRow) {
-        if (movieRepository.getSelectedMovie().getValue() == null){
-            // set mSelectedMovie in the repository
-            // very important to monitor the selected movie in the repository
-            movieRepository.setSelectedMovie(movie);
-        }
+//        if (movieRepository.getSelectedMovie().getValue() == null){
+//            Log.d(TAG, "processMovieClick: ");
+//            // set mSelectedMovie in the repository
+//            // very important to monitor the selected movie in the repository
+//            movieRepository.setSelectedMovie(movie);
+//        }
+        Log.d(TAG, "processMovieClick: state: " + movie.getState());
         ArrayObjectAdapter adapter =(ArrayObjectAdapter) clickedRow.getAdapter();
         selectedItemIndex = adapter.indexOf(movie);
 //        Log.d(TAG, "processMovieClick 2: "+ movieRepository.getSelectedMovie().getValue());
-        Log.d(TAG, "processMovieClick: state: " + movie.getState());
         Log.d(TAG, "processMovieClick: selectedRowIndex: " + selectedRowIndex);
         Log.d(TAG, "processMovieClick: selectedItemIndex: " + selectedItemIndex);
         // Use a switch statement for cleaner state handling
@@ -130,17 +141,15 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         Log.d(TAG, "handleIptvPlayListState: list size: " + mRowsAdapter.size());
         // fetch iptv movies
         try {
-
-            executorService.submit(() -> {
-                // remove iptv created rows first
-
-                mainHandler.post(this::removeIpTvRows);
+            // Use a new executor to isolate the IPTV fetch and prevent it from blocking the shared executor.
+            Executors.newSingleThreadExecutor().submit(() -> {
+                try {
+                    // remove iptv created rows first
+                    mainHandler.post(this::removeIpTvRows);
                     M3U8ContentFetcher.fetchIpTvPlayList(movie, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
                         @Override
                         public void onSuccess(ArrayList<Movie> result, String title) {
-                            Log.d(TAG, "onSuccess: "+ title+ ", "+ result.size());
-//                            mainHandler.post(()-> generateCategory(title, result));
-
+                            Log.d(TAG, "onSuccess: " + title + ", " + result.size());
                             generateCategory(title, result);
                         }
 
@@ -156,9 +165,17 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
 
                         @Override
                         public void onInvalidLink(String message) {
-                            Log.d(TAG, "onInvalidLink: "+ message);
+                            Log.d(TAG, "onInvalidLink: " + message);
                         }
                     });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error in handleIptvPlayListState for movie: " + movie.getTitle(), e);
+                    mainHandler.post(() -> {
+                        if (mFragment != null && mFragment.getContext() != null) {
+                            Toast.makeText(mFragment.getContext(), "Error loading IPTV list.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
             });
 
 //            executorService.submit(() -> {
@@ -220,22 +237,29 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
             Log.d(TAG, "handleNextPageState: This Next page is already fetched...");
             return;
         }
-//        movie.setFetch(Movie.REQUEST_CODE_EXTEND_MOVIE_SUB_LIST);
-//        if (mFragment != null) {
-//            Util.openBrowserIntent(movie, mFragment, true, true, true, selectedRowIndex, selectedItemIndex);
-//            return;
-//        }
-//        Util.openBrowserIntent(movie, mFragment.getActivity(), true, true, true, selectedRowIndex, selectedItemIndex);
-        movieRepository.getSearchMoviesOfServer(
-                true,
-                ServerConfigRepository.getInstance().getConfig(movie.getStudio()),
-                movie.getVideoUrl(), (category, movieList) -> {
-            if (movieList != null) {
-                Log.d("Movie", "Fetched movie33: " + movieList.toString());
-                updateAdapterOnMainThread(movieList, clickedRow, movie);
-                movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START);
-            } else {
-                Log.d("Movie", "movieList not found.");
+
+        // Isolate the repository call in a new thread to avoid blocking the shared executor
+        Executors.newSingleThreadExecutor().submit(() -> {
+            try {
+                movieRepository.getSearchMoviesOfServer(
+                        true,
+                        ServerConfigRepository.getInstance().getConfig(movie.getStudio()),
+                        movie.getVideoUrl(), (category, movieList) -> {
+                            if (movieList != null) {
+                                Log.d("Movie", "Fetched movie33: " + movieList.toString());
+                                updateAdapterOnMainThread(movieList, clickedRow, movie);
+//                movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START);
+                            } else {
+                                Log.d("Movie", "movieList not found.");
+                            }
+                        });
+            } catch (Exception e) {
+                Log.e(TAG, "Error in handleCookieState for movie: " + movie.getTitle(), e);
+                mainHandler.post(() -> {
+                    if (mFragment != null && mFragment.getContext() != null) {
+                        Toast.makeText(mFragment.getContext(), "Error processing cookie state.", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
@@ -252,28 +276,57 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
 
     protected void handleServerFetchByItemClickCase(Movie movie, ListRow clickedRow) {
         Log.d(TAG, "handleServerFetchByItemClickCase");
-        AbstractServer server = ServerConfigRepository.getInstance().getServer(movie.getStudio());
 
-        int nextAction = server.fetchNextAction(movie);
-        switch (nextAction) {
-            case VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY:
-                Log.d(TAG, "handleServerFetchByItemClickCase: nextAction: ACTION_OPEN_DETAILS_ACTIVITY");
-                Util.openVideoDetailsIntent(movie, mFragment);
-                break;
-            case VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY:
+        // Asynchronously get the server object first.
+        ServerConfigRepository.getInstance().getServerAsync(movie.getStudio(), server -> {
+            if (server == null) {
+                mainHandler.post(() -> {
+                    if (mFragment != null && mFragment.getContext() != null) {
+                        Toast.makeText(mFragment.getContext(), "Server not found.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+                return;
+            }
+
+            // Once we have the server, execute the potentially blocking call on a new, separate thread.
+            Executors.newSingleThreadExecutor().submit(() -> {
+                try {
+                    // This is the blocking call
+                    int nextAction = server.fetchNextAction(movie);
+
+                    // Once the action is fetched, post the result back to the main thread
+                    // to perform UI actions like opening an activity.
+                    mainHandler.post(() -> {
+                        switch (nextAction) {
+                            case VideoDetailsFragment.ACTION_OPEN_DETAILS_ACTIVITY:
+                                Log.d(TAG, "handleServerFetchByItemClickCase: nextAction: ACTION_OPEN_DETAILS_ACTIVITY");
+                                Util.openVideoDetailsIntent(movie, mFragment);
+                                break;
+                            case VideoDetailsFragment.ACTION_OPEN_EXTERNAL_ACTIVITY:
 //                dbHelper.addMainMovieToHistory(movie);  todo
-                Log.d(TAG, "handleServerFetchByItemClickCase: nextAction: ACTION_OPEN_EXTERNAL_ACTIVITY");
-                Util.openExternalVideoPlayer(movie, mFragment.getActivity());
-                break;
-            case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
+                                Log.d(TAG, "handleServerFetchByItemClickCase: nextAction: ACTION_OPEN_EXTERNAL_ACTIVITY");
+                                Util.openExternalVideoPlayer(movie, mFragment.getActivity());
+                                break;
+                            case VideoDetailsFragment.ACTION_OPEN_NO_ACTIVITY:
 //                dbHelper.addMainMovieToHistory(movie); todo
-                Log.d(TAG, "handleServerFetchByItemClickCase: nextAction: ACTION_OPEN_NO_ACTIVITY");
-                handleFetchMovieFromServer(movie, clickedRow, server);
-                break;
-            default:
-                Log.d(TAG, "handleServerFetchByItemClickCase: unknown case");
-        }
-
+                                Log.d(TAG, "handleServerFetchByItemClickCase: nextAction: ACTION_OPEN_NO_ACTIVITY");
+                                handleFetchMovieFromServer(movie, clickedRow, server);
+                                break;
+                            default:
+                                Log.d(TAG, "handleServerFetchByItemClickCase: unknown case");
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error fetching next action for movie: " + movie.getTitle(), e);
+                    // Optionally, post a toast or error message to the user on the main thread
+                    mainHandler.post(() -> {
+                        if (mFragment != null && mFragment.getContext() != null) {
+                            Toast.makeText(mFragment.getContext(), "Error processing movie.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
+        });
     }
 
     private void handleFetchMovieFromServer(Movie movie, ListRow clickedRow, AbstractServer server) {
@@ -328,14 +381,26 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
             return;
         }
 
-        // Call the MovieRepository to fetch the next page.
-        movieRepository.getSearchMovies(movie.getVideoUrl(), (category, movieList) -> {
-                if (movieList != null) {
-                    Log.d("Movie", "fetchNextPage movie33: " + movieList.toString());
-                    updateAdapterOnMainThread(movieList, clickedRow, movie);
-                } else {
-                    Log.d("Movie", "fetchNextPage movieList not found.");
-                }
+        // Isolate the repository call in a new thread to avoid blocking the shared executor
+        Executors.newSingleThreadExecutor().submit(() -> {
+            try {
+                // Call the MovieRepository to fetch the next page.
+                movieRepository.getSearchMovies(movie.getVideoUrl(), (category, movieList) -> {
+                    if (movieList != null) {
+                        Log.d("Movie", "fetchNextPage movie33: " + movieList.toString());
+                        updateAdapterOnMainThread(movieList, clickedRow, movie);
+                    } else {
+                        Log.d("Movie", "fetchNextPage movieList not found.");
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error in handleNextPageState for movie: " + movie.getTitle(), e);
+                mainHandler.post(() -> {
+                    if (mFragment != null && mFragment.getContext() != null) {
+                        Toast.makeText(mFragment.getContext(), "Error loading next page.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
         });
     }
 
@@ -354,7 +419,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         new Handler(Looper.getMainLooper()).post(() -> {
             ArrayObjectAdapter adapter = (ArrayObjectAdapter) clickedRow.getAdapter();
             adapter.addAll(adapter.size(), result);
-            movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START); // Flag that it's already clicked
+//            movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START); // Flag that it's already clicked
         });
     }
 

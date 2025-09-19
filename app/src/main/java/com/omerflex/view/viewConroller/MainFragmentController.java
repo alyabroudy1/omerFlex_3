@@ -10,6 +10,8 @@ import android.util.Log;
 import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
+import com.omerflex.entity.dto.ServerConfigDTO;
+import com.omerflex.server.IptvServer;
 import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.UpdateService;
 import com.omerflex.view.GetSearchQueryActivity;
@@ -37,6 +39,10 @@ public class MainFragmentController extends BaseFragmentController {
         try {
             Log.d(TAG, "loadData: try to check for update");
             ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
+//            ServerConfigDTO serverConfigDTO = new ServerConfigDTO();
+//            String url = "https://drive.google.com/u/0/uc?id=1a7kHxCHOxW6TH8OnM_kO3SjjQvt38oCx&export=download";
+//            serverConfigDTO.url = url;
+//            ServerConfigRepository.getInstance().handleIptvPlayListUpdate(serverConfigDTO);
         }catch (Exception e){
             Log.e(TAG, "checkForRemoteUpdates: "+e.getMessage());
         }

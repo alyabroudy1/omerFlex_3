@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 public class IptvServer extends AbstractServer {
 
     static String TAG = "iptv";
-    public static String MAIN_IPTV_PLAYLIST_URL = "https://drive.google.com/u/0/uc?id=1IdSILICjk5BE6WggZEuIAKrZxQPZFMb2&export=download";
+    public static String MAIN_IPTV_PLAYLIST_URL = "https://drive.google.com/u/0/uc?id=1a7kHxCHOxW6TH8OnM_kO3SjjQvt38oCx&export=download";
 
     private MovieRepository movieRepository;
     M3U8ContentFetcher contentFetcher;

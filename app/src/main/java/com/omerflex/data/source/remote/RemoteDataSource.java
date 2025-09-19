@@ -56,6 +56,13 @@ public class RemoteDataSource {
                             Log.d(TAG, "fetchHomepageMovies: Starting fetch for " + configs.size() + " servers.");
 
                             for (ServerConfig config : configs) {
+//                                if (
+//                                        !config.getName().equals(Movie.SERVER_MyCima)
+////                                        !config.getName().equals(Movie.SERVER_ARAB_SEED)
+//                                ){
+//                                    continue;
+//                                }
+
                                 AbstractServer server = null;
                                 try {
                                     server = ServerFactory.createServer(config.getName());
@@ -267,8 +274,13 @@ public class RemoteDataSource {
 
     public void fetchMovieDetails(Movie mSelectedMovie, ServerInterface.ActivityCallback<Movie> callback) {
         Log.d(TAG, "fetchMovieDetails: ");
-       AbstractServer server = ServerConfigRepository.getInstance().getServer(mSelectedMovie.getStudio());
-       server.fetch(mSelectedMovie, mSelectedMovie.getState(), callback);
+        ServerConfigRepository.getInstance().getServerAsync(mSelectedMovie.getStudio(), server -> {
+            if (server != null) {
+                server.fetch(mSelectedMovie, mSelectedMovie.getState(), callback);
+            } else {
+                callback.onInvalidLink("Server not found for " + mSelectedMovie.getStudio());
+            }
+        });
     }
 
     public void getSearchMovies(boolean handleCookie, String query, MovieRepository.MovieListCallback callback) {

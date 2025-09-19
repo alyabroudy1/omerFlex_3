@@ -116,7 +116,7 @@ public class FaselHdServer extends AbstractServer {
             m.setTitle(title);
             m.setDescription("نتائج البحث في الاسفل...");
             m.setStudio(Movie.SERVER_FASELHD);
-            m.setVideoUrl(doc.location());
+            m.setVideoUrl(url);
             //  m.setVideoUrl("https://www.google.com/");
             m.setState(Movie.COOKIE_STATE);
             m.setType(MovieType.COOKIE);
