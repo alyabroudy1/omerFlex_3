@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.JsResult;
 import android.webkit.SslErrorHandler;
@@ -144,7 +145,7 @@ public class GetDocActivity extends AppCompatActivity {
                 updateCookies(url);
                 view.evaluateJavascript("document.title", title -> {
                     Log.d(TAG, "Page title: " + title);
-                    if (title != null && (title.contains("Just a moment...") || title.contains("Checking your browser"))) {
+                    if (title != null && (title.contains("Just a moment...") || title.contains("Checking your browser") || title.contains("لحظة…"))) {
                         Log.d(TAG, "Challenge page detected. WebView will continue loading...");
                         challengeResolved = false;
                     } else {
@@ -223,6 +224,7 @@ public class GetDocActivity extends AppCompatActivity {
             Log.d(TAG, "Completing future successfully.");
             resultFuture.complete(html);
             cleanup();
+//            new Handler(Looper.getMainLooper()).post(this::cleanup);
         }
     }
 
@@ -231,6 +233,7 @@ public class GetDocActivity extends AppCompatActivity {
             Log.e(TAG, "Completing future exceptionally", e);
             resultFuture.completeExceptionally(e);
             cleanup();
+//            new Handler(Looper.getMainLooper()).post(this::cleanup);
         }
     }
 
@@ -253,6 +256,9 @@ public class GetDocActivity extends AppCompatActivity {
     private void cleanup() {
         timeoutHandler.removeCallbacksAndMessages(null);
         if (webView != null) {
+            if (webView.getParent() instanceof ViewGroup) {
+                ((ViewGroup) webView.getParent()).removeView(webView);
+            }
             webView.loadUrl("about:blank");
             webView.stopLoading();
             webView.setWebViewClient(null);

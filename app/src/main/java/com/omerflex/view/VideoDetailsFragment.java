@@ -254,4 +254,12 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         super.onSaveInstanceState(outState);
         detailsViewControl.onSaveInstanceState(outState);
     }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        if (detailsViewControl != null) {
+            detailsViewControl.onDetach();
+        }
+    }
 }

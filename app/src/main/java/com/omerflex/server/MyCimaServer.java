@@ -111,7 +111,7 @@ public class MyCimaServer extends AbstractServer {
         for (Element li : lis) {
             Movie movie = this.generateMovieFromDocElement(li);
             if (movie != null) {
-                Log.d(TAG, "search: mov: "+movie.getCardImageUrl());
+//                Log.d(TAG, "search: mov: "+movie.getCardImageUrl());
                 movieList.add(movie);
             }
         }
@@ -265,7 +265,7 @@ public class MyCimaServer extends AbstractServer {
                 if (image.contains("(") && image.contains(")")) {
                     image = image.substring(image.indexOf('(') + 1, image.indexOf(')'));
                 }
-                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
+//                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
 //                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
                 movie.setTitle(title);
                 movie.setVideoUrl(Util.getUrlPathOnly(videoUrl));

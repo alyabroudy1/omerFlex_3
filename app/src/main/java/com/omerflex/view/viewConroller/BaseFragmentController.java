@@ -146,6 +146,7 @@ public abstract class BaseFragmentController {
             Glide.with(mFragment.getActivity()).clear(backgroundTarget);
         }
         mHandler.removeCallbacks(updateBackgroundTask);
+        executorService.shutdown();
         mFragment = null; // Nullify the reference
     }
 

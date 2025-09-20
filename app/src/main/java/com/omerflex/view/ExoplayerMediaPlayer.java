@@ -63,8 +63,8 @@ import javax.net.ssl.X509TrustManager;
 @androidx.media3.common.util.UnstableApi
 public class ExoplayerMediaPlayer extends AppCompatActivity {
 
-    @Nullable private static ExoPlayer player;
-    static String TAG = "Exoplayer";
+    @Nullable private ExoPlayer player;
+    private static final String TAG = "Exoplayer";
 
     MovieRepository movieRepository;
     PlayerView playerView;

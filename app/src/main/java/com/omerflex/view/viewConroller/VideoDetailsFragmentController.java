@@ -356,4 +356,8 @@ public class VideoDetailsFragmentController {
         outState.putInt("selectedRowIndex", selectedRowIndex);
         outState.putInt("selectedItemIndex", selectedItemIndex);
     }
+
+    public void onDetach() {
+        this.fragment = null;
+    }
 }
