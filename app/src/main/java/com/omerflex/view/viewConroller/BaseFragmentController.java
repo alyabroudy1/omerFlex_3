@@ -108,7 +108,7 @@ public abstract class BaseFragmentController {
                 if (mFragment != null && mFragment.isAdded() && mFragment.getActivity() != null) {
                     if (drawable.getConstantState() != null) {
                         mBackgroundManager.setDrawable(drawable.getConstantState().newDrawable().mutate());
-                    } else {
+                    } else if (!(drawable instanceof android.graphics.drawable.BitmapDrawable)) {
                         mBackgroundManager.setDrawable(drawable);
                     }
                 }
