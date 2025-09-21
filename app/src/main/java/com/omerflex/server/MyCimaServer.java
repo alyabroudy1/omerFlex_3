@@ -164,7 +164,8 @@ public class MyCimaServer extends AbstractServer {
                 }
 //                String newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
                 String newUrl = null;
-                Document doc = this.getRequestDoc(url, OmerFlexApplication.getAppContext());
+//                Document doc = this.getRequestDoc(url, OmerFlexApplication.getAppContext());
+                Document doc = getSearchRequestDoc(url);
                 if (doc != null){
                     //fetch session
                     Elements boxs = doc.getElementsByClass("List--Seasons--Episodes");
