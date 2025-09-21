@@ -106,7 +106,11 @@ public abstract class BaseFragmentController {
             @Override
             public void onResourceReady(@NonNull Drawable drawable, @Nullable Transition<? super Drawable> transition) {
                 if (mFragment != null && mFragment.isAdded() && mFragment.getActivity() != null) {
-                    mBackgroundManager.setDrawable(drawable);
+                    if (drawable.getConstantState() != null) {
+                        mBackgroundManager.setDrawable(drawable.getConstantState().newDrawable().mutate());
+                    } else {
+                        mBackgroundManager.setDrawable(drawable);
+                    }
                 }
             }
         };

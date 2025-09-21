@@ -143,10 +143,16 @@ public class MovieRepository {
                         String videoUrl = isIpTv ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
                         movie.setVideoUrl(videoUrl);
                         Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
-
                         if (existingMovie == null) {
-                            long newId = movieDao.insert(movie);
-                            movie.setId(newId);
+                            if (
+                                    movie.getType() == MovieType.SEASON ||
+                                    movie.getType() == MovieType.SERIES ||
+                                    movie.getType() == MovieType.EPISODE ||
+                                    movie.getType() == MovieType.FILM
+                            ) {
+                                long newId = movieDao.insert(movie);
+                                movie.setId(newId);
+                            }
                         } else {
                             remoteMovies.set(i, existingMovie);
                         }
@@ -172,8 +178,15 @@ public class MovieRepository {
                     Movie movie = movies.get(i);
                     Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
                     if (existingMovie == null) {
-                        long newId = movieDao.insert(movie);
-                        movie.setId(newId);
+                        if (
+                                movie.getType() == MovieType.SEASON ||
+                                        movie.getType() == MovieType.SERIES ||
+                                        movie.getType() == MovieType.EPISODE ||
+                                        movie.getType() == MovieType.FILM
+                        ) {
+                            long newId = movieDao.insert(movie);
+                            movie.setId(newId);
+                        }
                     } else {
                         movies.set(i, existingMovie);
                     }
@@ -546,8 +559,15 @@ public class MovieRepository {
                             Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
 
                             if (existingMovie == null) {
-                                long newId = movieDao.insert(movie);
-                                movie.setId(newId);
+                                if (
+                                        movie.getType() == MovieType.SEASON ||
+                                                movie.getType() == MovieType.SERIES ||
+                                                movie.getType() == MovieType.EPISODE ||
+                                                movie.getType() == MovieType.FILM
+                                ) {
+                                    long newId = movieDao.insert(movie);
+                                    movie.setId(newId);
+                                }
                             } else {
                                 remoteMovies.set(i, existingMovie);
                             }

@@ -1432,6 +1432,73 @@ public class ArabSeedServer extends AbstractServer {
                 getConfig().getUrl() + "/latest1/", activityCallback, handleCookie);
     }
 
+    private void filterSearchResultMovies(Movie movie, ArrayList<Movie> movieList) {
+        if (movie == null) {
+            return;
+        }
+
+        if (movie.getType() == MovieType.EPISODE) {
+            String cleanedTitle = movie.getTitle()
+                    .replace("مشاهدة", "")
+                    .replace("مسلسل", "")
+                    .replaceAll("موسم\\s*\\d+", "")
+                    .replaceAll("حلقة\\s*\\d+", "")
+                    .replace("والاخيرة", "")
+                    .trim();
+            Log.d(TAG, "filterSearchResultMovies: cleaned title "+cleanedTitle);
+            boolean seriesExists = false;
+            for (Movie m : movieList) {
+                if (m.getTitle().equals(cleanedTitle)) {
+                    seriesExists = true;
+                    break;
+                }
+            }
+
+            if (!seriesExists) {
+//                movie.setVideoUrl(getConfig().getUrl() + "/series/"+cleanedTitle);
+                String url = movie.getVideoUrl();
+                if (!url.startsWith("http")){
+                    url = getConfig().getUrl() + url;
+                }
+//                String newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
+                String newUrl = null;
+                Document doc = this.getRequestDoc(url, OmerFlexApplication.getAppContext());
+                if (doc != null){
+                    //fetch session
+                    Elements boxs = doc.getElementsByClass("List--Seasons--Episodes");
+                    if (boxs.isEmpty()) {
+                        // Select elements whose class attribute contains both "seasons" and "list"
+                        boxs = doc.select("[class*=seasons][class*=list]");
+                    }
+                    Log.d(TAG, "generateGroupOfGroupMovie: boxes size: "+boxs.size());
+
+                    for (Element box : boxs) {
+                        Elements lis = box.getElementsByTag("a");
+                        for (Element li : lis) {
+                            newUrl = li.attr("href");
+                            Log.d(TAG, "filterSearchResultMovies: series url found: "+ newUrl);
+                            break;
+                        }
+                        if (newUrl != null){
+                            break;
+                        }
+                    }
+                }
+                if (newUrl == null){
+                    newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
+                }
+                movie.setVideoUrl(newUrl);
+                movie.setTitle(cleanedTitle);
+                movie.setType(MovieType.SERIES);
+                movie.setState(Movie.GROUP_OF_GROUP_STATE);
+                movieList.add(movie);
+            }
+        } else {
+            movieList.add(movie);
+        }
+        Log.d(TAG, "filterSearchResultMovies: movielist:"+movieList);
+    }
+
     @Override
     public String getLabel() {
         return "عرب سيد";

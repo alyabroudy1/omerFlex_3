@@ -88,6 +88,13 @@ public class MyCimaServer extends AbstractServer {
             return movieList;
         }
 
+        if (multiSearch) {
+//            String extraUrl = query.startsWith("http") ? query : (doc.baseUri().isEmpty() ? url : doc.baseUri());
+            Log.d(TAG, "search: extraUrl: "+url);
+            this.getExtraSearchSeriesMovieList(url, movieList);
+            this.getExtraSearchAnimeMovieList(url, movieList);
+        }
+
 
         Elements lis = null;
         if (query.contains("http")) {
@@ -110,29 +117,88 @@ public class MyCimaServer extends AbstractServer {
         Log.d(TAG, "search: lis size: "+lis.size());
         for (Element li : lis) {
             Movie movie = this.generateMovieFromDocElement(li);
-            if (movie != null) {
-//                Log.d(TAG, "search: mov: "+movie.getCardImageUrl());
-                movieList.add(movie);
+            filterSearchResultMovies(movie, movieList);
+        }
+
+        if (!movieList.isEmpty()){
+            Movie nextPage = this.generateNextPageMovie(doc);
+
+            Log.d(TAG, "search: nextPage: " + nextPage);
+
+            if (nextPage != null) {
+                movieList.add(nextPage);
             }
         }
-//        if (multiSearch) {
-//            String extraUrl = query.startsWith("http") ? query : (doc.baseUri().isEmpty() ? url : doc.baseUri());
-//            Log.d(TAG, "search: extraUrl: "+extraUrl);
-//            this.getExtraSearchMovieList(extraUrl, movieList);
-//        }
-//
-//        if (!movieList.isEmpty()){
-//            Movie nextPage = this.generateNextPageMovie(doc);
-//
-//            Log.d(TAG, "search: nextPage: " + nextPage);
-//
-//            if (nextPage != null) {
-//                movieList.add(nextPage);
-//            }
-//        }
 
         activityCallback.onSuccess(movieList, getLabel());
         return movieList;
+    }
+
+    private void filterSearchResultMovies(Movie movie, ArrayList<Movie> movieList) {
+        if (movie == null) {
+            return;
+        }
+
+        if (movie.getType() == MovieType.EPISODE) {
+            String cleanedTitle = movie.getTitle()
+                    .replace("مشاهدة", "")
+                    .replace("مسلسل", "")
+                    .replaceAll("موسم\\s*\\d+", "")
+                    .replaceAll("حلقة\\s*\\d+", "")
+                    .replace("والاخيرة", "")
+                    .trim();
+            Log.d(TAG, "filterSearchResultMovies: cleaned title "+cleanedTitle);
+            boolean seriesExists = false;
+            for (Movie m : movieList) {
+                if (m.getTitle().equals(cleanedTitle)) {
+                    seriesExists = true;
+                    break;
+                }
+            }
+
+            if (!seriesExists) {
+//                movie.setVideoUrl(getConfig().getUrl() + "/series/"+cleanedTitle);
+                String url = movie.getVideoUrl();
+                if (!url.startsWith("http")){
+                    url = getConfig().getUrl() + url;
+                }
+//                String newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
+                String newUrl = null;
+                Document doc = this.getRequestDoc(url, OmerFlexApplication.getAppContext());
+                if (doc != null){
+                    //fetch session
+                    Elements boxs = doc.getElementsByClass("List--Seasons--Episodes");
+                    if (boxs.isEmpty()) {
+                        // Select elements whose class attribute contains both "seasons" and "list"
+                        boxs = doc.select("[class*=seasons][class*=list]");
+                    }
+                    Log.d(TAG, "generateGroupOfGroupMovie: boxes size: "+boxs.size());
+
+                    for (Element box : boxs) {
+                        Elements lis = box.getElementsByTag("a");
+                        for (Element li : lis) {
+                            newUrl = li.attr("href");
+                            Log.d(TAG, "filterSearchResultMovies: series url found: "+ newUrl);
+                            break;
+                        }
+                        if (newUrl != null){
+                            break;
+                        }
+                    }
+                }
+                if (newUrl == null){
+                    newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
+                }
+                movie.setVideoUrl(newUrl);
+                movie.setTitle(cleanedTitle);
+                movie.setType(MovieType.SERIES);
+                movie.setState(Movie.GROUP_OF_GROUP_STATE);
+                movieList.add(movie);
+            }
+        } else {
+            movieList.add(movie);
+        }
+        Log.d(TAG, "filterSearchResultMovies: movielist:"+movieList);
     }
 
     protected String getSearchUrl(String query) {
@@ -153,10 +219,11 @@ public class MyCimaServer extends AbstractServer {
         return config.getUrl() + searchPart + query;
     }
 
-    private void getExtraSearchMovieList(String url, ArrayList<Movie> movies) {
+    private void getExtraSearchSeriesMovieList(String url, ArrayList<Movie> movies) {
         Log.d(TAG, "getExtraSearchMovieList: ");
         //search series
         String seriesSearch = url + "/list/series/";
+
         Document doc = getRequestDoc(seriesSearch);
         Log.d(TAG, "getExtraSearchMovieList: doc: " + doc.title());
         Elements lis2 = doc.getElementsByClass("GridItem");
@@ -170,10 +237,13 @@ public class MyCimaServer extends AbstractServer {
                 movies.add(movie);
             }
         }
+    }
 
+    private void getExtraSearchAnimeMovieList(String url, ArrayList<Movie> movies) {
+        Log.d(TAG, "getExtraSearchMovieList: ");
         //search anime
         String animeSearch = url + "/list/anime/";
-        doc = getRequestDoc(animeSearch);
+        Document doc = getRequestDoc(animeSearch);
         Log.d(TAG, "getExtraSearchMovieList: doc anime: " + doc.title());
         Elements lis3 = doc.getElementsByClass("GridItem");
         if (lis3.isEmpty()){
@@ -1249,9 +1319,9 @@ public class MyCimaServer extends AbstractServer {
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
 //        return search("la casa", activityCallback, handleCookie);
-//        return search("اسر", activityCallback,handleCookie);
+        return search("اسر", activityCallback,handleCookie);
 //        return search("ratched");
-        return search(getConfig().getUrl() + "/movies/recent/", activityCallback, handleCookie);
+//        return search(getConfig().getUrl() + "/movies/recent/", activityCallback, handleCookie);
 //   hhhhh     return search(getConfig().getUrl() + "/", activityCallback);
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);
