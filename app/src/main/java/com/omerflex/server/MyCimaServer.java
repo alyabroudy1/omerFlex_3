@@ -1319,9 +1319,9 @@ public class MyCimaServer extends AbstractServer {
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
 //        return search("la casa", activityCallback, handleCookie);
-        return search("اسر", activityCallback,handleCookie);
+//        return search("اسر", activityCallback,handleCookie);
 //        return search("ratched");
-//        return search(getConfig().getUrl() + "/movies/recent/", activityCallback, handleCookie);
+        return search(getConfig().getUrl() + "/movies/recent/", activityCallback, handleCookie);
 //   hhhhh     return search(getConfig().getUrl() + "/", activityCallback);
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);
