@@ -56,63 +56,70 @@ public class RemoteDataSource {
                             Log.d(TAG, "fetchHomepageMovies: Starting fetch for " + configs.size() + " servers.");
 
                             for (ServerConfig config : configs) {
-//                                if (
+                                if (
+                                        config.getName().equals(Movie.SERVER_OLD_AKWAM)
 //                                        !config.getName().equals(Movie.SERVER_MyCima)
-////                                        !config.getName().equals(Movie.SERVER_ARAB_SEED)
-//                                ){
-//                                    continue;
-//                                }
-
-                                AbstractServer server = null;
-                                try {
-                                    server = ServerFactory.createServer(config.getName());
-                                } catch (Exception e) {
-                                    Log.e(TAG, "Failed to create server: " + config.getName(), e);
-                                    latch.countDown(); // countDown even if server creation fails
+//                                        !config.getName().equals(Movie.SERVER_ARAB_SEED)
+                                ){
+                                    latch.countDown();
                                     continue;
                                 }
+                                ExecutorService executor2 = Executors.newCachedThreadPool();
+                                executor2.submit(() -> {
+                                    AbstractServer server = null;
+                                    try {
+                                        server = ServerFactory.createServer(config.getName());
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Failed to create server: " + config.getName(), e);
+                                        latch.countDown(); // countDown even if server creation fails
+//                                        continue;
+                                        return;
+                                    }
 
-                                if (server != null) {
-                                    final String serverName = server.getLabel();
-                                    Log.d(TAG, "fetchHomepageMovies: config: " + config.getName() + ", " + serverName);
-                                    server.getHomepageMovies(handleCookie, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
-                                        @Override
-                                        public void onSuccess(ArrayList<Movie> result, String title) {
-                                            Log.d(TAG, "onSuccess from " + serverName);
-                                            if (result.isEmpty()) {
-                                                Log.d(TAG, "onSuccess: " + title + " is empty");
+                                    if (server != null) {
+                                        final String serverName = server.getLabel();
+                                        Log.d(TAG, "fetchHomepageMovies: config: " + config.getName() + ", " + serverName);
+                                        server.getHomepageMovies(handleCookie, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+                                            @Override
+                                            public void onSuccess(ArrayList<Movie> result, String title) {
+                                                Log.d(TAG, "onSuccess from " + serverName);
+                                                if (result.isEmpty()) {
+                                                    Log.d(TAG, "onSuccess: " + title + " is empty");
+                                                }
+                                                callback.onMovieListFetched(title, result);
+                                                latch.countDown();
+                                                Log.d(TAG, "Latch count: " + latch.getCount());
                                             }
-                                            callback.onMovieListFetched(title, result);
-                                            latch.countDown();
-                                            Log.d(TAG, "Latch count: " + latch.getCount());
-                                        }
 
-                                        @Override
-                                        public void onInvalidCookie(ArrayList<Movie> result, String title) {
-                                            Log.d(TAG, "onInvalidCookie from " + serverName);
-                                            callback.onMovieListFetched(title, result);
-                                            latch.countDown();
-                                            Log.d(TAG, "Latch count: " + latch.getCount());
-                                        }
+                                            @Override
+                                            public void onInvalidCookie(ArrayList<Movie> result, String title) {
+                                                Log.d(TAG, "onInvalidCookie from " + serverName);
+                                                callback.onMovieListFetched(title, result);
+                                                latch.countDown();
+                                                Log.d(TAG, "Latch count: " + latch.getCount());
+                                            }
 
-                                        @Override
-                                        public void onInvalidLink(ArrayList<Movie> result) {
-                                            Log.d(TAG, "onInvalidLink from " + serverName);
-                                            latch.countDown();
-                                            Log.d(TAG, "Latch count: " + latch.getCount());
-                                        }
+                                            @Override
+                                            public void onInvalidLink(ArrayList<Movie> result) {
+                                                Log.d(TAG, "onInvalidLink from " + serverName);
+                                                latch.countDown();
+                                                Log.d(TAG, "Latch count: " + latch.getCount());
+                                            }
 
-                                        @Override
-                                        public void onInvalidLink(String message) {
-                                            Log.d(TAG, "onInvalidLink from " + serverName + ": " + message);
-                                            latch.countDown();
-                                            Log.d(TAG, "Latch count: " + latch.getCount());
-                                        }
+                                            @Override
+                                            public void onInvalidLink(String message) {
+                                                Log.d(TAG, "onInvalidLink from " + serverName + ": " + message);
+                                                latch.countDown();
+                                                Log.d(TAG, "Latch count: " + latch.getCount());
+                                            }
+                                        });
+                                    } else {
+                                        latch.countDown();
+                                        Log.d(TAG, "Server is null. Latch count: " + latch.getCount());
+                                    }
+
                                     });
-                                } else {
-                                    latch.countDown();
-                                    Log.d(TAG, "Server is null. Latch count: " + latch.getCount());
-                                }
+                                    executor2.shutdown();
                             }
 
                             try {

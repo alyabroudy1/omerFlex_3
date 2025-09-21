@@ -446,14 +446,14 @@ public class MovieRepository {
         databaseExecutor.execute(() -> {
             List<String> groups = new ArrayList<>();
             groups.add("الاخبار");
-            groups.add("Children");
             groups.add("أم بي سي");
-            groups.add("Syria");
             groups.add("shahid");
-            groups.add("doc");
-            groups.add("Germany");
+            groups.add("Syria");
             groups.add("اسلامية");
+            groups.add("Germany");
             groups.add("المجد");
+            groups.add("doc");
+            groups.add("Children");
 
             List<Movie> movies = movieDao.getMoviesByStudioAndGroups(Movie.SERVER_IPTV, groups);
             Log.d(TAG, "getHomepageChannels: Found " + (movies == null ? "null" : movies.size()) + " movies in DB.");
