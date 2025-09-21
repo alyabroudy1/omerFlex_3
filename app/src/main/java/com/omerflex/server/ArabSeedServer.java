@@ -648,6 +648,15 @@ public class ArabSeedServer extends AbstractServer {
             }
             break;
         }
+
+        if (dec.isEmpty()) {
+//            Element storyDiv = doc.selectFirst("div.post__story");
+            Element storyDiv  = doc.select("[class*=post][class*=story]").first();
+            if (storyDiv != null){
+                dec = storyDiv.text(); // Gets the full text content, concatenated
+            }
+        }
+
         Elements watchElems = doc.getElementsByClass("WatchButtons");
         if (watchElems.isEmpty()){
             watchElems = doc.getElementsByClass(".btton watch__btn");
