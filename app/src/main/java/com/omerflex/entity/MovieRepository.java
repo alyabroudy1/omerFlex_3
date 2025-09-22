@@ -599,7 +599,11 @@ public class MovieRepository {
                         executor.submit(() -> {
                             List<ServerConfig> configs = repository.getAllActiveConfigsList();
                             for (ServerConfig config : configs) {
-                                getSearchMoviesOfServer(false, config, query, callback);
+                                ExecutorService executor2 = Executors.newCachedThreadPool();
+                                executor2.submit(() -> {
+                                    getSearchMoviesOfServer(false, config, query, callback);
+                                });
+                                executor2.shutdown();
                             }
                         });
                         executor.shutdown();

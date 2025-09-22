@@ -13,8 +13,8 @@ android {
         applicationId "com.omerflex"
         minSdkVersion 21
         targetSdkVersion 34
-        versionCode 9
-        versionName "9"
+        versionCode 10
+        versionName "10"
 
         // Enable multidex for large app support
         multiDexEnabled true
