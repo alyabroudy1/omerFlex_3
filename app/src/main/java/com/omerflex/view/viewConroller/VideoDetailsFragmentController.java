@@ -78,7 +78,8 @@ public class VideoDetailsFragmentController {
             @Override
             public void onSuccess(Movie fetchedMovie, String title) {
 //                sharedViewModel.updateMovie(fetchedMovie);
-                Log.d(TAG, "onSuccess: ");
+                Log.d(TAG, "onSuccess: fetchedMovie: "+ fetchedMovie);
+                Log.d(TAG, "onSuccess: sublist: "+ fetchedMovie.getSubList());
                 updateUI(fetchedMovie);
             }
 
@@ -112,11 +113,13 @@ public class VideoDetailsFragmentController {
             adapter.addAll(adapter.size(), fetchedMovie.getSubList());
         }
 
+        Log.d(TAG, "updateUI: fetchedMovie sub:"+fetchedMovie.getSubList().size());
+        Log.d(TAG, "updateUI: fetchedMovie sub:"+fetchedMovie.getSubList());
         // Resume watching logic
         resumeWatching(fetchedMovie);
 
         fragment.hideProgressDialog(true, null);
-        evaluateWatchAction();
+        evaluateWatchAction(fetchedMovie);
     }
 
     private void resumeWatching(Movie fetchedMovie) {
@@ -224,13 +227,13 @@ public class VideoDetailsFragmentController {
         activityResultHandler.handleResult(requestCode, resultCode, data, mAdapter, fragment);
     }
 
-    public void evaluateWatchAction() {
-        if (mSelectedMovie == null) return;
+    public void evaluateWatchAction(Movie movie) {
+        if (movie == null) return;
         ArrayObjectAdapter actionAdapter = new ArrayObjectAdapter();
 
-        Movie firstSubMovie = mSelectedMovie;
-        if (!mSelectedMovie.getSubList().isEmpty()){
-            firstSubMovie = mSelectedMovie.getSubList().get(0);
+        Movie firstSubMovie = movie;
+        if (!movie.getSubList().isEmpty()){
+            firstSubMovie = movie.getSubList().get(0);
         }
 
         boolean watchCond = firstSubMovie.getState() == Movie.RESOLUTION_STATE || firstSubMovie.getState() == Movie.VIDEO_STATE;
@@ -242,7 +245,7 @@ public class VideoDetailsFragmentController {
             Log.d(TAG, "onSuccess: watchCond");
             actionAdapter.add(new Action(ACTION_WATCH, fragment.getResources().getString(R.string.watch)));
         }
-        if (mSelectedMovie.getTrailerUrl() != null && mSelectedMovie.getTrailerUrl().length() > 2) {
+        if (movie.getTrailerUrl() != null && movie.getTrailerUrl().length() > 2) {
             actionAdapter.add(new Action(ACTION_WATCH_TRAILER, fragment.getResources().getString(R.string.watch_trailer_1)));
         }
 

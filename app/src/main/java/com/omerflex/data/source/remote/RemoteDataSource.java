@@ -283,7 +283,11 @@ public class RemoteDataSource {
         Log.d(TAG, "fetchMovieDetails: ");
         ServerConfigRepository.getInstance().getServerAsync(mSelectedMovie.getStudio(), server -> {
             if (server != null) {
-                server.fetch(mSelectedMovie, mSelectedMovie.getState(), callback);
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                executor.submit(() -> {
+                     server.fetch(mSelectedMovie, mSelectedMovie.getState(), callback);
+                });
+                executor.shutdown();
             } else {
                 callback.onInvalidLink("Server not found for " + mSelectedMovie.getStudio());
             }

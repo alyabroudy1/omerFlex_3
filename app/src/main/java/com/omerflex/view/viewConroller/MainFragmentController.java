@@ -10,15 +10,10 @@ import android.util.Log;
 import com.omerflex.OmerFlexApplication;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieRepository;
-import com.omerflex.entity.dto.ServerConfigDTO;
-import com.omerflex.server.IptvServer;
 import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.UpdateService;
-import com.omerflex.view.GetSearchQueryActivity;
-import com.omerflex.view.SearchResultActivity;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainFragmentController extends BaseFragmentController {
 
@@ -91,8 +86,8 @@ public class MainFragmentController extends BaseFragmentController {
 
 
     @Override
-    public void handleActivityResult(int requestCode, int resultCode, Intent data) {
-        super.handleActivityResult(requestCode, resultCode, data);
+    public void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+        super.handleOnActivityResult(requestCode, resultCode, data);
         updateService.handleOnActivityResult(requestCode, resultCode, data);
     }
 

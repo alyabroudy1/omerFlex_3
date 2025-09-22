@@ -2,44 +2,22 @@
 package com.omerflex.view;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.CookieManager;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.leanback.app.BrowseSupportFragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.ListRowPresenter;
-import androidx.leanback.widget.Presenter;
 
 import com.omerflex.R;
-import com.omerflex.entity.Movie;
-import com.omerflex.server.Util;
-import com.omerflex.service.M3U8ContentFetcher;
 import com.omerflex.view.viewConroller.MainFragmentController;
 import com.omerflex.viewmodel.SharedViewModel;
 
 import androidx.lifecycle.ViewModelProvider;
-import androidx.webkit.internal.ApiFeature;
-
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
 
 /**
  * The MainFragment is a lean view that sets up the UI and delegates
@@ -298,7 +276,7 @@ public class MainFragment extends BrowseSupportFragment {
         super.onActivityResult(requestCode, resultCode, data);
         if (mController != null) {
             // Delegate the activity result to the controller.
-            mController.handleActivityResult(requestCode, resultCode, data);
+            mController.handleOnActivityResult(requestCode, resultCode, data);
         }
     }
 

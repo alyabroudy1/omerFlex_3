@@ -109,4 +109,7 @@ public interface MovieDao {
         );
         return getMoviesByStudioAndGroupsRaw(simpleSQLiteQuery);
     }
+
+    @Query("SELECT * FROM movies WHERE title = :title AND studio = :studio")
+    Movie getMovieByTitleAndStudio(String title, String studio);
 }

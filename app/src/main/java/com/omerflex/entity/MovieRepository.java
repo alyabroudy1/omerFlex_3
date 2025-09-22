@@ -18,6 +18,7 @@ import com.omerflex.server.AbstractServer;
 import com.omerflex.server.IptvServer;
 import com.omerflex.server.ServerFactory;
 import com.omerflex.server.ServerInterface;
+import com.omerflex.server.Util;
 import com.omerflex.server.config.ServerConfigRepository;
 
 import java.util.ArrayList;
@@ -142,7 +143,12 @@ public class MovieRepository {
                         Movie movie = remoteMovies.get(i);
                         String videoUrl = isIpTv ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
                         movie.setVideoUrl(videoUrl);
-                        Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
+                        Movie existingMovie = null;
+                        if (movie.getType() == MovieType.COLLECTION) {
+                            existingMovie = movieDao.getMovieByTitleAndStudio(movie.getTitle(), movie.getStudio());
+                        }else {
+                            existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
+                        }
                         if (existingMovie == null) {
                             if (
                                     movie.getType() == MovieType.SEASON ||
@@ -154,6 +160,10 @@ public class MovieRepository {
                                 movie.setId(newId);
                             }
                         } else {
+                            existingMovie.setTitle(movie.getTitle());
+                            existingMovie.setVideoUrl(movie.getVideoUrl());
+                            existingMovie.setState(movie.getState());
+                            existingMovie.setType(movie.getType());
                             remoteMovies.set(i, existingMovie);
                         }
                     }
@@ -200,9 +210,55 @@ public class MovieRepository {
 
     public void fetchMovieDetails(Movie mSelectedMovie, ServerInterface.ActivityCallback<Movie> callback) {
         databaseExecutor.execute(() -> {
-            reAddDomainToMovie(mSelectedMovie);
-            boolean saveCond = mSelectedMovie.getType() == MovieType.SERIES ||
-                    mSelectedMovie.getType() == MovieType.SEASON;
+            boolean isCollection = mSelectedMovie.getType() == MovieType.COLLECTION;
+
+            Log.d(TAG, "fetchMovieDetails: mSelectedMovie type: "+ mSelectedMovie.getType());
+            Movie localMselectedMovie = null;
+            if (mSelectedMovie.getId() == 0){
+                if (isCollection) {
+                    localMselectedMovie = movieDao.getMovieByTitleAndStudio(mSelectedMovie.getTitle(), mSelectedMovie.getStudio());
+                }else {
+                    localMselectedMovie = movieDao.getMovieByVideoUrlSync(Util.getUrlPathOnly(mSelectedMovie.getVideoUrl()));
+                }
+            }
+            if (localMselectedMovie == null){
+                localMselectedMovie = mSelectedMovie;
+            }
+            Log.d(TAG, "fetchMovieDetails: localMselectedMovie: "+localMselectedMovie);
+//            List<Movie> localSubList = new ArrayList<>();
+//            if (localMselectedMovie != null) {
+//                reAddDomainToMovie(localMselectedMovie);
+//                localSubList = movieDao.getMoviesByParentIdSync(localMselectedMovie.getId());
+//                if (!localSubList.isEmpty()){
+//                    reAddDomainToMovies(localSubList);
+//                    localMselectedMovie.setSubList(localSubList);
+//                    Movie finalLocalMselectedMovie = localMselectedMovie;
+//                    new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(finalLocalMselectedMovie, finalLocalMselectedMovie.getTitle()));
+//                    return;
+////                    if (localSubList != null && !localSubList.isEmpty()) {
+////                        Log.d(TAG, "fetchMovieDetails: found " + localSubList.size() + " sub-movies in local DB");
+//////                    Log.d(TAG, "fetchMovieDetails: localMselectedMovie " + localMselectedMovie);
+//////                    reAddDomainToMovies(localSubList);
+//////                    if (localMselectedMovie != null) {
+//////                         reAddDomainToMovie(localMselectedMovie);
+//////                        localMselectedMovie.setSubList(localSubList);
+////                        Movie finalLocalMselectedMovie = localMselectedMovie;
+////                        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(finalLocalMselectedMovie, finalLocalMselectedMovie.getTitle()));
+//////                    } else {
+//////                        mSelectedMovie.setSubList(localSubList);
+//////                        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(mSelectedMovie, mSelectedMovie.getTitle()));
+//////                    }
+////                        return;
+////                    }
+//                }
+//
+//            }
+//            Log.d(TAG, "fetchMovieDetails: localSubList: "+localSubList);
+//            if (localMselectedMovie == null){
+//                localMselectedMovie = mSelectedMovie;
+//            }
+//            reAddDomainToMovie(localMselectedMovie);
+
 
             // Commenting out the local data check in fetchMovieDetails created a loop for the following reason:
             //
@@ -217,58 +273,64 @@ public class MovieRepository {
             //
             //   5. The Loop: The UI is designed to be reactive. When the SharedViewModel is updated with new movie details, the UI observes this change and automatically refreshes itself to display the new data. This
             //      refresh, in turn, triggers the initial data request (step 1) all over again.
-            if (saveCond) {
-                List<Movie> localSubList = movieDao.getMoviesByParentIdSync(mSelectedMovie.getId());
-                Movie localMselectedMovie = movieDao.getMovieById(mSelectedMovie.getId());
 
-                if (localSubList != null && !localSubList.isEmpty()) {
-                    Log.d(TAG, "fetchMovieDetails: found " + localSubList.size() + " sub-movies in local DB");
-                    reAddDomainToMovies(localSubList);
-                    reAddDomainToMovie(localMselectedMovie);
-                    if (localMselectedMovie != null) {
-                        localMselectedMovie.setSubList(localSubList);
-                        Movie finalLocalMselectedMovie = localMselectedMovie;
-                        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(finalLocalMselectedMovie, finalLocalMselectedMovie.getTitle()));
-                    } else {
-                        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(mSelectedMovie, mSelectedMovie.getTitle()));
-                    }
-                    return;
-                }
-            }
 
             Log.d(TAG, "fetchMovieDetails: no local sub-movies found, fetching from remote");
-            remoteDataSource.fetchMovieDetails(mSelectedMovie, new ServerInterface.ActivityCallback<Movie>() {
+            remoteDataSource.fetchMovieDetails(localMselectedMovie, new ServerInterface.ActivityCallback<Movie>() {
                 @Override
                 public void onSuccess(Movie remoteMovie, String title) {
                     if (remoteMovie != null) {
                         databaseExecutor.execute(() -> {
+
                             remoteMovie.setVideoUrl(removeDomain(remoteMovie.getVideoUrl()));
-                            movieDao.update(remoteMovie);
-                            if (saveCond && remoteMovie.getSubList() != null && !remoteMovie.getSubList().isEmpty()) {
-                                List<Movie> subListFromRemote = remoteMovie.getSubList();
-                                List<Movie> finalSubList = new ArrayList<>();
-                                for (Movie remoteSubMovie : subListFromRemote) {
-                                    remoteSubMovie.setVideoUrl(removeDomain(remoteSubMovie.getVideoUrl()));
-                                    Movie localSubMovie = movieDao.getMovieByVideoUrlSync(remoteSubMovie.getVideoUrl());
-                                    if (localSubMovie != null) {
-                                        localSubMovie.setTitle(remoteSubMovie.getTitle());
-                                        localSubMovie.setDescription(remoteSubMovie.getDescription());
-                                        localSubMovie.setCardImageUrl(remoteSubMovie.getCardImageUrl());
-                                        localSubMovie.setBackgroundImageUrl(remoteSubMovie.getBackgroundImageUrl());
-                                        localSubMovie.setVideoUrl(remoteSubMovie.getVideoUrl());
-                                        movieDao.update(localSubMovie);
-                                        finalSubList.add(localSubMovie);
+                            Log.d(TAG, "onSuccess: mSelectedMovie:"+remoteMovie);
+                            boolean saveCond = remoteMovie.getType() == MovieType.SERIES ||
+                                    remoteMovie.getType() == MovieType.SEASON;
+
+                            if (saveCond && remoteMovie.getId() == 0){
+                                long newMovieId = movieDao.insert(remoteMovie);
+                                remoteMovie.setId(newMovieId);
+                                Log.d(TAG, "onSuccess: saving collection movie: "+remoteMovie);
+                                for (Movie subMovie : remoteMovie.getSubList()) {
+                                    subMovie.setParentId(newMovieId);
+                                }
+                            } else {
+                                Movie conflictingMovie = movieDao.getMovieByVideoUrlSync(remoteMovie.getVideoUrl());
+                                Log.d(TAG, "onSuccess: conflictingMovie: "+ remoteMovie.getVideoUrl());
+                                if (conflictingMovie != null && conflictingMovie.getId() != remoteMovie.getId()) {
+                                    // Conflict detected. Merge data into conflictingMovie and update it.
+                                    conflictingMovie.setTitle(remoteMovie.getTitle());
+                                    conflictingMovie.setState(remoteMovie.getState());
+                                    conflictingMovie.setType(remoteMovie.getType());
+                                    conflictingMovie.setCardImageUrl(remoteMovie.getCardImageUrl());
+                                    conflictingMovie.setBackgroundImageUrl(remoteMovie.getBackgroundImageUrl());
+                                    conflictingMovie.setSubList(remoteMovie.getSubList());
+                                    movieDao.update(conflictingMovie);
+                                    // Update remoteMovie's ID to match the one we just updated.
+                                    remoteMovie.setId(conflictingMovie.getId());
+                                } else {
+                                    // No conflict, or conflict is with the same movie, so update is safe.
+                                    movieDao.update(remoteMovie);
+                                }
+                            }
+
+                            if (saveCond){
+                                for (int i = 0; i < remoteMovie.getSubList().size(); i++) {
+                                    Movie movie = remoteMovie.getSubList().get(i);
+                                    Movie existingMovie =  movieDao.getMovieByVideoUrlSync(Util.getUrlPathOnly(movie.getVideoUrl()));
+                                    if (existingMovie == null) {
+                                       long newId = movieDao.insert(movie);
+                                       movie.setId(newId);
                                     } else {
-                                        remoteSubMovie.setParentId(remoteMovie.getId());
-                                        long newId = movieDao.insert(remoteSubMovie);
-                                        remoteSubMovie.setId(newId);
-                                        finalSubList.add(remoteSubMovie);
+                                        existingMovie.setTitle(movie.getTitle());
+                                        existingMovie.setVideoUrl(movie.getVideoUrl());
+                                        existingMovie.setState(movie.getState());
+                                        existingMovie.setType(movie.getType());
+                                        remoteMovie.getSubList().set(i, existingMovie);
                                     }
                                 }
-                                remoteMovie.setSubList(finalSubList);
+                                reAddDomainToMovie(remoteMovie);
                             }
-                            reAddDomainToMovie(remoteMovie);
-                            reAddDomainToMovies(remoteMovie.getSubList());
                             new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(remoteMovie, title));
                         });
                     } else {

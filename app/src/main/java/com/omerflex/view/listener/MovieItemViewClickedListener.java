@@ -1,5 +1,7 @@
 package com.omerflex.view.listener;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -234,25 +236,35 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         // to update the row with new result after fetching the cookie, setFetch to REQUEST_CODE_MOVIE_LIST
         Log.d(TAG, "handleCookieState: ");
         if (movie.getFetch() == Movie.NO_FETCH_MOVIE_AT_START) {
-            Log.d(TAG, "handleNextPageState: This Next page is already fetched...");
+            Log.d(TAG, "handleCookieState: This handleCookieState is already fetched...");
             return;
         }
-
-        // Isolate the repository call in a new thread to avoid blocking the shared executor
-        Executors.newSingleThreadExecutor().submit(() -> {
             try {
-                movieRepository.getSearchMoviesOfServer(
-                        true,
-                        ServerConfigRepository.getInstance().getConfig(movie.getStudio()),
-                        movie.getVideoUrl(), (category, movieList) -> {
-                            if (movieList != null) {
-                                Log.d("Movie", "Fetched movie33: " + movieList.toString());
-                                updateAdapterOnMainThread(movieList, clickedRow, movie);
-//                movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START);
-                            } else {
-                                Log.d("Movie", "movieList not found.");
+                ServerConfigRepository.getInstance().getConfigAsync(movie.getStudio(), config -> {
+                    if (config == null) {
+                        mainHandler.post(() -> {
+                            if (mFragment != null && mFragment.getContext() != null) {
+                                Toast.makeText(mFragment.getContext(), "Server config not found.", Toast.LENGTH_SHORT).show();
                             }
                         });
+                        return;
+                    }
+                    ExecutorService executor = Executors.newSingleThreadExecutor();
+
+                    executor.submit(() -> {
+                        movieRepository.getSearchMoviesOfServer(true, config, movie.getVideoUrl(), (category, movieList) -> {
+                            if (movieList != null) {
+    //                            Log.d("Movie", "handleCookieState movie33: " + movieList.toString());
+                                updateAdapterOnMainThread(movieList, clickedRow, movie);
+                                movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START);
+                            } else {
+                                Log.d("Movie", "handleCookieState movieList not found.");
+                            }
+                        });
+                    });
+                    executor.shutdown();
+                });
+
             } catch (Exception e) {
                 Log.e(TAG, "Error in handleCookieState for movie: " + movie.getTitle(), e);
                 mainHandler.post(() -> {
@@ -261,7 +273,6 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
                     }
                 });
             }
-        });
     }
 
     private void handleVideoState(Movie movie) {
@@ -287,6 +298,9 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
                 });
                 return;
             }
+
+            // https://wecima.video/2f7jimjworum/The.Walking.Dead.Daryl.Dixon.S03E03.WeCima.Tube.720p.mp4.html?Key=JiIyfK74LdKioPfIxlLHaA&Expires=1758550449
+            // https://tgb4.top15top.shop/2f7jimjworum/The.Walking.Dead.Daryl.Dixon.S03E03.WeCima.Tube.720p.mp4.html?Key=jWlEFsYxN_xzOSanB58AoA&Expires=1758550373
 
             // Once we have the server, execute the potentially blocking call on a new, separate thread.
             Executors.newSingleThreadExecutor().submit(() -> {
@@ -384,15 +398,27 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         // Isolate the repository call in a new thread to avoid blocking the shared executor
         Executors.newSingleThreadExecutor().submit(() -> {
             try {
-                // Call the MovieRepository to fetch the next page.
-                movieRepository.getSearchMovies(movie.getVideoUrl(), (category, movieList) -> {
-                    if (movieList != null) {
-                        Log.d("Movie", "fetchNextPage movie33: " + movieList.toString());
-                        updateAdapterOnMainThread(movieList, clickedRow, movie);
-                    } else {
-                        Log.d("Movie", "fetchNextPage movieList not found.");
+                ServerConfigRepository.getInstance().getConfigAsync(movie.getStudio(), config -> {
+                    if (config == null) {
+                        mainHandler.post(() -> {
+                            if (mFragment != null && mFragment.getContext() != null) {
+                                Toast.makeText(mFragment.getContext(), "Server config not found.", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                        return;
                     }
+
+                    movieRepository.getSearchMoviesOfServer(true, config, movie.getVideoUrl(), (category, movieList) -> {
+                        if (movieList != null) {
+                            Log.d("Movie", "fetchNextPage movie33: " + movieList.toString());
+                            updateAdapterOnMainThread(movieList, clickedRow, movie);
+                            movie.setFetch(Movie.NO_FETCH_MOVIE_AT_START);
+                        } else {
+                            Log.d("Movie", "fetchNextPage movieList not found.");
+                        }
+                    });
                 });
+
             } catch (Exception e) {
                 Log.e(TAG, "Error in handleNextPageState for movie: " + movie.getTitle(), e);
                 mainHandler.post(() -> {
@@ -423,4 +449,71 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         });
     }
 
+    public void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "handleActivityResult: " + requestCode + ", " + resultCode + ", " + data);
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            Log.d(TAG, "onActivityResult:RESULT_NOT_OK ");
+            return;
+        }
+        //int clickedRowId = data.getIntExtra(Movie.KEY_CLICKED_ROW_ID, -1);
+        int clickedRowId = selectedRowIndex;
+
+        if (clickedRowId == -1){
+            Log.d(TAG, "handleActivityResult: not ListRow");
+            Toast.makeText(mFragment.getActivity(), "حدث خطأ...", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Movie resultMovie = Util.recieveSelectedMovie(data);
+
+        //int clickedMovieIndex = data.getIntExtra(Movie.KEY_CLICKED_MOVIE_INDEX, -1);
+        int clickedMovieIndex = selectedItemIndex;
+        Log.d(TAG, "handleActivityResult: clickedMovieIndex: "+ clickedMovieIndex);
+        Log.d(TAG, "handleActivityResult: clickedRowId: "+ clickedRowId);
+        if (!(mRowsAdapter.get(clickedRowId) instanceof ListRow)){
+            Log.d(TAG, "handleResult: error: fail to find the clicked row");
+        }
+
+        ListRow listRow = (ListRow) mRowsAdapter.get(clickedRowId);
+        ArrayObjectAdapter clickedAdapter = (ArrayObjectAdapter) listRow.getAdapter();
+        if (clickedMovieIndex != -1) {
+            // we have to updated the clicked movie
+            updateClickedMovieItem(clickedAdapter, clickedMovieIndex, resultMovie);
+        }
+
+        switch (requestCode) {
+            case Movie.REQUEST_CODE_EXOPLAYER:
+                Log.d(TAG, "onActivityResult: REQUEST_CODE_EXOPLAYER");
+                Util.openExoPlayer(resultMovie, mFragment.getActivity(), true);
+                break;
+            case Movie.REQUEST_CODE_EXTERNAL_PLAYER:
+                Log.d(TAG, "onActivityResult: REQUEST_CODE_EXTERNAL_PLAYER: " + resultMovie);
+                Util.openExoPlayer(resultMovie, mFragment.getActivity(), true);
+                break;
+            default:
+                Log.d(TAG, "handleResult: default");
+                if (mFragment instanceof VideoDetailsFragment){
+                    VideoDetailsFragment videoDetailsFragment = (VideoDetailsFragment) mFragment;
+                    videoDetailsFragment.updateOverviewUI(resultMovie);
+                }
+                extendClickedRow(clickedAdapter, (ArrayList<Movie>) (resultMovie.getSubList()));
+                break;
+        }
+    }
+
+
+    private void extendClickedRow(ArrayObjectAdapter clickedAdapter, ArrayList<Movie> movieList) {
+        if (movieList == null || movieList.isEmpty()) {
+            Log.d(TAG, "extendClickedRow: empty list");
+            return;
+        }
+        Log.d(TAG, "extendClickedRow: movieList:" +movieList);
+        clickedAdapter.addAll(clickedAdapter.size(), movieList);
+    }
+
+    private void updateClickedMovieItem(ArrayObjectAdapter clickedAdapter, int clickedMovieIndex, Movie resultMovie) {
+        Log.d(TAG, "updateClickedMovieItem: clickedMovieIndex "+ clickedMovieIndex + ", size: "+ clickedAdapter.size());
+        if (resultMovie != null && clickedAdapter.size() > clickedMovieIndex) {
+            clickedAdapter.replace(clickedMovieIndex, resultMovie);
+        }
+    }
 }

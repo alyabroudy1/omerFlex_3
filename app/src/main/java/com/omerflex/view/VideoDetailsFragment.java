@@ -157,7 +157,7 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
 //        } else if (mSelectedMovie.getState() == Movie.GROUP_STATE) {
 //            headerTitle = getResources().getString(R.string.related_movie_row_header_series);
 //        }
-        if (mSelectedMovie.getType() == MovieType.SERIES) {
+        if (mSelectedMovie.getType() == MovieType.SERIES || mSelectedMovie.getType() == MovieType.COLLECTION) {
             headerTitle = getResources().getString(R.string.related_movie_row_header_session);
         } else if (mSelectedMovie.getType() == MovieType.SEASON) {
             headerTitle = getResources().getString(R.string.related_movie_row_header_series);
@@ -260,6 +260,9 @@ public class VideoDetailsFragment extends DetailsSupportFragment {
         super.onDetach();
         if (detailsViewControl != null) {
             detailsViewControl.onDetach();
+        }
+        if (mProgressDialog != null && mProgressDialog.isShowing()) {
+            mProgressDialog.dismiss();
         }
     }
 }

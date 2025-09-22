@@ -9,5 +9,5 @@ public enum MovieType {
     VIDEO,
     NEXT_PAGE,
     COOKIE,
-    BROWSER
+    COLLECTION, BROWSER
 }

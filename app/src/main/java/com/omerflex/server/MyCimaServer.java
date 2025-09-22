@@ -141,11 +141,28 @@ public class MyCimaServer extends AbstractServer {
 
         if (movie.getType() == MovieType.EPISODE) {
             String cleanedTitle = movie.getTitle()
+                    .replace("وتحميل", "")
+                    .replace("تحميل", "")
+                    .replace("ومشاهدة", "")
+                    .replace("ومشاهده", "")
                     .replace("مشاهدة", "")
+                    .replace("مشاهده", "")
                     .replace("مسلسل", "")
                     .replaceAll("موسم\\s*\\d+", "")
                     .replaceAll("حلقة\\s*\\d+", "")
+                    .replaceAll("حلقه\\s*\\d+", "")
+                    .replaceAll("الحلقة\\s*\\d+", "")
+                    .replaceAll("الحلقه\\s*\\d+", "")
                     .replace("والاخيرة", "")
+                    .replace("والاخيره", "")
+                    .replace("والأخيرة", "")
+                    .replace("والأخيره", "")
+                    .replace("الاخيرة", "")
+                    .replace("الاخيره", "")
+                    .replace("الأخيرة", "")
+                    .replace("الأخيره", "")
+                    .replace("انمي", "")
+                    .replace("أنمي", "")
                     .trim();
             Log.d(TAG, "filterSearchResultMovies: cleaned title "+cleanedTitle);
             boolean seriesExists = false;
@@ -158,48 +175,52 @@ public class MyCimaServer extends AbstractServer {
 
             if (!seriesExists) {
 //                movie.setVideoUrl(getConfig().getUrl() + "/series/"+cleanedTitle);
-                String url = movie.getVideoUrl();
-                if (!url.startsWith("http")){
-                    url = getConfig().getUrl() + url;
-                }
-//                String newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
-                String newUrl = null;
-//                Document doc = this.getRequestDoc(url, OmerFlexApplication.getAppContext());
-                Document doc = getSearchRequestDoc(url);
-                if (doc != null){
-                    //fetch session
-                    Elements boxs = doc.getElementsByClass("List--Seasons--Episodes");
-                    if (boxs.isEmpty()) {
-                        // Select elements whose class attribute contains both "seasons" and "list"
-                        boxs = doc.select("[class*=seasons][class*=list]");
-                    }
-                    Log.d(TAG, "generateGroupOfGroupMovie: boxes size: "+boxs.size());
-
-                    for (Element box : boxs) {
-                        Elements lis = box.getElementsByTag("a");
-                        for (Element li : lis) {
-                            newUrl = li.attr("href");
-                            Log.d(TAG, "filterSearchResultMovies: series url found: "+ newUrl);
-                            break;
-                        }
-                        if (newUrl != null){
-                            break;
-                        }
-                    }
-                }
-                if (newUrl == null){
-                    newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
-                }
-                movie.setVideoUrl(newUrl);
+//                String url = movie.getVideoUrl();
+//                if (!url.startsWith("http")){
+//                    url = getConfig().getUrl() + url;
+//                }
+////                String newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
+//                String newUrl = null;
+////                Document doc = this.getRequestDoc(url, OmerFlexApplication.getAppContext());
+//                Document doc = getSearchRequestDoc(url);
+//                if (doc != null &&  !(doc.title().contains("Just a moment...") || doc.title().contains("Checking your browser") || doc.title().contains("لحظة…"))){
+//                    //fetch session
+//                    Elements boxs = doc.getElementsByClass("List--Seasons--Episodes");
+//                    if (boxs.isEmpty()) {
+//                        // Select elements whose class attribute contains both "seasons" and "list"
+//                        boxs = doc.select("[class*=seasons][class*=list]");
+//                    }
+////                    Log.d(TAG, "generateGroupOfGroupMovie: boxes size: "+boxs.size());
+//
+//                    for (Element box : boxs) {
+//                        Elements lis = box.getElementsByTag("a");
+//                        for (Element li : lis) {
+//                            newUrl = li.attr("href");
+//                            Log.d(TAG, "filterSearchResultMovies: series url found: "+ newUrl);
+//                            break;
+//                        }
+//                        if (newUrl != null){
+//                            break;
+//                        }
+//                    }
+//                }
+//                if (newUrl == null){
+//                    newUrl = getConfig().getUrl() + "/series/"+cleanedTitle;
+//                }
+//                movie.setVideoUrl(newUrl);
+//                movieList.add(movie);
+//                Movie collection = Movie.clone(movie);
                 movie.setTitle(cleanedTitle);
-                movie.setType(MovieType.SERIES);
+                //   change type to collection to avoid being saved to db
+                movie.setType(MovieType.COLLECTION);
+                // let state be GROUP_OF_GROUP_STATE to fetch it correctly
                 movie.setState(Movie.GROUP_OF_GROUP_STATE);
-                movieList.add(movie);
+                movieList.add(movie); // add the collection movie
             }
         } else {
             movieList.add(movie);
         }
-        Log.d(TAG, "filterSearchResultMovies: movielist:"+movieList);
+//        Log.d(TAG, "filterSearchResultMovies: movielist:"+movieList);
     }
 
     protected String getSearchUrl(String query) {
@@ -508,6 +529,9 @@ public class MyCimaServer extends AbstractServer {
         //get link of episodes page
         Log.d(TAG, "generateGroupOfGroupMovie: " + doc.title());
         Element descElem = doc.getElementsByClass("PostItemContent").first();
+        if (descElem == null) {
+            descElem = doc.select("[class*=story][class*=content]").first();
+        }
         String desc = "";
         if (descElem != null) {
             desc = descElem.text();
@@ -522,9 +546,37 @@ public class MyCimaServer extends AbstractServer {
         }
         Log.d(TAG, "generateGroupOfGroupMovie: boxes size: "+boxs.size());
 
+        boolean isCollection = movie.getType() == MovieType.COLLECTION;
+        boolean seriesUrlFound = false;
+        if (isCollection){
+            // Step 1: Find <singlesection> tag
+//            Element singleSection = doc.selectFirst("singlesection");
+            Element singleSection = doc.select("[class*=page][class*=section][class*=series]").first();
+
+            if (singleSection != null) {
+                Element linkElement = singleSection.select("a").first();
+                if (linkElement != null) {
+                    String seriesUrl = linkElement.attr("href");
+                    System.out.println("Series URL: " + seriesUrl);
+                    movie.setVideoUrl(seriesUrl);
+                    movie.setType(MovieType.SERIES);
+                    seriesUrlFound = true;
+                } else {
+                    System.out.println("Series link not found.");
+                }
+            }
+
+
+        }
+        if (movie.getSubList() == null) {
+            movie.setSubList(new ArrayList<>());
+        }
+
         if (boxs.isEmpty()) {
-            movie.setState(Movie.GROUP_STATE);
-            movie.setType(MovieType.SEASON);
+            if (!isCollection){
+                movie.setState(Movie.GROUP_STATE);
+                movie.setType(MovieType.SEASON);
+            }
             if (movie.getVideoUrl() == null) {
                 return null;
             }
@@ -538,17 +590,17 @@ public class MyCimaServer extends AbstractServer {
                 String videoUrl = li.attr("href");
                 String cardImageUrl = movie.getCardImageUrl();
                 String backgroundImageUrl = movie.getCardImageUrl();
-                Movie episode = Movie.clone(movie);
-                episode.setParentId(movie.getId());
-                episode.setTitle(title);
-                episode.setDescription(desc);
-                episode.setVideoUrl(Util.getUrlPathOnly(videoUrl));
-                episode.setState(Movie.GROUP_STATE);
-                episode.setType(MovieType.SEASON);
-                if (movie.getSubList() == null) {
-                    movie.setSubList(new ArrayList<>());
+                Movie season = Movie.clone(movie);
+                if (!isCollection){
+                    season.setParentId(movie.getId());
                 }
-                movie.addSubList(episode);
+                season.setTitle(title);
+                season.setDescription(desc);
+                season.setVideoUrl(Util.getUrlPathOnly(videoUrl));
+                season.setState(Movie.GROUP_STATE);
+                season.setType(MovieType.SEASON);
+
+                movie.addSubList(season);
             }
         }
         activityCallback.onSuccess(movie, getLabel());
@@ -591,8 +643,12 @@ public class MyCimaServer extends AbstractServer {
     }
 
     private MovieFetchProcess generateGroupMovie(Document doc, Movie movie, ActivityCallback<Movie> activityCallback) {
+        boolean isCollection = movie.getType() == MovieType.COLLECTION;
         //get link of episodes page
         Element descElem = doc.getElementsByClass("PostItemContent").first();
+        if (descElem == null) {
+            descElem = doc.select("[class*=story][class*=content]").first();
+        }
         String desc = "";
         if (descElem != null) {
             desc = descElem.text();
@@ -622,7 +678,9 @@ public class MyCimaServer extends AbstractServer {
                 a.setStudio(Movie.SERVER_MyCima);
 
                 Movie episode = Movie.clone(movie);
-                episode.setParentId(movie.getId());
+                if (!isCollection){
+                    episode.setParentId(movie.getId());
+                }
                 episode.setTitle(title);
                 episode.setVideoUrl(Util.getUrlPathOnly(videoUrl));
                 episode.setState(Movie.ITEM_STATE);
@@ -1283,7 +1341,7 @@ public class MyCimaServer extends AbstractServer {
 //                    videoUrl = Util.extractDomain(movie.getVideoUrl(), true, true) + videoUrl;
                 }
                 videoUrl = videoUrl + "|referer=" + referer;
-                Log.d(TAG, "generateItemMovie: "+ videoUrl);
+//                Log.d(TAG, "generateItemMovie: "+ videoUrl);
 //                videoUrl = videoUrl + Util.generateHeadersForVideoUrl(headers);
 
                 Element titleElem = li.getElementsByTag("strong").first();
@@ -1310,7 +1368,7 @@ public class MyCimaServer extends AbstractServer {
                 }
                 movie.addSubList(episode);
             }
-            Log.d(TAG, "generateItemMovie: " + movie);
+//            Log.d(TAG, "generateItemMovie: " + movie);
             break;
         }
         activityCallback.onSuccess(movie, getLabel());
