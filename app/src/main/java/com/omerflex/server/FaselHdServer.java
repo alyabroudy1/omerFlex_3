@@ -41,6 +41,7 @@ import org.jsoup.select.Elements;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -850,6 +851,10 @@ public class FaselHdServer extends AbstractServer {
         movie.setDescription(description);
         movie.setBackgroundImageUrl(backgroundImage);
 
+        if (movie.getSubList() == null) {
+            movie.setSubList(new ArrayList<>());
+        }
+
         Element resolutionsTab = doc.selectFirst(".signleWatch");
         if (resolutionsTab != null) {
             Elements episodeList = resolutionsTab.getElementsByTag("li");
@@ -883,12 +888,11 @@ public class FaselHdServer extends AbstractServer {
                 a.setDescription(description);
                 a.setStudio(Movie.SERVER_FASELHD);
                 a.setBackgroundImageUrl(backgroundImage);
-                if (movie.getSubList() == null) {
-                    movie.setSubList(new ArrayList<>());
-                }
+
                 movie.addSubList(a);
             }
         }
+        Collections.reverse(movie.getSubList());
         activityCallback.onSuccess(movie, getLabel());
         return new MovieFetchProcess(MovieFetchProcess.FETCH_PROCESS_SUCCESS, movie);
     }
