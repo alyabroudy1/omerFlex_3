@@ -74,10 +74,11 @@ public class MovieRepository {
 
     private void reAddDomainToMovie(Movie movie) {
         if (movie != null && movie.getVideoUrl() != null && !movie.getVideoUrl().startsWith("http")) {
-            ServerConfig config = ServerConfigRepository.getInstance().getConfig(movie.getStudio());
-            if (config != null) {
-                movie.setVideoUrl(config.getUrl() + movie.getVideoUrl());
-            }
+            ServerConfigRepository.getInstance().getConfigAsync(movie.getStudio(), serverConfig -> {
+                if (serverConfig != null) {
+                    movie.setVideoUrl(serverConfig.getUrl() + movie.getVideoUrl());
+                }
+            });
         }
     }
 
@@ -212,13 +213,14 @@ public class MovieRepository {
         databaseExecutor.execute(() -> {
             boolean isCollection = mSelectedMovie.getType() == MovieType.COLLECTION;
 
+
             Log.d(TAG, "fetchMovieDetails: mSelectedMovie type: "+ mSelectedMovie.getType());
             Movie localMselectedMovie = null;
             if (mSelectedMovie.getId() == 0){
                 if (isCollection) {
                     localMselectedMovie = movieDao.getMovieByTitleAndStudio(mSelectedMovie.getTitle(), mSelectedMovie.getStudio());
                 }else {
-                    localMselectedMovie = movieDao.getMovieByVideoUrlSync(Util.getUrlPathOnly(mSelectedMovie.getVideoUrl()));
+                    localMselectedMovie = movieDao.getMovieByVideoUrlSync(removeDomain(mSelectedMovie.getVideoUrl()));
                 }
             }
             if (localMselectedMovie == null){
@@ -317,7 +319,8 @@ public class MovieRepository {
                             if (saveCond){
                                 for (int i = 0; i < remoteMovie.getSubList().size(); i++) {
                                     Movie movie = remoteMovie.getSubList().get(i);
-                                    Movie existingMovie =  movieDao.getMovieByVideoUrlSync(Util.getUrlPathOnly(movie.getVideoUrl()));
+                                    movie.setVideoUrl(removeDomain(movie.getVideoUrl()));
+                                    Movie existingMovie = movieDao.getMovieByVideoUrlSync(movie.getVideoUrl());
                                     if (existingMovie == null) {
                                        long newId = movieDao.insert(movie);
                                        movie.setId(newId);
@@ -330,6 +333,7 @@ public class MovieRepository {
                                     }
                                 }
                                 reAddDomainToMovie(remoteMovie);
+                                reAddDomainToMovies(remoteMovie.getSubList());
                             }
                             new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(remoteMovie, title));
                         });

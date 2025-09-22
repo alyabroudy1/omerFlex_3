@@ -245,12 +245,19 @@ public class GetDocActivity extends AppCompatActivity {
         CookieManager cookieManager = CookieManager.getInstance();
         String cookies = cookieManager.getCookie(currentUrl);
         Log.d(TAG, "updateCookies for " + currentUrl + ": " + cookies);
-        if (cookies == null) {
-            return;
+        boolean configChanged = false;
+        if (cookies != null) {
+            config.setStringCookies(cookies);
+            configChanged = true;
         }
-        config.setStringCookies(cookies);
-        config.setHeaders(headers);
-        new Thread(() -> ServerConfigRepository.getInstance().updateConfig(config)).start();
+        if (headers != null) {
+            config.setHeaders(headers);
+            configChanged = true;
+        }
+
+        if (configChanged) {
+            new Thread(() -> ServerConfigRepository.getInstance().updateConfig(config)).start();
+        }
     }
 
     private void cleanup() {

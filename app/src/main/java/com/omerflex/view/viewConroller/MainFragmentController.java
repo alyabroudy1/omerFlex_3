@@ -44,8 +44,8 @@ public class MainFragmentController extends BaseFragmentController {
         movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded, () -> {
             Log.d(TAG, "All homepage movies fetched. Loading subsequent data.");
             movieRepository.getWatchedMovies(this::onMoviesLoaded);
-            movieRepository.getWatchedChannels(this::onMoviesLoaded);
-            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
+//            movieRepository.getWatchedChannels(this::onMoviesLoaded);
+//            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
         });
 
 //        Intent searchResultIntent = new Intent(mFragment.getActivity(), SearchResultActivity.class);

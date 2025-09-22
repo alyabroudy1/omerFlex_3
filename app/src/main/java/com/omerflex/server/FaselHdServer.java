@@ -205,7 +205,7 @@ public class FaselHdServer extends AbstractServer {
     public Movie updateMovieState(Movie movie) {
         String u = movie.getVideoUrl();
         String n = movie.getTitle();
-        boolean seriesCase = u.contains("/seasons") || n.contains("مسلسل") || n.contains("فلام");
+        boolean seriesCase = u.contains("/seasons");
 
         if (seriesCase){
             movie.setState(Movie.GROUP_OF_GROUP_STATE);
@@ -213,7 +213,7 @@ public class FaselHdServer extends AbstractServer {
             return movie;
         }
         movie.setState(Movie.ITEM_STATE);
-        if (u.contains("/episodes") || n.contains("حلقة") || n.contains("حلقه")){
+        if (u.contains("episodes/") || n.contains("حلقة") || n.contains("حلقه")){
             movie.setType(MovieType.EPISODE);
         }
         if (n.contains("فلم") || n.contains("فيلم")){
