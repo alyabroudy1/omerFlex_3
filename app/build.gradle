@@ -62,6 +62,11 @@ dependencies {
     implementation "androidx.media3:media3-ui:$media3_version"  // Updated from 1.1.1
     implementation "androidx.media3:media3-ui-leanback:$media3_version"  // Updated from 1.1.1
     implementation "androidx.media3:media3-session:$media3_version"
+    // The ExoPlayer Cast Extension
+    implementation "androidx.media3:media3-cast:$media3_version"
+
+    // The Google Cast Framework (part of Google Play Services)
+    implementation "com.google.android.gms:play-services-cast-framework:21.0.1"
 
     // Network and parsing
     implementation 'org.jsoup:jsoup:1.16.2'  // Updated from 1.13.1
