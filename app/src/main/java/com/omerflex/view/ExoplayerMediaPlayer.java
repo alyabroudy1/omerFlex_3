@@ -59,7 +59,6 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieHistory;
 import com.omerflex.entity.MovieRepository;
 import com.omerflex.entity.MovieType;
-import com.omerflex.providers.MediaRouterHelper;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -110,10 +109,6 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     private CastStateListener mCastStateListener;
     private MenuItem mediaRouteMenuItem;
 
-    private MediaRouterHelper mediaRouterHelper;
-    private boolean isRoutingToRemote = false;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,9 +138,6 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         // It uses the OptionsProvider we defined in the Manifest.
         try {
             mCastContext = CastContext.getSharedInstance(this);
-            // Initialize MediaRouter helper
-            mediaRouterHelper = new MediaRouterHelper(this);
-            mediaRouterHelper.startDiscovery();
         } catch (RuntimeException e) {
             // This can happen if the Google Play services are out of date or missing.
             Log.e(TAG, "Failed to get CastContext instance. Is Google Play Services available?", e);
@@ -519,13 +511,17 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
             return;
         }
 
-        // Save state from current player
         long playbackPositionMs = C.TIME_UNSET;
         boolean playWhenReady = false;
+        MediaItem currentMediaItem = null;
 
+        // Save state from the old player
         if (currentPlayer != null) {
             playbackPositionMs = currentPlayer.getCurrentPosition();
             playWhenReady = currentPlayer.getPlayWhenReady();
+            if (currentPlayer.getCurrentMediaItem() != null) {
+                currentMediaItem = currentPlayer.getCurrentMediaItem();
+            }
             currentPlayer.stop();
         }
 
@@ -535,29 +531,23 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         Log.d(TAG, "setCurrentPlayer: Switching to " + (newPlayer == castPlayer ? "CastPlayer" : "LocalPlayer"));
 
         if (currentPlayer == castPlayer) {
-            // For CastPlayer, use a simple approach first
-            try {
-                MediaItem castMediaItem = buildMediaItemForCast(movie);
-                currentPlayer.setMediaItem(castMediaItem);
-                currentPlayer.prepare();
-                currentPlayer.setPlayWhenReady(true);
-
-                // Set a timeout to fallback if casting doesn't work
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    if (currentPlayer == castPlayer && currentPlayer.getPlaybackState() == Player.STATE_IDLE) {
-                        Log.w(TAG, "Cast playback failed - falling back to local player");
-                        setCurrentPlayer(player);
-                    }
-                }, 5000); // 5 second timeout
-
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to set up CastPlayer", e);
-                setCurrentPlayer(player); // Fallback to local player
+            // Cast Player
+            if (currentMediaItem != null) {
+                currentPlayer.setMediaItem(currentMediaItem);
+            } else {
+                MediaSource mediaSource = buildMediaSource(movie);
+                currentPlayer.setMediaItem(mediaSource.getMediaItem());
             }
+            currentPlayer.prepare();
+            currentPlayer.setPlayWhenReady(true);
         } else {
-            // Local player
-            MediaSource mediaSource = buildMediaSource(movie);
-            ((ExoPlayer)currentPlayer).setMediaSource(mediaSource);
+            // Local Player (your existing player)
+            if (currentMediaItem != null) {
+                currentPlayer.setMediaItem(currentMediaItem);
+            } else {
+                MediaSource mediaSource = buildMediaSource(movie);
+                ((ExoPlayer) currentPlayer).setMediaSource(mediaSource);
+            }
             currentPlayer.prepare();
             if (playbackPositionMs != C.TIME_UNSET) {
                 currentPlayer.seekTo(playbackPositionMs);
