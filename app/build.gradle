@@ -65,8 +65,12 @@ dependencies {
     // The ExoPlayer Cast Extension
     implementation "androidx.media3:media3-cast:$media3_version"
 
+    // MEDIA ROUTER (This is the library for the button itself)
+    // We are adding this explicitly to prevent conflicts.
+    implementation "androidx.mediarouter:mediarouter:1.7.0"
+
     // The Google Cast Framework (part of Google Play Services)
-    implementation "com.google.android.gms:play-services-cast-framework:21.0.1"
+    implementation "com.google.android.gms:play-services-cast-framework:21.4.0"
 
     // Network and parsing
     implementation 'org.jsoup:jsoup:1.16.2'  // Updated from 1.13.1

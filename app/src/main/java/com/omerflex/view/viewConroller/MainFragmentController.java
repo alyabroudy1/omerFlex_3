@@ -33,7 +33,7 @@ public class MainFragmentController extends BaseFragmentController {
         Log.d(TAG, "loadData: ");
         try {
             Log.d(TAG, "loadData: try to check for update");
-            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
+//            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
 //            ServerConfigDTO serverConfigDTO = new ServerConfigDTO();
 //            String url = "https://drive.google.com/u/0/uc?id=1a7kHxCHOxW6TH8OnM_kO3SjjQvt38oCx&export=download";
 //            serverConfigDTO.url = url;
@@ -41,13 +41,13 @@ public class MainFragmentController extends BaseFragmentController {
         }catch (Exception e){
             Log.e(TAG, "checkForRemoteUpdates: "+e.getMessage());
         }
-        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded, () -> {
-            Log.d(TAG, "All homepage movies fetched. Loading subsequent data.");
-            movieRepository.getWatchedMovies(this::onMoviesLoaded);
-            movieRepository.getWatchedChannels(this::onMoviesLoaded);
-            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
-        });
-
+//        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded, () -> {
+//            Log.d(TAG, "All homepage movies fetched. Loading subsequent data.");
+//            movieRepository.getWatchedMovies(this::onMoviesLoaded);
+//            movieRepository.getWatchedChannels(this::onMoviesLoaded);
+//            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
+//        });
+        movieRepository.getWatchedChannels(this::onMoviesLoaded);
 //        Intent searchResultIntent = new Intent(mFragment.getActivity(), SearchResultActivity.class);
 //        searchResultIntent.putExtra("query", "اسر");
 //        // setResult(Activity.RESULT_OK,returnIntent);

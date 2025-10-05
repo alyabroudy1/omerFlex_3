@@ -5,6 +5,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
@@ -16,9 +18,12 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.media3.cast.CastPlayer;
+import androidx.media3.cast.SessionAvailabilityListener;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
@@ -28,6 +33,7 @@ import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.SimpleExoPlayer;
 import androidx.media3.exoplayer.analytics.AnalyticsListener;
 import androidx.media3.exoplayer.dash.DashMediaSource;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
@@ -37,7 +43,13 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource;
 import androidx.media3.ui.AspectRatioFrameLayout;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.leanback.LeanbackPlayerAdapter;
+import androidx.mediarouter.app.MediaRouteButton;
 
+import com.google.android.gms.cast.MediaInfo;
+import com.google.android.gms.cast.framework.CastButtonFactory;
+import com.google.android.gms.cast.framework.CastContext;
+import com.google.android.gms.cast.framework.CastState;
+import com.google.android.gms.cast.framework.CastStateListener;
 import com.omerflex.R;
 import com.omerflex.db.AppDatabase;
 import com.omerflex.entity.Movie;
@@ -61,7 +73,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 @androidx.media3.common.util.UnstableApi
-public class ExoplayerMediaPlayer extends AppCompatActivity {
+public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAvailabilityListener {
 
     @Nullable private ExoPlayer player;
     private static final String TAG = "Exoplayer";
@@ -86,20 +98,63 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
     private Map<String, String> headers;
     private boolean hasSeekedToWatchedPosition = false;
 
+    private SimpleExoPlayer exoPlayer;
+    private CastPlayer castPlayer;
+    private Player currentPlayer;
+
+    private CastContext mCastContext;
+    private CastStateListener mCastStateListener;
+    private MenuItem mediaRouteMenuItem;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 
         // remove title
         // Hide the status bar.
         // Hide status bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
+
         this.getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-        getSupportActionBar().hide();
         setContentView(R.layout.activity_exoplayer);
+        getSupportActionBar().hide();
+
+        // Find the button directly from the layout
+        MediaRouteButton mediaRouteButton = findViewById(R.id.media_route_button);
+        // Connect it to the Cast framework
+        CastButtonFactory.setUpMediaRouteButton(this, mediaRouteButton);
+
+
+        // It's crucial to initialize the CastContext. This is a heavy operation,
+        // and the framework does it lazily in a background thread.
+        // It uses the OptionsProvider we defined in the Manifest.
+        try {
+            mCastContext = CastContext.getSharedInstance(this);
+        } catch (RuntimeException e) {
+            // This can happen if the Google Play services are out of date or missing.
+            Log.e(TAG, "Failed to get CastContext instance. Is Google Play Services available?", e);
+            // You could show an error dialog to the user here.
+            return;
+        }
+
+        // The Cast button will automatically become visible or hidden based on this.
+        mCastStateListener = newState -> {
+            if (newState == CastState.NO_DEVICES_AVAILABLE) {
+                Log.d(TAG, "CastState: No devices available.");
+            } else if (newState == CastState.NOT_CONNECTED) {
+                Log.d(TAG, "CastState: Devices available, but not connected.");
+            } else if (newState == CastState.CONNECTING) {
+                Log.d(TAG, "CastState: Connecting to a device.");
+            } else if (newState == CastState.CONNECTED) {
+                Log.d(TAG, "CastState: Connected to a device.");
+            }
+        };
+
         //  setContentView(R.layout.activity_main);
         playerView = findViewById(R.id.player_view);
 
@@ -144,6 +199,9 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         player = new ExoPlayer.Builder(getApplicationContext())
                 .setLoadControl(loadControl)
                 .build();
+
+        castPlayer = new CastPlayer(mCastContext);
+        castPlayer.setSessionAvailabilityListener(this);
 
 
         // give audio focus for iptv live videos
@@ -190,6 +248,9 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
         player.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT);
         playerView.setPlayer(player);
+
+        // CAST INTEGRATION: Determine which player to use initially and start playback
+        setCurrentPlayer(castPlayer.isCastSessionAvailable() ? castPlayer : player);
 
 
 // Set the media source to be played.
@@ -400,6 +461,83 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         //   player.play();
 
     }
+
+
+    @Override
+    public void onCastSessionAvailable() {
+        setCurrentPlayer(castPlayer);
+    }
+
+    @Override
+    public void onCastSessionUnavailable() {
+        setCurrentPlayer(exoPlayer);
+    }
+
+    private void setCurrentPlayer(Player newPlayer) {
+        if (currentPlayer == newPlayer) {
+            return;
+        }
+
+        long playbackPositionMs = C.TIME_UNSET;
+        boolean playWhenReady = false;
+        MediaItem currentMediaItem = null;
+
+        // Save state from the old player
+        if (currentPlayer != null) {
+            playbackPositionMs = currentPlayer.getCurrentPosition();
+            playWhenReady = currentPlayer.getPlayWhenReady();
+            if (currentPlayer.getCurrentMediaItem() != null) {
+                currentMediaItem = currentPlayer.getCurrentMediaItem();
+            }
+            currentPlayer.stop();
+        }
+
+        currentPlayer = newPlayer;
+        playerView.setPlayer(currentPlayer);
+
+        // Load media into the new player
+        if (currentPlayer == castPlayer) {
+            // Cast Player
+            if (currentMediaItem != null) {
+                currentPlayer.setMediaItem(currentMediaItem);
+            } else {
+                MediaSource mediaSource = buildMediaSource(movie);
+                currentPlayer.setMediaItem(mediaSource.getMediaItem());
+            }
+            currentPlayer.prepare();
+            currentPlayer.setPlayWhenReady(true);
+        } else {
+            // Local Player (your existing player)
+            if (currentMediaItem != null) {
+                currentPlayer.setMediaItem(currentMediaItem);
+            } else {
+                MediaSource mediaSource = buildMediaSource(movie);
+                ((ExoPlayer) currentPlayer).setMediaSource(mediaSource);
+            }
+            currentPlayer.prepare();
+            if (playbackPositionMs != C.TIME_UNSET) {
+                currentPlayer.seekTo(playbackPositionMs);
+            }
+            currentPlayer.setPlayWhenReady(playWhenReady);
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (mCastContext != null) {
+            mCastContext.addCastStateListener(mCastStateListener);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mCastContext != null) {
+            mCastContext.removeCastStateListener(mCastStateListener);
+        }
+    }
+
 
     private void updateHistoryPlayback() {
         new Thread(() -> {
@@ -817,7 +955,40 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         playerView.setKeepScreenOn(true);
+        if (mCastContext != null) {
+            mCastContext.addCastStateListener(mCastStateListener);
+        }
         Log.d("TAG", "onResume: yess");
     }
 
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        super.onCreateOptionsMenu(menu);
+//        // This line inflates your menu layout into the activity's app bar
+//        getMenuInflater().inflate(R.menu.main_menu, menu);
+//        // This line finds your button within the menu and makes it a fully functional Cast button
+//        CastButtonFactory.setUpMediaRouteButton(getApplicationContext(), menu, R.id.media_route_menu_item);
+//        return true;
+//    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+
+        // Set up the Cast button
+        mediaRouteMenuItem = CastButtonFactory.setUpMediaRouteButton(getApplicationContext(), menu, R.id.media_route_menu_item);
+        return true;
+    }
+
+    // A helper to guess the MIME type for the MediaItem
+    private String getMimeType(String url) {
+        int type = Util.inferContentType(Uri.parse(url));
+        switch (type) {
+            case C.CONTENT_TYPE_DASH: return "application/dash+xml";
+            case C.CONTENT_TYPE_HLS: return "application/x-mpegURL";
+            case C.CONTENT_TYPE_SS: return "application/vnd.ms-sstr+xml";
+            default: return null; // Let ExoPlayer infer it
+        }
+    }
 }
