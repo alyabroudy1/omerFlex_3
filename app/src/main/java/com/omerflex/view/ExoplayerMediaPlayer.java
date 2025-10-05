@@ -3,6 +3,8 @@ package com.omerflex.view;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -24,6 +26,7 @@ import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
@@ -56,6 +59,7 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieHistory;
 import com.omerflex.entity.MovieRepository;
 import com.omerflex.entity.MovieType;
+import com.omerflex.providers.MediaRouterHelper;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -106,6 +110,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     private CastStateListener mCastStateListener;
     private MenuItem mediaRouteMenuItem;
 
+    private MediaRouterHelper mediaRouterHelper;
+    private boolean isRoutingToRemote = false;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,6 +143,9 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         // It uses the OptionsProvider we defined in the Manifest.
         try {
             mCastContext = CastContext.getSharedInstance(this);
+            // Initialize MediaRouter helper
+            mediaRouterHelper = new MediaRouterHelper(this);
+            mediaRouterHelper.startDiscovery();
         } catch (RuntimeException e) {
             // This can happen if the Google Play services are out of date or missing.
             Log.e(TAG, "Failed to get CastContext instance. Is Google Play Services available?", e);
@@ -202,6 +213,22 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
 
         castPlayer = new CastPlayer(mCastContext);
         castPlayer.setSessionAvailabilityListener(this);
+        castPlayer.addListener(new Player.Listener() {
+            @Override
+            public void onPlayerError(PlaybackException error) {
+                Log.e(TAG, "CastPlayer error: " + error.getMessage(), error);
+                runOnUiThread(() -> {
+                    Toast.makeText(ExoplayerMediaPlayer.this,
+                            "Cast playback failed: " + error.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
+            }
+
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                Log.d(TAG, "CastPlayer state changed: " + playbackState);
+            }
+        });
 
 
         // give audio focus for iptv live videos
@@ -465,60 +492,153 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
 
     @Override
     public void onCastSessionAvailable() {
-        setCurrentPlayer(castPlayer);
+        Log.d(TAG, "onCastSessionAvailable: Cast session is available");
+        runOnUiThread(() -> {
+            try {
+                setCurrentPlayer(castPlayer);
+            } catch (Exception e) {
+                Log.e(TAG, "Error switching to CastPlayer", e);
+                Toast.makeText(this, "Failed to start casting", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
     public void onCastSessionUnavailable() {
-        setCurrentPlayer(exoPlayer);
+        Log.d(TAG, "onCastSessionUnavailable: Cast session is unavailable");
+        runOnUiThread(() -> {
+            try {
+                setCurrentPlayer(player);
+            } catch (Exception e) {
+                Log.e(TAG, "Error switching back to local player", e);
+            }
+        });
     }
-
     private void setCurrentPlayer(Player newPlayer) {
         if (currentPlayer == newPlayer) {
             return;
         }
 
+        // Save state from current player
         long playbackPositionMs = C.TIME_UNSET;
         boolean playWhenReady = false;
-        MediaItem currentMediaItem = null;
 
-        // Save state from the old player
         if (currentPlayer != null) {
             playbackPositionMs = currentPlayer.getCurrentPosition();
             playWhenReady = currentPlayer.getPlayWhenReady();
-            if (currentPlayer.getCurrentMediaItem() != null) {
-                currentMediaItem = currentPlayer.getCurrentMediaItem();
-            }
             currentPlayer.stop();
         }
 
         currentPlayer = newPlayer;
         playerView.setPlayer(currentPlayer);
 
-        // Load media into the new player
+        Log.d(TAG, "setCurrentPlayer: Switching to " + (newPlayer == castPlayer ? "CastPlayer" : "LocalPlayer"));
+
         if (currentPlayer == castPlayer) {
-            // Cast Player
-            if (currentMediaItem != null) {
-                currentPlayer.setMediaItem(currentMediaItem);
-            } else {
-                MediaSource mediaSource = buildMediaSource(movie);
-                currentPlayer.setMediaItem(mediaSource.getMediaItem());
+            // For CastPlayer, use a simple approach first
+            try {
+                MediaItem castMediaItem = buildMediaItemForCast(movie);
+                currentPlayer.setMediaItem(castMediaItem);
+                currentPlayer.prepare();
+                currentPlayer.setPlayWhenReady(true);
+
+                // Set a timeout to fallback if casting doesn't work
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (currentPlayer == castPlayer && currentPlayer.getPlaybackState() == Player.STATE_IDLE) {
+                        Log.w(TAG, "Cast playback failed - falling back to local player");
+                        setCurrentPlayer(player);
+                    }
+                }, 5000); // 5 second timeout
+
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to set up CastPlayer", e);
+                setCurrentPlayer(player); // Fallback to local player
             }
-            currentPlayer.prepare();
-            currentPlayer.setPlayWhenReady(true);
         } else {
-            // Local Player (your existing player)
-            if (currentMediaItem != null) {
-                currentPlayer.setMediaItem(currentMediaItem);
-            } else {
-                MediaSource mediaSource = buildMediaSource(movie);
-                ((ExoPlayer) currentPlayer).setMediaSource(mediaSource);
-            }
+            // Local player
+            MediaSource mediaSource = buildMediaSource(movie);
+            ((ExoPlayer)currentPlayer).setMediaSource(mediaSource);
             currentPlayer.prepare();
             if (playbackPositionMs != C.TIME_UNSET) {
                 currentPlayer.seekTo(playbackPositionMs);
             }
             currentPlayer.setPlayWhenReady(playWhenReady);
+        }
+    }
+
+    private void debugMediaItem(MediaItem mediaItem) {
+        Log.d(TAG, "MediaItem Debug:");
+        Log.d(TAG, "  - URI: " + mediaItem.localConfiguration.uri);
+        Log.d(TAG, "  - MIME Type: " + mediaItem.localConfiguration.mimeType);
+        Log.d(TAG, "  - Title: " + mediaItem.mediaMetadata.title);
+    }
+
+    private MediaItem buildMediaItemForCast(Movie movie) {
+        updateMovieUrlToHttps(movie);
+
+        String url = movie.getVideoUrl();
+        String[] parts = url.split("\\|", 2);
+        String cleanUrl = parts[0];
+        Map<String, String> headers = new HashMap<>();
+
+        if (parts.length == 2) {
+            headers = com.omerflex.server.Util.extractHeaders(parts[1]);
+            Log.d(TAG, "buildMediaItemForCast: Headers found: " + headers.size());
+        }
+
+        String mimeType = determineMimeType(cleanUrl);
+
+        // For HLS streams with headers, we need to use a different approach
+        MediaItem.Builder builder = new MediaItem.Builder()
+                .setUri(Uri.parse(cleanUrl))
+                .setMimeType(mimeType);
+
+        // Create a custom media item that includes headers in the media ID
+        // This is a workaround since CastPlayer doesn't directly support headers in MediaItem
+        if (!headers.isEmpty()) {
+            String mediaIdWithHeaders = cleanUrl + "|headers|" + parts[1];
+            builder.setMediaId(mediaIdWithHeaders);
+        }
+
+        MediaMetadata metadata = new MediaMetadata.Builder()
+                .setTitle(movie.getTitle())
+                .setDisplayTitle(movie.getTitle())
+                .build();
+
+        builder.setMediaMetadata(metadata);
+
+        return builder.build();
+    }
+
+    private String determineMimeType(String url) {
+        Uri uri = Uri.parse(url);
+        @C.ContentType int contentType = Util.inferContentType(uri);
+
+        switch (contentType) {
+            case C.CONTENT_TYPE_HLS:
+                return MimeTypes.APPLICATION_M3U8;
+            case C.CONTENT_TYPE_DASH:
+                return MimeTypes.APPLICATION_MPD;
+            case C.CONTENT_TYPE_SS:
+                return MimeTypes.APPLICATION_SS;
+            default:
+                // For progressive streams, try to detect from file extension
+                if (url.contains(".m3u8")) {
+                    return MimeTypes.APPLICATION_M3U8;
+                } else if (url.contains(".mpd")) {
+                    return MimeTypes.APPLICATION_MPD;
+                } else if (url.contains(".ism")) {
+                    return MimeTypes.APPLICATION_SS;
+                } else if (url.contains(".mp4")) {
+                    return MimeTypes.VIDEO_MP4;
+                } else if (url.contains(".webm")) {
+                    return MimeTypes.VIDEO_WEBM;
+                } else if (url.contains(".mkv")) {
+                    return "video/x-matroska";
+                } else {
+                    // Default to MP4
+                    return MimeTypes.VIDEO_MP4;
+                }
         }
     }
 
@@ -814,6 +934,36 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     }
 
     private MediaSource createMediaSource(DataSource.Factory dataSourceFactory, Uri uri, Movie movie) {
+        int type = Util.inferContentType(uri);
+        String mimeType = determineMimeType(uri.toString());
+
+        MediaItem mediaItem = new MediaItem.Builder()
+                .setUri(uri)
+                .setMimeType(mimeType)
+                .setMediaMetadata(new MediaMetadata.Builder()
+                        .setTitle(movie.getTitle())
+                        .build())
+                .build();
+
+        Log.d(TAG, "createMediaSource: type: " + type + ", mimeType: " + mimeType);
+
+        if (movie.getVideoUrl().contains("m3u")) {
+            return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+        }
+
+        switch (type) {
+            case C.CONTENT_TYPE_SS:
+                return new SsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+            case C.CONTENT_TYPE_DASH:
+                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+            case C.CONTENT_TYPE_HLS:
+                return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+            default:
+                return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+        }
+    }
+
+    private MediaSource createMediaSource_old(DataSource.Factory dataSourceFactory, Uri uri, Movie movie) {
         int type = Util.inferContentType(uri);
         Log.d(TAG, "createMediaSource: type: "+type);
 
