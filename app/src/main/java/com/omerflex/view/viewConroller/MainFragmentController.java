@@ -52,8 +52,8 @@ public class MainFragmentController extends BaseFragmentController {
         Movie movie = new Movie();
         movie.setStudio(Movie.SERVER_FASELHD);
         movie.setTitle("test title");
-//        movie.setVideoUrl("https://www.w3schools.com/html/mov_bbb.mp4");
-        movie.setVideoUrl("https://r466--1pqdyczv.c.scdns.io/stream/v1/hlsa/HNB3sRj5xWSyd9eNFStmYA/1759677414/www.faselhds.life/all/83.135.170.96/no/DE/0/01-02/4/34f13c811a15c34cd03c772a49b6df97/160_hd1080b_playlist.m3u8");
+        movie.setVideoUrl("https://www.w3schools.com/html/mov_bbb.mp4");
+//        movie.setVideoUrl("https://r466--1pqdyczv.c.scdns.io/stream/v1/hlsa/HNB3sRj5xWSyd9eNFStmYA/1759677414/www.faselhds.life/all/83.135.170.96/no/DE/0/01-02/4/34f13c811a15c34cd03c772a49b6df97/160_hd1080b_playlist.m3u8");
         Util.openExoPlayer(movie, mFragment.getActivity(), false);
 //        Intent searchResultIntent = new Intent(mFragment.getActivity(), SearchResultActivity.class);
 //        searchResultIntent.putExtra("query", "اسر");

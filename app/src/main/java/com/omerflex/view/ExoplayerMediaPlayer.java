@@ -1,5 +1,11 @@
 package com.omerflex.view;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+
+import androidx.mediarouter.media.MediaControlIntent;
+import androidx.mediarouter.media.MediaRouter;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -59,6 +65,9 @@ import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieHistory;
 import com.omerflex.entity.MovieRepository;
 import com.omerflex.entity.MovieType;
+import com.omerflex.providers.DlnaCaster;
+import com.omerflex.providers.MediaServer;
+import com.omerflex.providers.SsdpDiscoverer;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -108,7 +117,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     private CastContext mCastContext;
     private CastStateListener mCastStateListener;
     private MenuItem mediaRouteMenuItem;
-
+    private Map<String, String> deviceLocations = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,6 +140,24 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         MediaRouteButton mediaRouteButton = findViewById(R.id.media_route_button);
         // Connect it to the Cast framework
         CastButtonFactory.setUpMediaRouteButton(this, mediaRouteButton);
+        // Set click listener to show available devices
+//        if (mediaRouteButton != null) {
+//            mediaRouteButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    showDiscoveredDevices();
+//                }
+//            });
+//        }
+        // Set up click listener for built-in casting
+//        if (mediaRouteButton != null) {
+//            mediaRouteButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    startBuiltInCasting();
+//                }
+//            });
+//        }
 
 
         // It's crucial to initialize the CastContext. This is a heavy operation,
@@ -482,6 +509,375 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     }
 
 
+
+    private void showDiscoveredDevices() {
+        AlertDialog loadingDialog = new AlertDialog.Builder(this)
+                .setTitle("Discovering DLNA Devices...")
+                .setMessage("Searching for devices on your network...")
+                .setCancelable(false)
+                .create();
+        loadingDialog.show();
+
+        deviceLocations.clear(); // Clear previous devices
+
+        SsdpDiscoverer.discoverDevicesWithDetails(new SsdpDiscoverer.DiscoveryListener() {
+            @Override
+            public void onDeviceFound(String deviceInfo, String ipAddress) {
+                Log.d(TAG, "Discovered device: " + deviceInfo);
+                // Store device info for later use
+                deviceLocations.put(deviceInfo, ipAddress);
+            }
+
+            @Override
+            public void onDiscoveryComplete(List<String> devices) {
+                runOnUiThread(() -> {
+                    loadingDialog.dismiss();
+                    showDiscoveredDevicesDialog(devices);
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                runOnUiThread(() -> {
+                    loadingDialog.dismiss();
+                    showDiscoveryError(error);
+                });
+            }
+        });
+    }
+
+    private void onDlnaDeviceSelected(String deviceInfo) {
+        String deviceIp = deviceLocations.get(deviceInfo);
+        if (deviceIp == null) {
+            Toast.makeText(this, "Device info not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        AlertDialog castingDialog = new AlertDialog.Builder(this)
+                .setTitle("Casting to " + deviceInfo)
+                .setMessage("Setting up media server...")
+                .setCancelable(false)
+                .create();
+        castingDialog.show();
+
+        // Extract headers from video URL
+        String url = movie.getVideoUrl();
+        String[] parts = url.split("\\|", 2);
+        Map<String, String> headers = new HashMap<>();
+        if (parts.length == 2) {
+            headers = com.omerflex.server.Util.extractHeaders(parts[1]);
+        }
+
+        // Start media server
+        MediaServer mediaServer = MediaServer.getInstance();
+        String localServerUrl = mediaServer.startServer(movie, headers);
+
+        if (localServerUrl == null) {
+            castingDialog.dismiss();
+            Toast.makeText(this, "Failed to start media server", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Log.d(TAG, "Media server URL: " + localServerUrl);
+
+        // Build device location URL (try common ports)
+        String[] commonPorts = {"49152", "49000", "5000", "8200"};
+
+        // Try to cast to each possible port
+        tryCastToDevice(deviceIp, commonPorts, localServerUrl, deviceInfo, castingDialog, 0);
+    }
+
+    private void tryCastToDevice(String deviceIp, String[] ports, String videoUrl,
+                                 String deviceInfo, AlertDialog dialog, int portIndex) {
+        if (portIndex >= ports.length) {
+            // All ports failed
+            runOnUiThread(() -> {
+                dialog.dismiss();
+                Toast.makeText(this, "Failed to connect to device. Try Web Video Caster.", Toast.LENGTH_LONG).show();
+                MediaServer.getInstance().stopServer();
+            });
+            return;
+        }
+
+        String port = ports[portIndex];
+        String deviceLocation = "http://" + deviceIp + ":" + port + "/description.xml";
+
+        Log.d(TAG, "Trying to cast to: " + deviceLocation);
+
+        DlnaCaster.castToDevice(deviceLocation, videoUrl, movie.getTitle(), new DlnaCaster.CastListener() {
+            @Override
+            public void onCastSuccess() {
+                runOnUiThread(() -> {
+                    dialog.dismiss();
+                    Toast.makeText(ExoplayerMediaPlayer.this,
+                            "Casting started successfully to " + deviceInfo,
+                            Toast.LENGTH_LONG).show();
+
+                    // Pause local playback
+                    if (player != null && player.isPlaying()) {
+                        player.pause();
+                    }
+                });
+            }
+
+            @Override
+            public void onCastError(String error) {
+                Log.d(TAG, "Cast failed on port " + port + ": " + error);
+                // Try next port
+                tryCastToDevice(deviceIp, ports, videoUrl, deviceInfo, dialog, portIndex + 1);
+            }
+        });
+    }
+
+    private void showDiscoveredDevicesDialog(List<String> devices) {
+        if (devices.isEmpty()) {
+            showNoDevicesFound();
+            return;
+        }
+
+        String[] deviceArray = devices.toArray(new String[0]);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Discovered DLNA Devices (" + devices.size() + ")")
+                .setItems(deviceArray, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String selectedDevice = devices.get(which);
+                        onDlnaDeviceSelected(selectedDevice);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showDiscoveryError(String error) {
+        new AlertDialog.Builder(this)
+                .setTitle("Discovery Error")
+                .setMessage("Failed to discover devices: " + error + "\n\nMake sure you're connected to Wi-Fi.")
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+
+    // Helper methods for debugging
+    private String getConnectionState(MediaRouter.RouteInfo route) {
+        try {
+            int state = route.getConnectionState();
+            switch (state) {
+                case MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED: return "CONNECTED";
+                case MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTING: return "CONNECTING";
+                case MediaRouter.RouteInfo.CONNECTION_STATE_DISCONNECTED: return "DISCONNECTED";
+                default: return "UNKNOWN(" + state + ")";
+            }
+        } catch (Exception e) {
+            return "ERROR";
+        }
+    }
+
+    private String getDeviceType(MediaRouter.RouteInfo route) {
+        try {
+            int type = route.getDeviceType();
+            switch (type) {
+                case MediaRouter.RouteInfo.DEVICE_TYPE_TV: return "TV";
+                case MediaRouter.RouteInfo.DEVICE_TYPE_SPEAKER: return "SPEAKER";
+//                case MediaRouter.RouteInfo.DEVICE_TYPE_BLUETOOTH: return "BLUETOOTH";
+                case MediaRouter.RouteInfo.DEVICE_TYPE_UNKNOWN: return "UNKNOWN";
+                default: return "OTHER(" + type + ")";
+            }
+        } catch (Exception e) {
+            return "ERROR";
+        }
+    }
+
+    private void showDevicesDialog(List<MediaRouter.RouteInfo> devices) {
+        String[] deviceNames = new String[devices.size()];
+        for (int i = 0; i < devices.size(); i++) {
+            MediaRouter.RouteInfo device = devices.get(i);
+            String deviceInfo = device.getName();
+
+            // Add type information
+            String type = getDeviceType(device);
+            String state = getConnectionState(device);
+            deviceInfo += " [" + type + " - " + state + "]";
+
+            if (device.getDescription() != null && !device.getDescription().isEmpty()) {
+                deviceInfo += "\n" + device.getDescription();
+            }
+
+            deviceNames[i] = deviceInfo;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("All Discovered Routes (" + devices.size() + ")")
+                .setItems(deviceNames, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        MediaRouter.RouteInfo selectedDevice = devices.get(which);
+                        onDeviceSelected(selectedDevice);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showNoDevicesFound() {
+        new AlertDialog.Builder(this)
+                .setTitle("No Devices Found")
+                .setMessage("No casting devices found on your network.\n\n" +
+                        "Make sure:\n" +
+                        "• Your TV/Cast device is on the same Wi-Fi\n" +
+                        "• Your TV is turned on\n" +
+                        "• Your device supports casting (Chromecast, Smart TV, etc.)")
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    private void onDeviceSelected(MediaRouter.RouteInfo device) {
+        Log.d(TAG, "Device selected: " + device.getName());
+        Toast.makeText(this, "Selected: " + device.getName(), Toast.LENGTH_SHORT).show();
+
+        // For now, just show a toast - we'll handle actual casting later
+        // You can add your casting logic here when ready
+    }
+
+    private void startBuiltInCasting() {
+        try {
+            // Get the clean video URL without headers
+            String url = movie.getVideoUrl();
+            String[] parts = url.split("\\|", 2);
+            String cleanUrl = parts[0];
+
+            Log.d(TAG, "Starting DLNA/UPnP casting with URL: " + cleanUrl);
+
+            // Try multiple intents for different casting apps
+
+            // Intent 1: Generic video view (may show DLNA apps)
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.parse(cleanUrl), "video/*");
+            intent.putExtra(Intent.EXTRA_TITLE, movie.getTitle());
+            intent.putExtra("title", movie.getTitle());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            // Intent 2: Specific to popular casting apps
+            Intent allCastingIntent = new Intent(Intent.ACTION_SEND);
+            allCastingIntent.setType("video/*");
+            allCastingIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse(cleanUrl));
+            allCastingIntent.putExtra("title", movie.getTitle());
+            allCastingIntent.putExtra("subject", movie.getTitle());
+
+            // Create chooser to show all available casting apps
+            Intent chooserIntent = Intent.createChooser(intent, "Cast to TV");
+            // Add the SEND intent as an option
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] {allCastingIntent});
+
+            // Check if any app can handle this
+            if (chooserIntent.resolveActivity(getPackageManager()) != null) {
+                // Pause local playback
+                if (player != null && player.isPlaying()) {
+                    player.pause();
+                }
+
+                startActivity(chooserIntent);
+                Toast.makeText(this, "Select a casting app...", Toast.LENGTH_SHORT).show();
+
+            } else {
+                // No casting app found - prompt to install Web Video Caster
+                showNoCastingAppDialog();
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting casting", e);
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void showNoCastingAppDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("No Casting App Found")
+                .setMessage("To cast to your TV, please install a DLNA casting app like 'Web Video Caster' from Play Store")
+                .setPositiveButton("Install", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        openPlayStoreForCastingApps();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void openPlayStoreForCastingApps() {
+        try {
+            Intent playStoreIntent = new Intent(Intent.ACTION_VIEW);
+            playStoreIntent.setData(Uri.parse("market://details?id=com.instantbits.cast.webvideo"));
+            startActivity(playStoreIntent);
+        } catch (Exception e) {
+            // Fallback to web browser
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW);
+            browserIntent.setData(Uri.parse("https://play.google.com/store/apps/details?id=com.instantbits.cast.webvideo"));
+            startActivity(browserIntent);
+        }
+    }
+
+
+
+    /**
+     * Start built-in Android casting using Intent
+     */
+    private void startBuiltInCastingGoogle() {
+        try {
+            // Get the clean video URL without headers
+            String url = movie.getVideoUrl();
+            String[] parts = url.split("\\|", 2);
+            String cleanUrl = parts[0];
+
+            Log.d(TAG, "Starting built-in casting with URL: " + cleanUrl);
+
+            // Create the intent for viewing the video
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.parse(cleanUrl), "video/*");
+
+            // Add extra information for better casting experience
+            intent.putExtra(Intent.EXTRA_TITLE, movie.getTitle());
+            intent.putExtra("title", movie.getTitle());
+
+            // Add flags to suggest casting
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            // Check if there's an app that can handle this intent (including casting apps)
+            if (intent.resolveActivity(getPackageManager()) != null) {
+                // Pause local playback before starting cast
+                if (player != null && player.isPlaying()) {
+                    player.pause();
+                }
+
+                // Start the casting intent
+                startActivity(intent);
+
+                Toast.makeText(this, "Opening casting dialog...", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Built-in casting intent started successfully");
+
+            } else {
+                // No app available to handle casting
+                Toast.makeText(this, "No casting app available on your device", Toast.LENGTH_LONG).show();
+                Log.w(TAG, "No activity found to handle casting intent");
+
+                // Resume playback if no casting app available
+                if (player != null) {
+                    player.play();
+                }
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting built-in casting", e);
+            Toast.makeText(this, "Error starting casting: " + e.getMessage(), Toast.LENGTH_LONG).show();
+
+            // Resume playback on error
+            if (player != null) {
+                player.play();
+            }
+        }
+    }
+
     @Override
     public void onCastSessionAvailable() {
         Log.d(TAG, "onCastSessionAvailable: Cast session is available");
@@ -511,11 +907,11 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
             return;
         }
 
+        // Save state from current player
         long playbackPositionMs = C.TIME_UNSET;
         boolean playWhenReady = false;
         MediaItem currentMediaItem = null;
 
-        // Save state from the old player
         if (currentPlayer != null) {
             playbackPositionMs = currentPlayer.getCurrentPosition();
             playWhenReady = currentPlayer.getPlayWhenReady();
@@ -1055,6 +1451,8 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
                 player = null;
             }
         }
+        // Stop media server
+        MediaServer.getInstance().stopServer();
     }
 
     @Override

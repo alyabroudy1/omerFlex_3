@@ -36,6 +36,9 @@ android {
     buildFeatures {
         viewBinding true
     }
+    packagingOptions {
+        exclude 'META-INF/DEPENDENCIES'
+    }
 }
 
 dependencies {
@@ -69,9 +72,15 @@ dependencies {
     // We are adding this explicitly to prevent conflicts.
     implementation "androidx.mediarouter:mediarouter:1.7.0"
 
-
     // The Google Cast Framework (part of Google Play Services)
     implementation "com.google.android.gms:play-services-cast-framework:21.4.0"
+
+    // For DLNA discovery - use a maintained library
+    implementation 'com.github.andriydruk:rxdnssd:0.9.17'
+
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+    // For network operations
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 
     // Network and parsing
     implementation 'org.jsoup:jsoup:1.16.2'  // Updated from 1.13.1

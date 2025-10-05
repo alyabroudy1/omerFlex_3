@@ -9,6 +9,13 @@ import android.os.Build;
 import android.util.Log;
 
 import com.omerflex.OmerFlexApplication;
+
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Enumeration;
+
 /**
  * Utility class for network-related operations.
  */
@@ -51,6 +58,29 @@ public class NetworkUtils {
             NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
             return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
         }
+    }
+
+    public static String getLocalIpAddress() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp()) continue;
+
+                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if (addr instanceof Inet4Address) {
+                        String ip = addr.getHostAddress();
+                        Log.d("NetworkUtils", "Found local IP: " + ip);
+                        return ip;
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            Log.e("NetworkUtils", "Error getting network interfaces", e);
+        }
+        return null;
     }
 
     /**
