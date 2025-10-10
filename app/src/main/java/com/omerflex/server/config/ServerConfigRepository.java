@@ -20,12 +20,14 @@ import com.omerflex.entity.ServerConfig;
 import com.omerflex.entity.dto.ServerConfigDTO;
 import com.omerflex.server.AbstractServer;
 import com.omerflex.server.IptvServer;
+import com.omerflex.server.OldAkwamServer;
 import com.omerflex.server.ServerFactory;
 import com.omerflex.service.UpdateService;
 
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -147,6 +149,24 @@ public class ServerConfigRepository {
 
     public List<ServerConfig> getAllActiveConfigsList() {
         return serverConfigDao.getActiveServers();
+    }
+
+    public ArrayList<String> getActiveServerNames() {
+        List<ServerConfig> activeConfigs = getAllActiveConfigsList();
+        ArrayList<String> serverNames = new ArrayList<>();
+        for (ServerConfig config : activeConfigs) {
+            if (config.getName().equals(Movie.SERVER_OLD_AKWAM)){
+                continue;
+            }
+            // Prefer the user-friendly label, but fall back to the name if the label is not set.
+            if (config.getLabel() != null && !config.getLabel().isEmpty()) {
+                serverNames.add(config.getLabel());
+            } else {
+                serverNames.add(config.getName());
+            }
+        }
+        Log.d(TAG, "getActiveServerNames: "+ serverNames);
+        return serverNames;
     }
 
     public void initializeDbWithDefaults() {

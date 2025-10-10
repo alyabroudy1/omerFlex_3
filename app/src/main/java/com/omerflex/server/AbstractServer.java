@@ -171,7 +171,7 @@ public abstract class AbstractServer implements ServerInterface {
                     redirectCount++;
                 } else {
                     Log.e(TAG, "Unexpected status " + response.statusCode() + " for " + currentUrl);
-//                    Log.e(TAG, "Unexpected status " + response.body());
+                    Log.e(TAG, response.body());
                     return statusCode == HttpURLConnection.HTTP_NOT_FOUND ? null : response.parse();
                 }
             }
@@ -555,5 +555,9 @@ public abstract class AbstractServer implements ServerInterface {
 
     public boolean shouldUpdateDomainOnSearchResult(){
         return true;
+    }
+
+    public String getLabel() {
+        return getConfig().getLabel() != null ? getConfig().getLabel() : getConfig().getName();
     }
 }

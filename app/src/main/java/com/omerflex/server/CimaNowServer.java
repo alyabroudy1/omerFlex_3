@@ -985,11 +985,6 @@ headers.put("Referer", ogUrl);
     }
 
     @Override
-    public String getLabel() {
-        return "سيماناو";
-    }
-
-    @Override
     public String getServerId() {
         return Movie.SERVER_CimaNow;
     }

@@ -130,10 +130,6 @@ public class MovieRepository {
     }
 
     public void getHomepageMovies(boolean handleCookie, final MovieListCallback callback) {
-        getHomepageMovies(handleCookie, callback, null);
-    }
-
-    public void getHomepageMovies(boolean handleCookie, final MovieListCallback callback, final RemoteDataSource.AllMoviesCallback allMoviesCallback) {
         Log.d(TAG, "getHomepageMovies: ");
         remoteDataSource.fetchHomepageMovies(handleCookie, (remoteCategory, remoteMovies) -> {
             Log.d(TAG, "getHomepageMovies: remote: " + remoteMovies.size());
@@ -164,6 +160,7 @@ public class MovieRepository {
                             existingMovie.setTitle(movie.getTitle());
                             existingMovie.setVideoUrl(movie.getVideoUrl());
                             existingMovie.setState(movie.getState());
+                            existingMovie.setCardImageUrl(movie.getCardImageUrl());
                             existingMovie.setType(movie.getType());
                             remoteMovies.set(i, existingMovie);
                         }
@@ -178,7 +175,14 @@ public class MovieRepository {
                     callback.onMovieListFetched(remoteCategory, remoteMovies);
                 });
             }
-        }, allMoviesCallback);
+        });
+    }
+
+    public ArrayList<String> getHomepageCategories() {
+        // You should get this list from your ServerConfigRepository or another central place
+        // where you define which servers are active.
+        // For example:
+        return ServerConfigRepository.getInstance().getActiveServerNames();
     }
 
     public void saveIptvMovies(HashMap<String, ArrayList<Movie>> iptvMovies, final IptvMovieListCallback callback) {
@@ -614,12 +618,14 @@ public class MovieRepository {
     }
 
     public void getSearchMoviesOfServer(boolean handleCookie, ServerConfig config, String query, MovieListCallback callback) {
-        AbstractServer server = ServerFactory.createServer(config.getName());
-        if (server == null) {
-            return;
-        }
-        Log.d(TAG, "getSearchMoviesOfServer: config: " + config.getName() + ", " + server.getLabel());
-        server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
+        ExecutorService executor = Executors.newCachedThreadPool();
+        executor.submit(() -> {
+                AbstractServer server = ServerFactory.createServer(config.getName());
+                if (server == null) {
+                    return;
+                }
+                Log.d(TAG, "getSearchMoviesOfServer: config: " + config.getName() + ", " + server.getLabel());
+                server.search(query, new ServerInterface.ActivityCallback<ArrayList<Movie>>() {
             @Override
             public void onSuccess(ArrayList<Movie> remoteMovies, String remoteCategory) {
                 Log.d(TAG, "onSuccess: " + remoteCategory);
@@ -674,6 +680,9 @@ public class MovieRepository {
                 Log.d(TAG, "onInvalidLink from " + config.getName() + ": " + message);
             }
         }, handleCookie);
+
+            });
+            executor.shutdown();
     }
 
     public void getSearchIptvMovies(String query, MovieListCallback callback) {

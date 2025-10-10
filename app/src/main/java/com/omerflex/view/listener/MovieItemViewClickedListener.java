@@ -396,7 +396,9 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
         }
 
         // Isolate the repository call in a new thread to avoid blocking the shared executor
-        Executors.newSingleThreadExecutor().submit(() -> {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        executor.submit(() -> {
             try {
                 ServerConfigRepository.getInstance().getConfigAsync(movie.getStudio(), config -> {
                     if (config == null) {
@@ -408,6 +410,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
                         return;
                     }
 
+                    Log.d(TAG, "handleNextPageState: ClickListener");
                     movieRepository.getSearchMoviesOfServer(true, config, movie.getVideoUrl(), (category, movieList) -> {
                         if (movieList != null) {
                             Log.d("Movie", "fetchNextPage movie33: " + movieList.toString());
@@ -428,6 +431,7 @@ public class MovieItemViewClickedListener implements OnItemViewClickedListener{
                 });
             }
         });
+        executor.shutdown();
     }
 
     /**

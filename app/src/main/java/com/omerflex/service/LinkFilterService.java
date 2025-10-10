@@ -50,6 +50,8 @@ public class LinkFilterService {
             "error",
             "null",
             "/stub",
+            "/library/",
+            "afcdn.net/library/",
             ".html"
     );
 

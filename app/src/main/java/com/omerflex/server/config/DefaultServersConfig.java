@@ -3,6 +3,7 @@ package com.omerflex.server.config;
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.ServerConfig;
 import com.omerflex.server.IptvServer;
+import com.omerflex.server.MyCimaServer;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -18,9 +19,10 @@ public class DefaultServersConfig {
         //### mycima ###
         ServerConfig mycimaConfig = new ServerConfig();
         mycimaConfig.setName(Movie.SERVER_MyCima);
-        mycimaConfig.setUrl("https://mycima.io");
-        mycimaConfig.setReferer("https://mycima.io/");
+        mycimaConfig.setUrl("https://cima.wecima.show");
+        mycimaConfig.setReferer("https://cima.wecima.show/");
         mycimaConfig.setActive(true);
+        mycimaConfig.setLabel("ماي سيما");
         mycimaConfig.setCreatedAt(date);
 
         scm.updateConfig(mycimaConfig);
@@ -28,9 +30,10 @@ public class DefaultServersConfig {
 //        //         ### cimaNow ###
         ServerConfig cimaNowConfig = new ServerConfig();
         cimaNowConfig.setName(Movie.SERVER_CimaNow);
-        cimaNowConfig.setActive(true);
+        cimaNowConfig.setActive(false);
         cimaNowConfig.setUrl("https://cimanow.cc");
         cimaNowConfig.setReferer("https://cimanow.cc/");
+        cimaNowConfig.setLabel("سيماناو");
         cimaNowConfig.setCreatedAt(date);
 
         scm.updateConfig(cimaNowConfig);
@@ -42,6 +45,7 @@ public class DefaultServersConfig {
         arabseedConfig.setUrl("https://arabseed.show");
         arabseedConfig.setReferer("https://arabseed.show/");
         arabseedConfig.setActive(true);
+        arabseedConfig.setLabel("عرب سيد");
         arabseedConfig.setCreatedAt(date);
 
         scm.updateConfig(arabseedConfig);
@@ -52,6 +56,7 @@ public class DefaultServersConfig {
         faselConfig.setName(Movie.SERVER_FASELHD);
         faselConfig.setUrl("https://www.faselhds.center");
         faselConfig.setReferer("https://www.faselhds.center/");
+        faselConfig.setLabel("فاصل");
         faselConfig.setCreatedAt(date);
 
         scm.updateConfig(faselConfig);
@@ -62,6 +67,7 @@ public class DefaultServersConfig {
         larozaConfig.setActive(true);
         larozaConfig.setUrl("https://www.laroza.now");
         larozaConfig.setReferer("https://www.laroza.now/");
+        larozaConfig.setLabel("لاروزا");
         larozaConfig.setCreatedAt(date);
 
         scm.updateConfig(larozaConfig);
@@ -73,6 +79,7 @@ public class DefaultServersConfig {
         akwamConfig.setUrl("https://ak.sv");
         akwamConfig.setReferer("https://ak.sv/");
         akwamConfig.setCreatedAt(date);
+        akwamConfig.setLabel("أكوام");
 
         scm.updateConfig(akwamConfig);
 //
@@ -83,6 +90,7 @@ public class DefaultServersConfig {
         oldAkwamConfig.setUrl("https://www.ak.sv");
         oldAkwamConfig.setReferer("https://www.ak.sv/");
         oldAkwamConfig.setCreatedAt(date);
+        oldAkwamConfig.setLabel("اكوام القديم");
 
         scm.updateConfig(oldAkwamConfig);
 //
@@ -93,6 +101,7 @@ public class DefaultServersConfig {
 //        iptvConfig.setUrl("https://drive.google.com/drive/folders/1lHoE-WD43FGr9kHAYoo-11HrPHgUOQMa?usp=sharing");
         iptvConfig.setReferer("https://drive.google.com/");
         iptvConfig.setActive(true);
+        iptvConfig.setLabel("قنوات");
         iptvConfig.setCreatedAt(date);
 
         scm.updateConfig(iptvConfig);

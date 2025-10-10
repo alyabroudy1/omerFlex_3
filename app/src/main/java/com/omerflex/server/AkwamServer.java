@@ -1016,11 +1016,6 @@ public class AkwamServer extends AbstractServer {
 //        return search("ratched", activityCallback, handleCookie);
     }
 
-    @Override
-    public String getLabel() {
-        return "أكوام";
-    }
-
     public MovieFetchProcess handleJSResult(String elementJson, List<Movie> movies, Movie movie){
         Movie resultMovie = movies.isEmpty() ? movie : movies.get(0);
 //        resultMovie.setMainMovie(movie.getMainMovie());

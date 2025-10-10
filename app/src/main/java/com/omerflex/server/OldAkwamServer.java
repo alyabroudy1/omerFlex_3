@@ -1023,11 +1023,6 @@ public class OldAkwamServer extends AbstractServer {
     }
 
     @Override
-    public String getLabel() {
-        return "اكوام القديم";
-    }
-
-    @Override
     public String getServerId() {
         return Movie.SERVER_OLD_AKWAM;
     }

@@ -79,7 +79,7 @@ public class VideoDetailsFragmentController {
             public void onSuccess(Movie fetchedMovie, String title) {
 //                sharedViewModel.updateMovie(fetchedMovie);
                 Log.d(TAG, "onSuccess: fetchedMovie: "+ fetchedMovie);
-                Log.d(TAG, "onSuccess: sublist: "+ fetchedMovie.getSubList());
+//                Log.d(TAG, "onSuccess: sublist: "+ fetchedMovie.getSubList());
                 updateUI(fetchedMovie);
             }
 
@@ -113,8 +113,8 @@ public class VideoDetailsFragmentController {
             adapter.addAll(adapter.size(), fetchedMovie.getSubList());
         }
 
-        Log.d(TAG, "updateUI: fetchedMovie sub:"+fetchedMovie.getSubList().size());
-        Log.d(TAG, "updateUI: fetchedMovie sub:"+fetchedMovie.getSubList());
+//        Log.d(TAG, "updateUI: fetchedMovie sub:"+fetchedMovie.getSubList().size());
+//        Log.d(TAG, "updateUI: fetchedMovie sub:"+fetchedMovie.getSubList());
         // Resume watching logic
         resumeWatching(fetchedMovie);
 

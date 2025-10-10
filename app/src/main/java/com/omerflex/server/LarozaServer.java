@@ -789,16 +789,12 @@ public class LarozaServer extends AbstractServer{
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
 //        return search(getSearchUrl("البطل"), activityCallback);
-        return search(getConfig().getUrl() + "/newvideos.php", activityCallback, handleCookie);
+//        return search(getConfig().getUrl() + "/newvideos.php", activityCallback, handleCookie);
+        return search(getConfig().getUrl() + "/category.php?cat=arabic-movies28", activityCallback, handleCookie);
 //        return search(getConfig().getUrl() + "/moslslat1.php", activityCallback);
 //        return search(getConfig().getUrl() + "/category/افلام-اجنبية/", activityCallback);
 //        return search(getConfig().getUrl() + "/category/المسلسلات", activityCallback);
 //        return search("sonic", activityCallback);
-    }
-
-    @Override
-    public String getLabel() {
-        return "لاروزا";
     }
 
     @Override

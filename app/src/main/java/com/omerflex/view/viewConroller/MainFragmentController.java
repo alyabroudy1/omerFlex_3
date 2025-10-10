@@ -3,6 +3,7 @@ package com.omerflex.view.viewConroller;
 import androidx.leanback.app.BrowseSupportFragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.HeaderItem;
+import androidx.leanback.widget.ListRow;
 
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
@@ -13,6 +14,7 @@ import com.omerflex.entity.MovieRepository;
 import com.omerflex.server.Util;
 import com.omerflex.server.config.ServerConfigRepository;
 import com.omerflex.service.UpdateService;
+import com.omerflex.view.CardPresenter;
 
 import java.util.ArrayList;
 
@@ -31,54 +33,96 @@ public class MainFragmentController extends BaseFragmentController {
 
     @Override
     public void loadData() {
-        Log.d(TAG, "loadData: ");
+        Log.d(TAG, "loadData: starting");
         try {
             Log.d(TAG, "loadData: try to check for update");
-//            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
-//            ServerConfigDTO serverConfigDTO = new ServerConfigDTO();
-//            String url = "https://drive.google.com/u/0/uc?id=1a7kHxCHOxW6TH8OnM_kO3SjjQvt38oCx&export=download";
-//            serverConfigDTO.url = url;
-//            ServerConfigRepository.getInstance().handleIptvPlayListUpdate(serverConfigDTO);
-        }catch (Exception e){
-            Log.e(TAG, "checkForRemoteUpdates: "+e.getMessage());
+            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
+        } catch (Exception e) {
+            Log.e(TAG, "checkForRemoteUpdates: " + e.getMessage());
         }
-//        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded, () -> {
-//            Log.d(TAG, "All homepage movies fetched. Loading subsequent data.");
-//            movieRepository.getWatchedMovies(this::onMoviesLoaded);
-//            movieRepository.getWatchedChannels(this::onMoviesLoaded);
-////            movieRepository.getHomepageChannels(this::onHomepageChannelsLoaded);
-//        });
-//        movieRepository.getWatchedChannels(this::onMoviesLoaded);
-        Movie movie = new Movie();
-        movie.setStudio(Movie.SERVER_FASELHD);
-        movie.setTitle("test title");
-        movie.setVideoUrl("https://www.w3schools.com/html/mov_bbb.mp4");
-//        movie.setVideoUrl("https://r466--1pqdyczv.c.scdns.io/stream/v1/hlsa/HNB3sRj5xWSyd9eNFStmYA/1759677414/www.faselhds.life/all/83.135.170.96/no/DE/0/01-02/4/34f13c811a15c34cd03c772a49b6df97/160_hd1080b_playlist.m3u8");
-        Util.openExoPlayer(movie, mFragment.getActivity(), false);
-//        Intent searchResultIntent = new Intent(mFragment.getActivity(), SearchResultActivity.class);
-//        searchResultIntent.putExtra("query", "اسر");
-//        // setResult(Activity.RESULT_OK,returnIntent);
-//        //  finish();
-//        mFragment.startActivity(searchResultIntent);
+
+        ArrayList<String> categories = movieRepository.getHomepageCategories();
+        categories.add("المحفوظات");
+        categories.add("محفوظات القنوات");
+        for (String category : categories) {
+            HeaderItem header = new HeaderItem(categories.indexOf(category) + 1, category);
+            addEmptyMovieRow(header);
+        }
+
+        // Phase 2: Fetch all content asynchronously and in parallel
+        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded);
+        movieRepository.getWatchedMovies(this::onMoviesLoaded);
+        movieRepository.getWatchedChannels(this::onMoviesLoaded);
+        movieRepository.getHomepageChannels(this::onMoviesLoaded);
+
+
+        // The rest of this is test code, you may want to remove it.
+//        Movie movie = new Movie();
+//        movie.setStudio(Movie.SERVER_FASELHD);
+//        movie.setTitle("test title");
+//        movie.setVideoUrl("https://www.w3schools.com/html/mov_bbb.mp4");
+    }
+
+    private void addEmptyMovieRow(HeaderItem header) {
+        CardPresenter cardPresenter = new CardPresenter();
+        ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(cardPresenter);
+        ListRow listRow = new ListRow(header, listRowAdapter);
+        mRowsAdapter.add(listRow);
     }
 
     private void onHomepageMoviesLoaded(String category, ArrayList<Movie> movieList) {
-        if (movieList != null && !movieList.isEmpty()) {
-            HeaderItem header = new HeaderItem(1, category);
-            addMovieRow(header, movieList);
-        } else {
-            Log.d(TAG, "movieList not found.");
+        if (movieList == null || movieList.isEmpty()) {
+            Log.d(TAG, "Movie list for category '" + category + "' is empty or null. The row will remain empty.");
+            return;
         }
+
+        // Search for the pre-existing row to populate
+        for (int i = 0; i < mRowsAdapter.size(); i++) {
+            Object item = mRowsAdapter.get(i);
+            if (item instanceof ListRow) {
+                ListRow row = (ListRow) item;
+                if (row.getHeaderItem() != null && row.getHeaderItem().getName().equals(category)) {
+                    // Found the row, add the movies to its adapter
+                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) row.getAdapter();
+                    adapter.addAll(adapter.size(), movieList);
+                    Log.d(TAG, "Populated " + movieList.size() + " movies to existing category: " + category);
+                    return; // Exit after populating
+                }
+            }
+        }
+
+        // Fallback: If no pre-existing row was found, create a new one.
+        Log.w(TAG, "No pre-existing row found for category '" + category + "'. Creating a new one.");
+        // Using the category hashcode as an ID for the header
+        HeaderItem header = new HeaderItem(category.hashCode(), category);
+        addMovieRow(header, movieList);
     }
 
     private void onMoviesLoaded(String category, ArrayList<Movie> movieList) {
-        if (movieList != null) {
-            Log.d(TAG, "Fetched onMoviesLoaded: " + movieList.size());
-            HeaderItem header = new HeaderItem(1, category);
-            addMovieRow(header, movieList);
-        } else {
-            Log.d(TAG, "onMoviesLoaded: movieList not found.");
+        if (movieList == null) { // Watched list can be empty, so we still update to clear the row
+            movieList = new ArrayList<>();
         }
+
+        // Search for the pre-existing row to populate
+        for (int i = 0; i < mRowsAdapter.size(); i++) {
+            Object item = mRowsAdapter.get(i);
+            if (item instanceof ListRow) {
+                ListRow row = (ListRow) item;
+                if (row.getHeaderItem() != null && row.getHeaderItem().getName().equals(category)) {
+                    // Found the row, clear old items and add the new list
+                    ArrayObjectAdapter adapter = (ArrayObjectAdapter) row.getAdapter();
+                    adapter.clear();
+                    adapter.addAll(0, movieList);
+                    Log.d(TAG, "Populated " + movieList.size() + " movies to existing category: " + category);
+                    return; // Exit after populating
+                }
+            }
+        }
+
+        // Fallback: If no pre-existing row was found, create a new one.
+        Log.w(TAG, "No pre-existing row found for category '" + category + "'. Creating a new one.");
+        HeaderItem header = new HeaderItem(category.hashCode(), category);
+        addMovieRow(header, movieList);
     }
 
     private void onHomepageChannelsLoaded(String category, ArrayList<Movie> movieList) {

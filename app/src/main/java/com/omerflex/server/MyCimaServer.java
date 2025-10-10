@@ -9,6 +9,9 @@ import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.omerflex.entity.Movie;
 import com.omerflex.entity.MovieFetchProcess;
 import com.omerflex.entity.ServerConfig;
@@ -114,7 +117,7 @@ public class MyCimaServer extends AbstractServer {
                 lis = doc.select("[class*=media-card]");
             }
         }
-        Log.d(TAG, "search: lis size: "+lis.size());
+//        Log.d(TAG, "search: lis size: "+lis.size());
         for (Element li : lis) {
             Movie movie = this.generateMovieFromDocElement(li);
             filterSearchResultMovies(movie, movieList);
@@ -140,34 +143,11 @@ public class MyCimaServer extends AbstractServer {
         }
 
         if (movie.getType() == MovieType.EPISODE) {
-            String cleanedTitle = movie.getTitle()
-                    .replace("وتحميل", "")
-                    .replace("تحميل", "")
-                    .replace("ومشاهدة", "")
-                    .replace("ومشاهده", "")
-                    .replace("مشاهدة", "")
-                    .replace("مشاهده", "")
-                    .replace("مسلسل", "")
-                    .replaceAll("موسم\\s*\\d+", "")
-                    .replaceAll("حلقة\\s*\\d+", "")
-                    .replaceAll("حلقه\\s*\\d+", "")
-                    .replaceAll("الحلقة\\s*\\d+", "")
-                    .replaceAll("الحلقه\\s*\\d+", "")
-                    .replace("والاخيرة", "")
-                    .replace("والاخيره", "")
-                    .replace("والأخيرة", "")
-                    .replace("والأخيره", "")
-                    .replace("الاخيرة", "")
-                    .replace("الاخيره", "")
-                    .replace("الأخيرة", "")
-                    .replace("الأخيره", "")
-                    .replace("انمي", "")
-                    .replace("أنمي", "")
-                    .trim();
-            Log.d(TAG, "filterSearchResultMovies: cleaned title "+cleanedTitle);
+//            String cleanedTitle = cleanMovieTitle(movie.getTitle());
+//            Log.d(TAG, "filterSearchResultMovies: cleaned title "+cleanedTitle);
             boolean seriesExists = false;
             for (Movie m : movieList) {
-                if (m.getTitle().equals(cleanedTitle)) {
+                if (m.getTitle().equals(movie.getTitle())) {
                     seriesExists = true;
                     break;
                 }
@@ -210,7 +190,7 @@ public class MyCimaServer extends AbstractServer {
 //                movie.setVideoUrl(newUrl);
 //                movieList.add(movie);
 //                Movie collection = Movie.clone(movie);
-                movie.setTitle(cleanedTitle);
+//                movie.setTitle(cleanedTitle);
                 //   change type to collection to avoid being saved to db
                 movie.setType(MovieType.COLLECTION);
                 // let state be GROUP_OF_GROUP_STATE to fetch it correctly
@@ -221,6 +201,36 @@ public class MyCimaServer extends AbstractServer {
             movieList.add(movie);
         }
 //        Log.d(TAG, "filterSearchResultMovies: movielist:"+movieList);
+    }
+
+    @NonNull
+    private static String cleanMovieTitle(String title) {
+       return title
+                .replace("وتحميل", "")
+                .replace("تحميل", "")
+                .replace("ومشاهدة", "")
+                .replace("ومشاهده", "")
+                .replace("مشاهدة", "")
+                .replace("مشاهده", "")
+                .replace("مسلسل", "")
+                .replaceAll("موسم\\s*\\d+", "")
+                .replaceAll("حلقة\\s*\\d+", "")
+                .replaceAll("حلقه\\s*\\d+", "")
+                .replaceAll("الحلقة\\s*\\d+", "")
+                .replaceAll("الحلقه\\s*\\d+", "")
+                .replace("والاخيرة", "")
+                .replace("والاخيره", "")
+                .replace("والأخيرة", "")
+                .replace("والأخيره", "")
+                .replace("الاخيرة", "")
+                .replace("الاخيره", "")
+                .replace("الأخيرة", "")
+                .replace("الأخيره", "")
+                .replace("انمي", "")
+                .replace("أنمي", "")
+                .replace("فيلم", "")
+                .replace("فلم", "")
+                .trim();
     }
 
     protected String getSearchUrl(String query) {
@@ -255,10 +265,19 @@ public class MyCimaServer extends AbstractServer {
         Log.d(TAG, "getExtraSearchMovieList: lis2: " + lis2.size());
         for (Element li : lis2) {
             Movie movie = generateMovieFromDocElement(li);
-            if (movie != null && !movies.contains(movie)) {
+            if (movie != null) {
                 movies.add(movie);
             }
         }
+    }
+
+    private boolean movieExists(Movie movie, ArrayList<Movie> movies) {
+        for (Movie mov: movies) {
+            if (mov.getTitle().equals(movie.getTitle())){
+                return true;
+            }
+        }
+        return false;
     }
 
     private void getExtraSearchAnimeMovieList(String url, ArrayList<Movie> movies) {
@@ -326,17 +345,23 @@ public class MyCimaServer extends AbstractServer {
 
                 Element nameElem = li.getElementsByAttribute("title").first();
                 String title = "";
+                Element imageElem = li.getElementsByAttribute("style").first();
                 if (nameElem != null) {
                     title = nameElem.attr("title");
+                    imageElem = nameElem.getElementsByAttribute("style").first();
+
                 }
 
-                Element imageElem = li.getElementsByAttribute("style").first();
+//                Element imageElem = li.getElementsByAttribute("style").first();
                 String image = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
                 if (imageElem == null){
                     imageElem = li.select("[class*=media][class*=card]").first();
                 }
                 if (imageElem != null) {
-                    image = imageElem.attr("style");
+//                    image = imageElem.attr("style");
+                    image = imageElem.attr("data-src");
+//                    Log.d(TAG, "generateMovieFromDocElement: title: "+title);
+//                    Log.d(TAG, "generateMovieFromDocElement: imageElem-1: "+imageElem.outerHtml());
                 }
 
                 if (!image.contains("http")) {
@@ -347,10 +372,20 @@ public class MyCimaServer extends AbstractServer {
                     }
                 }
 
-                if (image.equals("")) {
+                if (image.isEmpty()) {
                     Element image3Elem = li.getElementsByClass("BG--GridItem").first();
                     if (image3Elem != null) {
                         image = image3Elem.attr("data-owl-img");
+                    }
+                }
+
+                if (image.isEmpty()) {
+                    Element image4Elem = li.select("[class*=media][class*=card][class*=thumb]").first();
+                    if (image4Elem != null) {
+                        Element image5Elem = image4Elem.getElementsByAttribute("style").first();
+                        if (image4Elem != null) {
+                            image = image5Elem.attr("style");
+                        }
                     }
                 }
 
@@ -358,7 +393,9 @@ public class MyCimaServer extends AbstractServer {
                     image = image.substring(image.indexOf('(') + 1, image.indexOf(')'));
                 }
 //                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
-//                Log.d(TAG, "generateMovieFromDocElement: image: "+image);
+//                Log.d(TAG, "generateMovieFromDocElement: title3: "+title);
+//                Log.d(TAG, "generateMovieFromDocElement: image3: "+image);
+
                 movie.setTitle(title);
                 movie.setVideoUrl(Util.getUrlPathOnly(videoUrl));
 //                if (isSeries(movie)) {
@@ -370,11 +407,17 @@ public class MyCimaServer extends AbstractServer {
 //                movie.setState(detectMovieState(movie));
                 movie.setStudio(Movie.SERVER_MyCima);
                 movie.setDescription("");
+                Log.d(TAG, "generateMovieFromDocElement: ardImageUrl(image): "+image);
                 movie.setCardImageUrl(image);
                 movie.setBackgroundImageUrl(image);
                 movie.setBgImageUrl(image);
 
                 movie = updateMovieState(movie);
+                // titles should be cleand only after state update
+                if (!title.isEmpty()){
+                    title = cleanMovieTitle(title);
+                }
+                movie.setTitle(title);
 //                movie.setMainMovie(movie);
             }
 
@@ -1265,6 +1308,9 @@ public class MyCimaServer extends AbstractServer {
         if (descElem == null) {
             descElem = doc.select("[class*=story][class*=content]").first();
         }
+        if (descElem == null) {
+            descElem = doc.select("[class*=description][class*=content]").first();
+        }
         String desc = "";
         if (descElem != null) {
             desc = descElem.text();
@@ -1273,20 +1319,63 @@ public class MyCimaServer extends AbstractServer {
         String referer = Util.extractDomain(url, true, true);
         Elements uls = doc.getElementsByClass("List--Download--Wecima--Single");
 
+//        Log.d(TAG, "generateItemMovie: description: "+desc);
         if (uls.isEmpty()) {
-            uls = doc.select("[class*=downloads][class*=list]");
+            uls = doc.select("[class*=downloads][class*=list][class*=Download][class*=List]");
         }
 //        Log.d(TAG, "generateItemMovie: html: " + doc.html());
 //        Log.d(TAG, "generateItemMovie: title: " + doc.title());
-//        Log.d(TAG, "generateItemMovie: uls: " + uls.size());
+//        Log.d(TAG, "generateItemMovie: download uls: " + uls.size());
         for (Element ul : uls) {
             Elements lis = ul.getElementsByTag("li");
-            for (Element li : lis) {
+//            Log.d(TAG, "generateItemMovie: download lis: " + lis.size());
 
+            for (Element li : lis) {
                 Element videoUrlElem = li.getElementsByAttribute("href").first();
+                if (videoUrlElem == null){
+                    videoUrlElem = li.getElementsByAttribute("data-href").first();
+                }
                 if (videoUrlElem != null) {
                     String videoUrl = videoUrlElem.attr("href");
+                    if (videoUrl.isEmpty()){
+                        videoUrl = videoUrlElem.attr("data-href");
+                    }
+                    if (videoUrl.isEmpty()){
+                        Log.d(TAG, "generateItemMovie: fail finding download url ");
+                        continue;
+                    }
+//                    Log.d(TAG, "generateItemMovie:videoUrl: "+videoUrl);
+                        if (!videoUrl.startsWith("http")){
+                            // Your encoded string from the data-url attribute
+// Decode the Base64 string into a byte array
+// The NO_WRAP flag ensures no extra line breaks are added
+                            try {
+                                // Step 1: Remove all plus '+' characters from the string.
+//                                String cleanedUrl = videoUrl.replace("+", "");
+//
+//                                // Step 2: Prepend the Base64 string for "http", which is "aHR0c".
+//                                String finalUrlString = "aHR0c" + cleanedUrl;
 
+                                // Step 3: Perform the standard Base64 decoding on the corrected string.
+                                // Using Base64.DEFAULT is robust and handles padding.
+                                byte[] decodedBytes = Base64.decode(videoUrl, Base64.DEFAULT);
+
+                                // Step 4: Convert the byte array to a UTF-8 string to get the final URL.
+                                videoUrl = new String(decodedBytes, StandardCharsets.UTF_8);
+
+                                // Now, the 'videoUrl' variable holds the clean, usable URL.
+                                // You can log it to verify:
+//                                Log.d(TAG, "Successfully decoded URL: " + videoUrl);
+
+                            } catch (Exception e) {
+                                // This will catch any errors if the string is still malformed.
+                                Log.e(TAG, "generateItemMovie: Error decoding URL: " + e.getMessage());
+                            }
+                            // Now 'decodedUrl' holds the final, readable URL
+//                     System.out.println(videoUrl);
+//                    videoUrl = Util.extractDomain(movie.getVideoUrl(), true, true) + videoUrl;
+                        }
+//                    Log.d(TAG, "generateItemMovie:videoUrl: "+videoUrl);
                     Element titleElem = li.getElementsByTag("resolution").first();
                     String title = movie.getTitle();
                     if (titleElem != null) {
@@ -1328,13 +1417,27 @@ public class MyCimaServer extends AbstractServer {
                     // Your encoded string from the data-url attribute
 // Decode the Base64 string into a byte array
 // The NO_WRAP flag ensures no extra line breaks are added
-                    byte[] decodedBytes = Base64.decode(videoUrl, Base64.NO_WRAP);
+                    try {
+                        // Step 1: Remove all plus '+' characters from the string.
+//                        String cleanedUrl = videoUrl.replace("+", "");
+//
+//                        // Step 2: Prepend the Base64 string for "http", which is "aHR0c".
+//                        String finalUrlString = "aHR0c" + cleanedUrl;
 
-// Convert the byte array to a UTF-8 string
-                    videoUrl = new String(decodedBytes, StandardCharsets.UTF_8);
-                    if (videoUrl.contains(getConfig().getUrl())){
-                        //ignore mycima server
-                        continue;
+                        // Step 3: Perform the standard Base64 decoding on the corrected string.
+                        // Using Base64.DEFAULT is robust and handles padding.
+                        byte[] decodedBytes = Base64.decode(videoUrl, Base64.DEFAULT);
+
+                        // Step 4: Convert the byte array to a UTF-8 string to get the final URL.
+                        videoUrl = new String(decodedBytes, StandardCharsets.UTF_8);
+
+                        // Now, the 'videoUrl' variable holds the clean, usable URL.
+                        // You can log it to verify:
+//                        Log.d(TAG, "Successfully watch decoded URL: " + videoUrl);
+
+                    } catch (Exception e) {
+                        // This will catch any errors if the string is still malformed.
+                        Log.e(TAG, "generateItemMovie: Error decoding URL: " + e.getMessage());
                     }
                     // Now 'decodedUrl' holds the final, readable URL
 //                     System.out.println(videoUrl);
@@ -1380,15 +1483,11 @@ public class MyCimaServer extends AbstractServer {
 //        return search("la casa", activityCallback, handleCookie);
 //        return search("اسر", activityCallback,handleCookie);
 //        return search("ratched");
-        return search(getConfig().getUrl() + "/movies/recent/", activityCallback, handleCookie);
+        return search(getConfig().getUrl() + "/movies/", activityCallback, handleCookie);
+//        return search(getConfig().getUrl() + "/category/أفلام/", activityCallback, handleCookie);
 //   hhhhh     return search(getConfig().getUrl() + "/", activityCallback);
 //        return search(config.url + "/category/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa/%d9%85%d8%b3%d9%84%d8%b3%d9%84%d8%a7%d8%aa-%d8%b1%d9%85%d8%b6%d8%a7%d9%86-2024/list/");
 //        return search(config.url);
-    }
-
-    @Override
-    public String getLabel() {
-        return "ماي سيما";
     }
 
     public String getCustomUserAgent(int state) {

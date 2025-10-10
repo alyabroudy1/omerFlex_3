@@ -182,11 +182,6 @@ public ArrayList<Movie> search(String query, ActivityCallback<ArrayList<Movie>> 
         return "";
     }
 
-    @Override
-    public String getLabel() {
-        return "قنوات";
-    }
-
     public void fetchDriveFiles(String m3u8Url, ActivityCallback<ArrayList<Movie>> activityCallback) throws IOException {
          contentFetcher.fetchDriveFiles(m3u8Url, activityCallback);
     }

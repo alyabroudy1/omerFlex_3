@@ -1438,7 +1438,8 @@ public class ArabSeedServer extends AbstractServer {
 //        return search("sonic", activityCallback, handleCookie);
                 return search(
 ////                config.url +"/category/netfilx/");
-                getConfig().getUrl() + "/latest1/", activityCallback, handleCookie);
+//                getConfig().getUrl() + "/latest1/", activityCallback, handleCookie);
+                getConfig().getUrl() + "/category/netfilx/افلام-netfilx/", activityCallback, handleCookie);
     }
 
     private void filterSearchResultMovies(Movie movie, ArrayList<Movie> movieList) {
@@ -1508,10 +1509,6 @@ public class ArabSeedServer extends AbstractServer {
         Log.d(TAG, "filterSearchResultMovies: movielist:"+movieList);
     }
 
-    @Override
-    public String getLabel() {
-        return "عرب سيد";
-    }
 
     @Override
     public String getServerId() {

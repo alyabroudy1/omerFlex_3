@@ -280,11 +280,6 @@ public class FaselHdServer extends AbstractServer {
         return searchUrl;
     }
 
-    @Override
-    public String getLabel() {
-        return "فاصل";
-    }
-
 //    public Movie fetch(Movie movie) {
 //        Log.d(TAG, "fetch: " + movie.getVideoUrl());
 //        switch (movie.getState()) {
@@ -1676,7 +1671,8 @@ public class FaselHdServer extends AbstractServer {
 
     @Override
     public ArrayList<Movie> getHomepageMovies(boolean handleCookie, ActivityCallback<ArrayList<Movie>> activityCallback) {
-        return search(getConfig().getUrl() + "/most_recent", activityCallback, handleCookie);
+//        return search(getConfig().getUrl() + "/most_recent", activityCallback, handleCookie);
+        return search(getConfig().getUrl() + "/movies", activityCallback, handleCookie);
 //        return search("la casa", activityCallback, handleCookie);
     }
 
