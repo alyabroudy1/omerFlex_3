@@ -399,7 +399,7 @@ public abstract class AbstractServer implements ServerInterface {
 
             // If Jsoup gets a challenge page, use the activity to get the real page
 //            if (true) {
-            if (docTitle.contains("Just a moment") || docTitle.contains("Checking your browser")) {
+            if (docTitle.contains("Just a moment") || docTitle.contains("Checking your browser") || docTitle.contains("لحظة…") || docTitle.contains("التحقق")) {
                 Log.d(TAG, "getRequestDoc: Cloudflare detected, launching GetDocActivity.");
                 if (context == null) {
                     Log.e(TAG, "getRequestDoc: Context is null, cannot launch GetDocActivity for Cloudflare.");

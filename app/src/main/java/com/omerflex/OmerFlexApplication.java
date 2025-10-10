@@ -91,10 +91,10 @@ public class OmerFlexApplication extends Application {
 
         initializeServerConfigRepository();
 
-        // Enable strict mode for debug builds
-        if (BuildConfig.DEBUG) {
-            enableStrictMode();
-        }
+//        // Enable strict mode for debug builds
+//        if (BuildConfig.DEBUG) {
+//            enableStrictMode();
+//        }
 
 
         Log.i(TAG, "Application initialized. Other components will be lazily initialized on demand.");

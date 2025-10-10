@@ -80,7 +80,7 @@ public class GetDocActivity extends AppCompatActivity {
         Log.d(TAG, "Loading URL in WebView: " + url);
         webView.loadUrl(url);
 
-        timeoutHandler.postDelayed(this::timeout, 90000); // 90-second timeout
+        timeoutHandler.postDelayed(this::timeout, 60000); // 90-second timeout
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -145,7 +145,7 @@ public class GetDocActivity extends AppCompatActivity {
                 updateCookies(url);
                 view.evaluateJavascript("document.title", title -> {
                     Log.d(TAG, "Page title: " + title);
-                    if (title != null && (title.contains("Just a moment...") || title.contains("Checking your browser") || title.contains("لحظة…"))) {
+                    if (title != null && (title.contains("Just a moment...") || title.contains("Checking your browser") || title.contains("لحظة…") || title.contains("التحقق"))) {
                         Log.d(TAG, "Challenge page detected. WebView will continue loading...");
                         challengeResolved = false;
                     } else {

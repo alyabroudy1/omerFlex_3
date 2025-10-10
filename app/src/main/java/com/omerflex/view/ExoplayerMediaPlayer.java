@@ -167,7 +167,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
             mCastContext = CastContext.getSharedInstance(this);
         } catch (RuntimeException e) {
             // This can happen if the Google Play services are out of date or missing.
-            Log.e(TAG, "Failed to get CastContext instance. Is Google Play Services available?", e);
+            Log.e(TAG, "Failed to get CastContext instance. Is Google Play Services available?");
             // You could show an error dialog to the user here.
             return;
         }
@@ -1414,6 +1414,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         // See whether the player view wants to handle media or DPAD keys events.
         Log.d("Exoplayer", "dispatchKeyEvent: "+event.toString());
 
+        if(playerView == null){
+            return super.dispatchKeyEvent(event);
+        }
+
         if (!playerView.isControllerFullyVisible()) {
             if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_CENTER || event.getKeyCode() == KeyEvent.KEYCODE_ENTER)
             {
@@ -1492,7 +1496,9 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     @Override
     protected void onResume() {
         super.onResume();
-        playerView.setKeepScreenOn(true);
+        if (playerView != null) {
+            playerView.setKeepScreenOn(true);
+        }
         if (mCastContext != null) {
             mCastContext.addCastStateListener(mCastStateListener);
         }
