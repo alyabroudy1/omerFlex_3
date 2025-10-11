@@ -146,26 +146,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         setContentView(R.layout.activity_exoplayer);
         getSupportActionBar().hide();
 
-        // Manually handle the cast button to show a unified picker
-//        MediaRouteButton mediaRouteButton = findViewById(R.id.media_route_button);
-//        if (mediaRouteButton != null) {
-//            mediaRouteButton.setOnClickListener(v -> showCastOrDlnaDialog());
-//        }
-
-        ImageView shareButton = findViewById(R.id.share_button);
-        if (shareButton != null) {
-            shareButton.setOnClickListener(v -> showCastOrDlnaDialog());
-        }
-        // Set up click listener for built-in casting
-//        if (mediaRouteButton != null) {
-//            mediaRouteButton.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    startBuiltInCasting();
-//                }
-//            });
-//        }
-
+        playerView = findViewById(R.id.player_view);
+        AppDatabase db = AppDatabase.getDatabase(this);
+        movieRepository = MovieRepository.getInstance(this, db.movieDao());
+        movie = com.omerflex.server.Util.recieveSelectedMovie(getIntent());
 
         // It's crucial to initialize the CastContext. This is a heavy operation,
         // and the framework does it lazily in a background thread.
@@ -199,31 +183,45 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         mCastStateListener = newState -> {
             if (newState == CastState.NO_DEVICES_AVAILABLE) {
                 Log.d(TAG, "CastState: No devices available.");
-            } else if (newState == CastState.NOT_CONNECTED) {
+            }
+            else if (newState == CastState.NOT_CONNECTED) {
                 Log.d(TAG, "CastState: Devices available, but not connected.");
-            } else if (newState == CastState.CONNECTING) {
+            }
+            else if (newState == CastState.CONNECTING) {
                 Log.d(TAG, "CastState: Connecting to a device.");
-            } else if (newState == CastState.CONNECTED) {
+            }
+            else if (newState == CastState.CONNECTED) {
                 Log.d(TAG, "CastState: Connected to a device.");
             }
         };
 
         //  setContentView(R.layout.activity_main);
-        playerView = findViewById(R.id.player_view);
-        final View customControls = findViewById(R.id.custom_controls);
-        playerView.setControllerVisibilityListener((PlayerControlView.VisibilityListener) visibility -> {
-            if (customControls != null) {
-                customControls.setVisibility(visibility);
+        TextView customTitle = playerView.findViewById(R.id.custom_exo_title);
+        if (customTitle != null) {
+            if (movie != null && movie.getTitle() != null) {
+                customTitle.setText(movie.getTitle());
+            } else {
+                customTitle.setText("No Title");
             }
-        });
+        }
+
+        // The title will be set dynamically by a player listener.
+
+        // Manually handle the cast button to show a unified picker
+//        MediaRouteButton mediaRouteButton = playerView.findViewById(R.id.media_route_button);
+//        if (mediaRouteButton != null) {
+//            mediaRouteButton.setOnClickListener(v -> showCastOrDlnaDialog());
+//        }
+
+        ImageView shareButton = playerView.findViewById(R.id.share_button);
+        if (shareButton != null) {
+            shareButton.setOnClickListener(v -> showCastOrDlnaDialog());
+        }
 
 
 //        player = new ExoPlayer.Builder(getApplicationContext()).build();
-       // player.setPlayWhenReady(true);
+        // player.setPlayWhenReady(true);
         //leanbackPlayerAdapter = new LeanbackPlayerAdapter(this, player, 0);
-        AppDatabase db = AppDatabase.getDatabase(this);
-        movieRepository = MovieRepository.getInstance(this, db.movieDao());
-        movie = com.omerflex.server.Util.recieveSelectedMovie(getIntent());
 
         leanbackPlayerAdapter = new LeanbackPlayerAdapter(this.getApplicationContext(), player, 16);
 

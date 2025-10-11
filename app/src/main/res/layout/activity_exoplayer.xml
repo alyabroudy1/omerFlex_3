@@ -6,11 +6,11 @@
     android:layout_height="match_parent"
     tools:context=".view.ExoplayerMediaPlayer">
 
-    <!--Widget for exoplayer view-->
     <androidx.media3.ui.PlayerView
         android:id="@+id/player_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        app:controller_layout_id="@layout/omerflex_player_control_view"
         app:show_buffering="when_playing"
         app:resize_mode="fit"
         app:show_shuffle_button="true">
@@ -20,38 +20,6 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:visibility="gone"/>
-
-        <LinearLayout
-            android:id="@+id/custom_controls"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|end"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="8dp">
-
-            <ImageView
-                android:id="@+id/share_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:src="@drawable/ic_baseline_share_24"
-                android:contentDescription="Share"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="8dp"/>
-
-            <androidx.mediarouter.app.MediaRouteButton
-                android:id="@+id/media_route_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                />
-
-        </LinearLayout>
-
     </androidx.media3.ui.PlayerView>
 
 </RelativeLayout>
