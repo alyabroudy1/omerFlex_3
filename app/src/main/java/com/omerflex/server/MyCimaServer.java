@@ -321,7 +321,8 @@ public class MyCimaServer extends AbstractServer {
     private Movie generateNextPageMovie(Document doc) {
         Movie nextPage = null;
         //nextpage
-        Elements nextLinkNaviElements = doc.getElementsByClass("next");
+//        Elements nextLinkNaviElements = doc.getElementsByClass("next");
+        Elements nextLinkNaviElements = doc.select("[class*=next][class*=page]");
         //        Log.d(TAG, "search: nextpage1 found :"+nextLinkNaviElements.size());
         if (!nextLinkNaviElements.isEmpty()) {
             Element nextLinkNaviElement = nextLinkNaviElements.first();
