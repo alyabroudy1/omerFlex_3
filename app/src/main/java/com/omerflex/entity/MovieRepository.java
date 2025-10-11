@@ -581,10 +581,12 @@ public class MovieRepository {
                     }
                 }
                 Log.d(TAG, "getHomepageChannels: movies are grouped in :"+ moviesByGroup.size());
+                new Handler(Looper.getMainLooper()).post(() -> {
                     for (Map.Entry<String, List<Movie>> entry : moviesByGroup.entrySet()) {
                         Log.d(TAG, "getHomepageChannels: updating ui: "+ entry.getKey());
                         callback.onMovieListFetched(entry.getKey(), new ArrayList<>(entry.getValue()));
                     }
+                });
             }
         });
     }

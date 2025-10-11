@@ -91,12 +91,12 @@ public class MyCimaServer extends AbstractServer {
             return movieList;
         }
 
-        if (multiSearch) {
-//            String extraUrl = query.startsWith("http") ? query : (doc.baseUri().isEmpty() ? url : doc.baseUri());
-            Log.d(TAG, "search: extraUrl: "+url);
-            this.getExtraSearchSeriesMovieList(url, movieList);
-            this.getExtraSearchAnimeMovieList(url, movieList);
-        }
+//        if (multiSearch) {
+////            String extraUrl = query.startsWith("http") ? query : (doc.baseUri().isEmpty() ? url : doc.baseUri());
+//            Log.d(TAG, "search: extraUrl: "+url);
+//            this.getExtraSearchSeriesMovieList(url, movieList);
+//            this.getExtraSearchAnimeMovieList(url, movieList);
+//        }
 
 
         Elements lis = null;
@@ -198,7 +198,16 @@ public class MyCimaServer extends AbstractServer {
                 movieList.add(movie); // add the collection movie
             }
         } else {
-            movieList.add(movie);
+            boolean movieExists = false;
+            for (Movie m : movieList) {
+                if (m.getTitle().equals(movie.getTitle())) {
+                    movieExists = true;
+                    break;
+                }
+            }
+            if (!movieExists) {
+                movieList.add(movie);
+            }
         }
 //        Log.d(TAG, "filterSearchResultMovies: movielist:"+movieList);
     }
