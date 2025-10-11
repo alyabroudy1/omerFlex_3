@@ -119,6 +119,14 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     private MenuItem mediaRouteMenuItem;
     private Map<String, SsdpDiscoverer.DlnaDevice> deviceLocations = new HashMap<>();
 
+
+
+
+    private MediaRouter mMediaRouter;
+    private MediaRouter.Callback mMediaRouterCallback;
+    private boolean mCastDevicesAvailable = false;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -136,18 +144,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         setContentView(R.layout.activity_exoplayer);
         getSupportActionBar().hide();
 
-        // Find the button directly from the layout
+        // Manually handle the cast button to show a unified picker
         MediaRouteButton mediaRouteButton = findViewById(R.id.media_route_button);
-        // Connect it to the Cast framework
-        CastButtonFactory.setUpMediaRouteButton(this, mediaRouteButton);
-        // Set click listener to show available devices
         if (mediaRouteButton != null) {
-            mediaRouteButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    showDiscoveredDevices();
-                }
-            });
+            mediaRouteButton.setOnClickListener(v -> showCastOrDlnaDialog());
         }
         // Set up click listener for built-in casting
 //        if (mediaRouteButton != null) {
@@ -171,6 +171,22 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
             // You could show an error dialog to the user here.
             return;
         }
+
+        mMediaRouter = MediaRouter.getInstance(this);
+        mMediaRouterCallback = new MediaRouter.Callback() {
+            @Override
+            public void onRouteAdded(MediaRouter router, MediaRouter.RouteInfo route) {
+                updateCastDeviceAvailability();
+            }
+            @Override
+            public void onRouteRemoved(MediaRouter router, MediaRouter.RouteInfo route) {
+                updateCastDeviceAvailability();
+            }
+            @Override
+            public void onRouteChanged(MediaRouter router, MediaRouter.RouteInfo route) {
+                updateCastDeviceAvailability();
+            }
+        };
 
         // The Cast button will automatically become visible or hidden based on this.
         mCastStateListener = newState -> {
@@ -552,9 +568,12 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
             Toast.makeText(this, "Device info not found", Toast.LENGTH_SHORT).show();
             return;
         }
+        castToDlnaLocation(deviceInfo, selectedDevice.location);
+    }
 
+    private void castToDlnaLocation(String deviceName, String locationUrl) {
         AlertDialog castingDialog = new AlertDialog.Builder(this)
-                .setTitle("Casting to " + deviceInfo)
+                .setTitle("Casting to " + deviceName)
                 .setMessage("Setting up media server...")
                 .setCancelable(false)
                 .create();
@@ -579,18 +598,23 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         }
 
         Log.d(TAG, "Media server URL: " + localServerUrl);
+        Log.d(TAG, "Trying to cast to: " + locationUrl);
 
-        String deviceLocation = selectedDevice.location;
-        Log.d(TAG, "Trying to cast to: " + deviceLocation);
-
-        DlnaCaster.castToDevice(deviceLocation, localServerUrl, movie.getTitle(), new DlnaCaster.CastListener() {
+        DlnaCaster.castToDevice(locationUrl, localServerUrl, movie.getTitle(), new DlnaCaster.CastListener() {
             @Override
             public void onCastSuccess() {
                 runOnUiThread(() -> {
                     castingDialog.dismiss();
                     Toast.makeText(ExoplayerMediaPlayer.this,
-                            "Casting started successfully to " + deviceInfo,
+                            "Casting started successfully to " + deviceName,
                             Toast.LENGTH_LONG).show();
+
+                    // Save the device for next time
+                    android.content.SharedPreferences prefs = getSharedPreferences("dlna_prefs", MODE_PRIVATE);
+                    android.content.SharedPreferences.Editor editor = prefs.edit();
+                    editor.putString("last_dlna_name", deviceName);
+                    editor.putString("last_dlna_location", locationUrl);
+                    editor.apply();
 
                     // Pause local playback
                     if (player != null && player.isPlaying()) {
@@ -861,6 +885,14 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         }
     }
 
+    private void updateCastDeviceAvailability() {
+        mCastDevicesAvailable = mMediaRouter.isRouteAvailable(
+                new androidx.mediarouter.media.MediaRouteSelector.Builder()
+                        .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
+                        .build(),
+                0);
+    }
+
     @Override
     public void onCastSessionAvailable() {
         Log.d(TAG, "onCastSessionAvailable: Cast session is available");
@@ -1017,6 +1049,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         if (mCastContext != null) {
             mCastContext.addCastStateListener(mCastStateListener);
         }
+        mMediaRouter.addCallback(new androidx.mediarouter.media.MediaRouteSelector.Builder()
+                .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
+                .build(), mMediaRouterCallback, MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
+        updateCastDeviceAvailability();
     }
 
     @Override
@@ -1445,6 +1481,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     @Override
     protected void onStop() {
         super.onStop();
+        mMediaRouter.removeCallback(mMediaRouterCallback);
 
         Log.d("TAG", "onStop: yess ");
         if (player != null && movie.getParentId() != null) {
@@ -1503,9 +1540,52 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.main_menu, menu);
 
-        // Set up the Cast button
+        // Set up the Cast button, but we will hide it to avoid confusion with the layout button
         mediaRouteMenuItem = CastButtonFactory.setUpMediaRouteButton(getApplicationContext(), menu, R.id.media_route_menu_item);
+        if (mediaRouteMenuItem != null) {
+            mediaRouteMenuItem.setVisible(false);
+        }
         return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void showCastOrDlnaDialog() {
+        android.content.SharedPreferences prefs = getSharedPreferences("dlna_prefs", MODE_PRIVATE);
+        String lastDeviceName = prefs.getString("last_dlna_name", null);
+        String lastDeviceLocation = prefs.getString("last_dlna_location", null);
+
+        final java.util.List<String> items = new java.util.ArrayList<>();
+
+        if (lastDeviceName != null && lastDeviceLocation != null) {
+            items.add("Reconnect to " + lastDeviceName);
+        }
+        if (mCastDevicesAvailable) {
+            items.add("Google Cast Device");
+        }
+        items.add("Scan for DLNA Devices");
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Cast to...");
+        builder.setItems(items.toArray(new CharSequence[0]), (dialog, which) -> {
+            String selectedItem = items.get(which);
+            if (selectedItem.startsWith("Reconnect")) {
+                castToDlnaLocation(lastDeviceName, lastDeviceLocation);
+            } else if (selectedItem.equals("Google Cast Device")) {
+                // Show the standard Google Cast chooser dialog
+                androidx.mediarouter.app.MediaRouteChooserDialogFragment chooser = new androidx.mediarouter.app.MediaRouteChooserDialogFragment();
+                chooser.setRouteSelector(new androidx.mediarouter.media.MediaRouteSelector.Builder()
+                        .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
+                        .build());
+                chooser.show(getSupportFragmentManager(), "MediaRouteChooser");
+            } else { // "Scan for DLNA Devices"
+                showDiscoveredDevices();
+            }
+        });
+        builder.create().show();
     }
 
     // A helper to guess the MIME type for the MediaItem

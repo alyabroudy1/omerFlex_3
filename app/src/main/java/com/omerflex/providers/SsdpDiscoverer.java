@@ -68,7 +68,26 @@ public class SsdpDiscoverer {
         }
     }
 
+    private static List<DlnaDevice> deviceCache = new ArrayList<>();
+    private static long lastCacheTime = 0;
+    private static final long CACHE_DURATION_MS = 60 * 1000; // 60 seconds
+
     public static void discoverDevicesWithDetails(DiscoveryListener listener) {
+        // Check cache first
+        long now = System.currentTimeMillis();
+        if (lastCacheTime > 0 && (now - lastCacheTime < CACHE_DURATION_MS) && !deviceCache.isEmpty()) {
+            Log.d(TAG, "Returning " + deviceCache.size() + " cached DLNA devices.");
+            // Use a new thread to avoid blocking the caller, mimicking the async behavior
+            new Thread(() -> {
+                for (DlnaDevice device : deviceCache) {
+                    listener.onDeviceFound(device);
+                }
+                listener.onDiscoveryComplete(deviceCache.stream().map(DlnaDevice::toString).collect(Collectors.toList()));
+            }).start();
+            return; // Stop here, don't perform a new scan
+        }
+
+        // If cache is stale, perform network discovery
         new Thread(() -> {
             try {
                 List<DlnaDevice> devices = new ArrayList<>();
@@ -78,7 +97,7 @@ public class SsdpDiscoverer {
                                 "HOST: " + SSDP_HOST + ":" + SSDP_PORT + "\r\n" +
                                 "MAN: \"ssdp:discover\"\r\n" +
                                 "MX: 3\r\n" +
-                                "ST: ssdp:all\r\n" + 
+                                "ST: ssdp:all\r\n" +
                                 "\r\n";
 
                 byte[] sendData = searchMessage.getBytes();
@@ -115,6 +134,12 @@ public class SsdpDiscoverer {
                         }
                     }
                 }
+
+                // Update the cache with the new findings
+                Log.d(TAG, "Discovery finished. Found " + devices.size() + " devices. Updating cache.");
+                deviceCache.clear();
+                deviceCache.addAll(devices);
+                lastCacheTime = System.currentTimeMillis();
 
                 listener.onDiscoveryComplete(devices.stream().map(DlnaDevice::toString).collect(Collectors.toList()));
 
