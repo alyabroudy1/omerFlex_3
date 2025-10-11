@@ -51,6 +51,7 @@ import androidx.media3.exoplayer.smoothstreaming.SsMediaSource;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
 import androidx.media3.ui.AspectRatioFrameLayout;
+import androidx.media3.ui.PlayerControlView;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.leanback.LeanbackPlayerAdapter;
 import androidx.mediarouter.app.MediaRouteButton;
@@ -209,6 +210,12 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
 
         //  setContentView(R.layout.activity_main);
         playerView = findViewById(R.id.player_view);
+        final View customControls = findViewById(R.id.custom_controls);
+        playerView.setControllerVisibilityListener((PlayerControlView.VisibilityListener) visibility -> {
+            if (customControls != null) {
+                customControls.setVisibility(visibility);
+            }
+        });
 
 
 //        player = new ExoPlayer.Builder(getApplicationContext()).build();
