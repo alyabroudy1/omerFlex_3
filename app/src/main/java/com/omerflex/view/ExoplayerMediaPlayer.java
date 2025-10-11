@@ -20,6 +20,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -145,9 +146,14 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         getSupportActionBar().hide();
 
         // Manually handle the cast button to show a unified picker
-        MediaRouteButton mediaRouteButton = findViewById(R.id.media_route_button);
-        if (mediaRouteButton != null) {
-            mediaRouteButton.setOnClickListener(v -> showCastOrDlnaDialog());
+//        MediaRouteButton mediaRouteButton = findViewById(R.id.media_route_button);
+//        if (mediaRouteButton != null) {
+//            mediaRouteButton.setOnClickListener(v -> showCastOrDlnaDialog());
+//        }
+
+        ImageView shareButton = findViewById(R.id.share_button);
+        if (shareButton != null) {
+            shareButton.setOnClickListener(v -> showCastOrDlnaDialog());
         }
         // Set up click listener for built-in casting
 //        if (mediaRouteButton != null) {
@@ -1567,6 +1573,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
             items.add("Google Cast Device");
         }
         items.add("Scan for DLNA Devices");
+        items.add("Share to another app");
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Cast to...");
@@ -1581,11 +1588,38 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
                         .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
                         .build());
                 chooser.show(getSupportFragmentManager(), "MediaRouteChooser");
-            } else { // "Scan for DLNA Devices"
+            } else if (selectedItem.equals("Scan for DLNA Devices")) {
                 showDiscoveredDevices();
+            } else if (selectedItem.equals("Share to another app")) {
+                shareVideoUrl();
             }
         });
         builder.create().show();
+    }
+
+    private void shareVideoUrl() {
+        if (movie == null || movie.getVideoUrl() == null) {
+            Toast.makeText(this, "Video URL not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Get the clean video URL without headers
+        String url = movie.getVideoUrl();
+        String[] parts = url.split("\\|", 2);
+        String cleanUrl = parts[0];
+
+        Intent shareIntent = new Intent(Intent.ACTION_VIEW);
+        shareIntent.setDataAndType(Uri.parse(cleanUrl), "video/*");
+        shareIntent.putExtra(Intent.EXTRA_TITLE, movie.getTitle());
+
+        // Create a chooser to show only video players
+        Intent chooserIntent = Intent.createChooser(shareIntent, "Open with");
+
+        if (chooserIntent.resolveActivity(getPackageManager()) != null) {
+            startActivity(chooserIntent);
+        } else {
+            Toast.makeText(this, "No app found to play this video", Toast.LENGTH_SHORT).show();
+        }
     }
 
     // A helper to guess the MIME type for the MediaItem
