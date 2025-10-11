@@ -117,7 +117,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     private CastContext mCastContext;
     private CastStateListener mCastStateListener;
     private MenuItem mediaRouteMenuItem;
-    private Map<String, String> deviceLocations = new HashMap<>();
+    private Map<String, SsdpDiscoverer.DlnaDevice> deviceLocations = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,14 +141,14 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
         // Connect it to the Cast framework
         CastButtonFactory.setUpMediaRouteButton(this, mediaRouteButton);
         // Set click listener to show available devices
-//        if (mediaRouteButton != null) {
-//            mediaRouteButton.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    showDiscoveredDevices();
-//                }
-//            });
-//        }
+        if (mediaRouteButton != null) {
+            mediaRouteButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showDiscoveredDevices();
+                }
+            });
+        }
         // Set up click listener for built-in casting
 //        if (mediaRouteButton != null) {
 //            mediaRouteButton.setOnClickListener(new View.OnClickListener() {
@@ -522,10 +522,10 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
 
         SsdpDiscoverer.discoverDevicesWithDetails(new SsdpDiscoverer.DiscoveryListener() {
             @Override
-            public void onDeviceFound(String deviceInfo, String ipAddress) {
-                Log.d(TAG, "Discovered device: " + deviceInfo);
+            public void onDeviceFound(SsdpDiscoverer.DlnaDevice device) {
+                Log.d(TAG, "Discovered device: " + device.friendlyName);
                 // Store device info for later use
-                deviceLocations.put(deviceInfo, ipAddress);
+                deviceLocations.put(device.toString(), device);
             }
 
             @Override
@@ -547,8 +547,8 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
     }
 
     private void onDlnaDeviceSelected(String deviceInfo) {
-        String deviceIp = deviceLocations.get(deviceInfo);
-        if (deviceIp == null) {
+        SsdpDiscoverer.DlnaDevice selectedDevice = deviceLocations.get(deviceInfo);
+        if (selectedDevice == null || selectedDevice.location == null) {
             Toast.makeText(this, "Device info not found", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -580,35 +580,14 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
 
         Log.d(TAG, "Media server URL: " + localServerUrl);
 
-        // Build device location URL (try common ports)
-        String[] commonPorts = {"49152", "49000", "5000", "8200"};
-
-        // Try to cast to each possible port
-        tryCastToDevice(deviceIp, commonPorts, localServerUrl, deviceInfo, castingDialog, 0);
-    }
-
-    private void tryCastToDevice(String deviceIp, String[] ports, String videoUrl,
-                                 String deviceInfo, AlertDialog dialog, int portIndex) {
-        if (portIndex >= ports.length) {
-            // All ports failed
-            runOnUiThread(() -> {
-                dialog.dismiss();
-                Toast.makeText(this, "Failed to connect to device. Try Web Video Caster.", Toast.LENGTH_LONG).show();
-                MediaServer.getInstance().stopServer();
-            });
-            return;
-        }
-
-        String port = ports[portIndex];
-        String deviceLocation = "http://" + deviceIp + ":" + port + "/description.xml";
-
+        String deviceLocation = selectedDevice.location;
         Log.d(TAG, "Trying to cast to: " + deviceLocation);
 
-        DlnaCaster.castToDevice(deviceLocation, videoUrl, movie.getTitle(), new DlnaCaster.CastListener() {
+        DlnaCaster.castToDevice(deviceLocation, localServerUrl, movie.getTitle(), new DlnaCaster.CastListener() {
             @Override
             public void onCastSuccess() {
                 runOnUiThread(() -> {
-                    dialog.dismiss();
+                    castingDialog.dismiss();
                     Toast.makeText(ExoplayerMediaPlayer.this,
                             "Casting started successfully to " + deviceInfo,
                             Toast.LENGTH_LONG).show();
@@ -622,12 +601,16 @@ public class ExoplayerMediaPlayer extends AppCompatActivity implements SessionAv
 
             @Override
             public void onCastError(String error) {
-                Log.d(TAG, "Cast failed on port " + port + ": " + error);
-                // Try next port
-                tryCastToDevice(deviceIp, ports, videoUrl, deviceInfo, dialog, portIndex + 1);
+                runOnUiThread(() -> {
+                    castingDialog.dismiss();
+                    Toast.makeText(ExoplayerMediaPlayer.this, "Cast failed: " + error, Toast.LENGTH_LONG).show();
+                    MediaServer.getInstance().stopServer();
+                });
             }
         });
     }
+
+
 
     private void showDiscoveredDevicesDialog(List<String> devices) {
         if (devices.isEmpty()) {

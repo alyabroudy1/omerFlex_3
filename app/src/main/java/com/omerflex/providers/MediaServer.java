@@ -4,12 +4,14 @@ import android.util.Log;
 import com.omerflex.entity.Movie;
 import com.omerflex.service.utils.NetworkUtils;
 
-import fi.iki.elonen.NanoHTTPD;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
+
+import fi.iki.elonen.NanoHTTPD;
 
 public class MediaServer extends NanoHTTPD {
     private static final String TAG = "MediaServer";
@@ -33,7 +35,9 @@ public class MediaServer extends NanoHTTPD {
         this.headers = headers;
 
         try {
-            stopServer(); // Stop existing server
+            if (isRunning()) {
+                stop();
+            }
             start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
 
             String localIp = NetworkUtils.getLocalIpAddress();
@@ -49,11 +53,9 @@ public class MediaServer extends NanoHTTPD {
     }
 
     public void stopServer() {
-        try {
+        if (isRunning()) {
             stop();
             Log.d(TAG, "Media server stopped");
-        } catch (Exception e) {
-            Log.e(TAG, "Error stopping media server", e);
         }
     }
 
@@ -64,37 +66,53 @@ public class MediaServer extends NanoHTTPD {
     @Override
     public Response serve(IHTTPSession session) {
         String uri = session.getUri();
-        String method = session.getMethod().name();
+        Log.d(TAG, "Request: " + session.getMethod().name() + " " + uri);
 
-        Log.d(TAG, "Request: " + method + " " + uri);
+        if (!Method.GET.equals(session.getMethod())) {
+            return newFixedLengthResponse(Response.Status.METHOD_NOT_ALLOWED, "text/plain", "Method not allowed");
+        }
 
-        if ("/video".equals(uri) && Method.GET.equals(session.getMethod())) {
-            return serveVideo(session);
-        } else if ("/".equals(uri)) {
-            return newFixedLengthResponse(Response.Status.OK, "text/html",
-                    "<html><body><h1>Media Server</h1><p>Server is running</p></body></html>");
-        } else {
-            return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not found");
+        try {
+            String originalUrl = currentMovie.getVideoUrl().split("\\|")[0];
+            String remoteUrl;
+
+            if ("/video".equals(uri)) {
+                remoteUrl = originalUrl;
+            } else {
+                // Handle HLS relative paths
+                int lastSlash = originalUrl.lastIndexOf('/');
+                if (lastSlash != -1) {
+                    String baseUrl = originalUrl.substring(0, lastSlash + 1);
+                    remoteUrl = baseUrl + (uri.startsWith("/") ? uri.substring(1) : uri);
+                } else {
+                    return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not found");
+                }
+            }
+            return proxyRequest(session, remoteUrl);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error determining remote URL", e);
+            return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Internal server error");
         }
     }
 
-    private Response serveVideo(IHTTPSession session) {
+    private Response proxyRequest(IHTTPSession session, String remoteUrl) {
+        HttpURLConnection connection = null;
         try {
-            String videoUrl = currentMovie.getVideoUrl().split("\\|")[0];
-            Log.d(TAG, "Proxying video: " + videoUrl);
+            Log.d(TAG, "Proxying request for: " + remoteUrl);
 
-            URL url = new URL(videoUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            URL url = new URL(remoteUrl);
+            connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
 
-            // Add original headers
+            // Add original headers from the movie object
             if (headers != null) {
                 for (Map.Entry<String, String> header : headers.entrySet()) {
                     connection.setRequestProperty(header.getKey(), header.getValue());
                 }
             }
 
-            // Copy range header if present
+            // Copy range header from the client request
             String rangeHeader = session.getHeaders().get("range");
             if (rangeHeader != null) {
                 connection.setRequestProperty("Range", rangeHeader);
@@ -103,38 +121,72 @@ public class MediaServer extends NanoHTTPD {
 
             connection.setConnectTimeout(30000);
             connection.setReadTimeout(30000);
-            connection.connect();
 
             int responseCode = connection.getResponseCode();
             String contentType = connection.getContentType();
-            long contentLength = connection.getContentLengthLong();
+            long contentLength = -1;
+            String contentLengthHeader = connection.getHeaderField("Content-Length");
+            if (contentLengthHeader != null) {
+                try {
+                    contentLength = Long.parseLong(contentLengthHeader);
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "Could not parse Content-Length header: " + contentLengthHeader);
+                }
+            }
 
             Log.d(TAG, "Original server response: " + responseCode +
                     ", Type: " + contentType + ", Length: " + contentLength);
 
-            // Create response
-            Response.Status status = responseCode == 206 ?
-                    Response.Status.PARTIAL_CONTENT : Response.Status.OK;
+            Response.IStatus status = Response.Status.lookup(responseCode);
+            if (status == null) {
+                final int finalResponseCode = responseCode;
+                final String finalDescription = connection.getResponseMessage();
+                status = new Response.IStatus() {
+                    @Override
+                    public String getDescription() {
+                        return finalDescription;
+                    }
 
-            Response response = newChunkedResponse(status, contentType, connection.getInputStream());
-
-            // Set headers
-            response.addHeader("Accept-Ranges", "bytes");
-            response.addHeader("Access-Control-Allow-Origin", "*");
-            response.addHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-            response.addHeader("Access-Control-Allow-Headers", "Range");
-
-            // Handle content range
-            String contentRange = connection.getHeaderField("Content-Range");
-            if (contentRange != null) {
-                response.addHeader("Content-Range", contentRange);
+                    @Override
+                    public int getRequestStatus() {
+                        return finalResponseCode;
+                    }
+                };
             }
 
-            Log.d(TAG, "Video streaming started");
+            InputStream inputStream = null;
+            try {
+                inputStream = connection.getInputStream();
+            } catch (IOException e) {
+                inputStream = connection.getErrorStream();
+            }
+
+            Response response;
+            if (contentLength != -1) {
+                response = newFixedLengthResponse(status, contentType, inputStream, contentLength);
+            } else {
+                response = newChunkedResponse(status, contentType, inputStream);
+            }
+
+            // Copy all headers from original response to our response
+            Map<String, List<String>> headerFields = connection.getHeaderFields();
+            for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
+                if (entry.getKey() != null) {
+                    for (String value : entry.getValue()) {
+                        response.addHeader(entry.getKey(), value);
+                    }
+                }
+            }
+
+            response.addHeader("Access-Control-Allow-Origin", "*");
+            Log.d(TAG, "Streaming started for " + remoteUrl);
             return response;
 
         } catch (Exception e) {
-            Log.e(TAG, "Error serving video", e);
+            Log.e(TAG, "Error serving request for " + remoteUrl, e);
+            if (connection != null) {
+                connection.disconnect();
+            }
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain",
                     "Error: " + e.getMessage());
         }

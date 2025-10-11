@@ -2,29 +2,33 @@ package com.omerflex.providers;
 
 import android.util.Log;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 public class SsdpDiscoverer {
     private static final String TAG = "SsdpDiscoverer";
     private static final String SSDP_HOST = "239.255.255.250";
     private static final int SSDP_PORT = 1900;
-    private static final int TIMEOUT = 3000;
+    private static final int TIMEOUT = 5000;
 
     public interface DiscoveryListener {
-        void onDeviceFound(String deviceInfo, String ipAddress);
+        void onDeviceFound(DlnaDevice device);
         void onDiscoveryComplete(List<String> devices);
         void onError(String error);
     }
 
-    // Add this method to SsdpDiscoverer class
     public static class DlnaDevice {
         public String friendlyName;
         public String ipAddress;
@@ -40,13 +44,30 @@ public class SsdpDiscoverer {
             this.usn = usn;
         }
 
+        private String getServiceType() {
+            if (usn == null) return "";
+            String[] parts = usn.split("::");
+            if (parts.length < 2) return "";
+            String servicePart = parts[1];
+            String[] serviceParts = servicePart.split(":");
+            if (serviceParts.length >= 4) {
+                return serviceParts[3]; // e.g., AVTransport
+            }
+            return "";
+        }
+
         @Override
         public String toString() {
-            return friendlyName + " (" + ipAddress + ")";
+            String serviceType = getServiceType();
+            String name = (friendlyName != null) ? friendlyName : "Unknown Device";
+            
+            if (serviceType != null && !serviceType.isEmpty()) {
+                return name + " (" + serviceType + ")";
+            }
+            return name;
         }
     }
 
-    // Update the discovery method to return DlnaDevice objects
     public static void discoverDevicesWithDetails(DiscoveryListener listener) {
         new Thread(() -> {
             try {
@@ -57,7 +78,7 @@ public class SsdpDiscoverer {
                                 "HOST: " + SSDP_HOST + ":" + SSDP_PORT + "\r\n" +
                                 "MAN: \"ssdp:discover\"\r\n" +
                                 "MX: 3\r\n" +
-                                "ST: urn:schemas-upnp-org:service:AVTransport:1\r\n" + // Media renderers
+                                "ST: ssdp:all\r\n" + 
                                 "\r\n";
 
                 byte[] sendData = searchMessage.getBytes();
@@ -86,7 +107,7 @@ public class SsdpDiscoverer {
                             DlnaDevice device = parseDeviceDetails(response, deviceIp);
                             if (device != null && !containsDevice(devices, device.usn)) {
                                 devices.add(device);
-                                listener.onDeviceFound(device.toString(), deviceIp);
+                                listener.onDeviceFound(device);
                             }
 
                         } catch (java.net.SocketTimeoutException e) {
@@ -121,8 +142,13 @@ public class SsdpDiscoverer {
                 }
             }
 
-            if (server != null && location != null) {
-                String friendlyName = extractFriendlyName(server);
+            if (location != null) {
+                String friendlyName = fetchFriendlyName(location);
+                if (friendlyName == null && server != null) {
+                    friendlyName = extractFriendlyName(server);
+                } else if (friendlyName == null) {
+                    friendlyName = "Unknown Device";
+                }
                 return new DlnaDevice(friendlyName, ipAddress, location, server, usn);
             }
 
@@ -134,7 +160,42 @@ public class SsdpDiscoverer {
         }
     }
 
+    private static String fetchFriendlyName(String locationUrl) {
+        try {
+            URL url = new URL(locationUrl);
+            HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setConnectTimeout(2000);
+            urlConnection.setReadTimeout(2000);
+            try (InputStream in = urlConnection.getInputStream()) {
+                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+                factory.setNamespaceAware(true);
+                XmlPullParser xpp = factory.newPullParser();
+                xpp.setInput(in, null);
+
+                int eventType = xpp.getEventType();
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+                    if (eventType == XmlPullParser.START_TAG) {
+                        if ("friendlyName".equalsIgnoreCase(xpp.getName())) {
+                            if (xpp.next() == XmlPullParser.TEXT) {
+                                return xpp.getText().trim();
+                            }
+                        }
+                    }
+                    eventType = xpp.next();
+                }
+            } finally {
+                urlConnection.disconnect();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to fetch or parse device description from " + locationUrl, e);
+        }
+        return null;
+    }
+
     private static boolean containsDevice(List<DlnaDevice> devices, String usn) {
+        if (usn == null) {
+            return false;
+        }
         for (DlnaDevice device : devices) {
             if (device.usn != null && device.usn.equals(usn)) {
                 return true;
@@ -143,83 +204,82 @@ public class SsdpDiscoverer {
         return false;
     }
 
-    public static void discoverDevices(DiscoveryListener listener) {
-        new Thread(() -> {
-            try {
-                List<String> devices = new ArrayList<>();
-
-                // SSDP M-SEARCH message
-                String searchMessage =
-                        "M-SEARCH * HTTP/1.1\r\n" +
-                                "HOST: " + SSDP_HOST + ":" + SSDP_PORT + "\r\n" +
-                                "MAN: \"ssdp:discover\"\r\n" +
-                                "MX: 3\r\n" +
-                                "ST: ssdp:all\r\n" +
-                                "\r\n";
-
-                byte[] sendData = searchMessage.getBytes();
-
-                // Get local IP address
-                String localIp = getLocalIpAddress();
-                if (localIp == null) {
-                    listener.onError("Cannot get local IP address");
-                    return;
-                }
-
-                Log.d(TAG, "Starting SSDP discovery from: " + localIp);
-
-                try (DatagramSocket socket = new DatagramSocket()) {
-                    socket.setSoTimeout(TIMEOUT);
-
-                    InetAddress group = InetAddress.getByName(SSDP_HOST);
-                    DatagramPacket sendPacket = new DatagramPacket(
-                            sendData, sendData.length, group, SSDP_PORT
-                    );
-
-                    // Send discovery packet
-                    socket.send(sendPacket);
-                    Log.d(TAG, "SSDP discovery packet sent");
-
-                    // Listen for responses
-                    byte[] receiveData = new byte[8192];
-                    long endTime = System.currentTimeMillis() + TIMEOUT;
-
-                    while (System.currentTimeMillis() < endTime) {
-                        try {
-                            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                            socket.receive(receivePacket);
-
-                            String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                            String deviceIp = receivePacket.getAddress().getHostAddress();
-
-                            Log.d(TAG, "Received response from: " + deviceIp);
-                            Log.d(TAG, "Response: " + response);
-
-                            // Parse device info from response
-                            String deviceInfo = parseDeviceInfo(response, deviceIp);
-                            if (deviceInfo != null && !devices.contains(deviceInfo)) {
-                                devices.add(deviceInfo);
-                                listener.onDeviceFound(deviceInfo, deviceIp);
+        public static void discoverDevices(DiscoveryListener listener) {
+            new Thread(() -> {
+                try {
+                    List<DlnaDevice> devices = new ArrayList<>();
+    
+                    // SSDP M-SEARCH message
+                    String searchMessage =
+                            "M-SEARCH * HTTP/1.1\r\n" +
+                                    "HOST: " + SSDP_HOST + ":" + SSDP_PORT + "\r\n" +
+                                    "MAN: \"ssdp:discover\"\r\n" +
+                                    "MX: 3\r\n" +
+                                    "ST: ssdp:all\r\n" +
+                                    "\r\n";
+    
+                    byte[] sendData = searchMessage.getBytes();
+    
+                    // Get local IP address
+                    String localIp = getLocalIpAddress();
+                    if (localIp == null) {
+                        listener.onError("Cannot get local IP address");
+                        return;
+                    }
+    
+                    Log.d(TAG, "Starting SSDP discovery from: " + localIp);
+    
+                    try (DatagramSocket socket = new DatagramSocket()) {
+                        socket.setSoTimeout(TIMEOUT);
+    
+                        InetAddress group = InetAddress.getByName(SSDP_HOST);
+                        DatagramPacket sendPacket = new DatagramPacket(
+                                sendData, sendData.length, group, SSDP_PORT
+                        );
+    
+                        // Send discovery packet
+                        socket.send(sendPacket);
+                        Log.d(TAG, "SSDP discovery packet sent");
+    
+                        // Listen for responses
+                        byte[] receiveData = new byte[8192];
+                        long endTime = System.currentTimeMillis() + TIMEOUT;
+    
+                        while (System.currentTimeMillis() < endTime) {
+                            try {
+                                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                                socket.receive(receivePacket);
+    
+                                String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                                String deviceIp = receivePacket.getAddress().getHostAddress();
+    
+                                Log.d(TAG, "Received response from: " + deviceIp);
+                                Log.d(TAG, "Response: " + response);
+    
+                                // Parse device info from response
+                                DlnaDevice device = parseDeviceInfo(response, deviceIp);
+                                if (device != null && !containsDevice(devices, device.usn)) {
+                                    devices.add(device);
+                                    listener.onDeviceFound(device);
+                                }
+    
+                            } catch (java.net.SocketTimeoutException e) {
+                                // Timeout is expected, continue
+                                break;
                             }
-
-                        } catch (java.net.SocketTimeoutException e) {
-                            // Timeout is expected, continue
-                            break;
                         }
                     }
+    
+                    Log.d(TAG, "SSDP discovery completed. Found: " + devices.size() + " devices");
+                    listener.onDiscoveryComplete(devices.stream().map(DlnaDevice::toString).collect(Collectors.toList()));
+    
+                } catch (Exception e) {
+                    Log.e(TAG, "SSDP discovery error", e);
+                    listener.onError("Discovery failed: " + e.getMessage());
                 }
-
-                Log.d(TAG, "SSDP discovery completed. Found: " + devices.size() + " devices");
-                listener.onDiscoveryComplete(devices);
-
-            } catch (Exception e) {
-                Log.e(TAG, "SSDP discovery error", e);
-                listener.onError("Discovery failed: " + e.getMessage());
-            }
-        }).start();
-    }
-
-    private static String parseDeviceInfo(String response, String ipAddress) {
+            }).start();
+        }
+    private static DlnaDevice parseDeviceInfo(String response, String ipAddress) {
         try {
             String[] lines = response.split("\r\n");
             String server = null;
@@ -239,14 +299,14 @@ public class SsdpDiscoverer {
             if (server != null) {
                 // Extract friendly name if available
                 String friendlyName = extractFriendlyName(server);
-                return friendlyName + " (" + ipAddress + ")";
+                return new DlnaDevice(friendlyName, ipAddress, location, server, usn);
             }
 
-            return "Unknown Device (" + ipAddress + ")";
+            return new DlnaDevice("Unknown Device", ipAddress, location, server, usn);
 
         } catch (Exception e) {
             Log.e(TAG, "Error parsing device info", e);
-            return "Device (" + ipAddress + ")";
+            return new DlnaDevice("Device", ipAddress, null, null, null);
         }
     }
 
