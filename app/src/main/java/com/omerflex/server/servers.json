@@ -5,8 +5,9 @@
       "displayName": "omar",
       "url": "http://194.164.53.40/movie",
       "webName": "http://194.164.53.40/movie",
-      "isActive": true,
+      "isActive": false,
       "description": "description",
+      "label": "Omar",
       "date": "2024-02-22T12:30:00"
     },
     {
@@ -16,6 +17,7 @@
       "webName": "https://www.akwam.cc",
       "isActive": true,
       "description": "description",
+      "label": "أكوام",
       "date": "2025-09-12T12:34:00"
     },
     {
@@ -25,6 +27,7 @@
       "webName": "https://ak.sv/",
       "isActive": true,
       "description": "description",
+      "label": "اكوام القديم",
       "date": "2024-02-22T12:30:00"
     },
     {
@@ -34,6 +37,7 @@
       "webName": "https://www.mycima.io",
       "isActive": true,
       "description": "description",
+      "label": "ماي سيما",
       "date": "2025-02-19T12:30:00"
     },
     {
@@ -43,6 +47,7 @@
       "webName": "https://www.faselhd.center",
       "isActive": true,
       "description": "description",
+      "label": "فاصل",
       "date": "2024-09-07T12:33:00"
     },
     {
@@ -52,6 +57,7 @@
       "webName": "https://arabseed.show",
       "isActive": true,
       "description": "description",
+      "label": "عرب سيد",
       "date": "2025-03-07T12:31:00"
     },
     {
@@ -61,6 +67,7 @@
       "webName": "https://cimaclub.skin",
       "isActive": false,
       "description": "description",
+      "label": "cima",
       "date": "2024-02-22T12:30:00"
     },
     {
@@ -70,6 +77,7 @@
       "webName": "https://watanflix.com",
       "isActive": false,
       "description": "description",
+      "label": "watan",
       "date": "2024-02-22T12:30:00"
     },
     {
@@ -79,6 +87,7 @@
       "webName": "https://cimanow.cc",
       "isActive": false,
       "description": "description",
+      "label": "سيماناو",
       "date": "2024-10-18T12:30:00"
     },
     {
@@ -88,6 +97,7 @@
       "webName": "https://www.as-goal.cc",
       "isActive": false,
       "description": "description",
+      "label": "koora",
       "date": "2025-01-25T12:30:00"
     },
     {
@@ -96,8 +106,8 @@
       "url": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile-4/app/omerFlex.apk",
       "webName": "https://github.com/alyabroudy1/omerFlex_3/raw/refs/heads/mobile-4/app/",
       "isActive": true,
-      "description": "10",
-      "date": "2025-09-22T22:30:00"
+      "description": "11",
+      "date": "2025-10-12T22:30:00"
     },
     {
       "name": "Iptv",
@@ -106,6 +116,7 @@
       "webName": "https://drive.google.com/u/0/uc?id=1a7kHxCHOxW6TH8OnM_kO3SjjQvt38oCx&export=download",
       "isActive": true,
       "description": "7",
+      "label": "قنوات",
       "date": "2025-02-12T12:30:00"
     }
   ]
