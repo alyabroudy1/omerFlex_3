@@ -36,4 +36,7 @@ public interface ServerConfigDao {
 
     @Query("SELECT * FROM server_config WHERE isActive = 1")
     List<ServerConfig> getActiveServers();
+
+    @Query("DELETE FROM server_config")
+    void deleteAll();
 }
