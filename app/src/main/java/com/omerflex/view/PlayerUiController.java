@@ -3,11 +3,13 @@ package com.omerflex.view;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewParent;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.Player;
 import androidx.media3.ui.PlayerView;
+
 
 import com.omerflex.service.PlayerManager;
 
@@ -64,25 +66,83 @@ public class PlayerUiController {
     }
 
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (playerView.dispatchKeyEvent(event)) {
-            return true;
+        if (!playerView.isControllerFullyVisible()) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                playerView.showController();
+            }
+            // Let the default PlayerView behavior handle key events when controller is hidden.
+            return playerView.dispatchKeyEvent(event);
         }
 
+        // Controller is visible, implement custom logic
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            View focusedView = activity.getCurrentFocus();
+            View bottomBar = playerView.findViewById(androidx.media3.ui.R.id.exo_bottom_bar);
+            View centerControls = playerView.findViewById(androidx.media3.ui.R.id.exo_center_controls);
+
+            boolean isButtonFocused = false;
+            if (focusedView != null && focusedView != playerView) {
+                 // Check if the focused view is a descendant of the main control layouts
+                if ((bottomBar != null && isDescendant(focusedView, bottomBar)) ||
+                    (centerControls != null && isDescendant(focusedView, centerControls))) {
+                    isButtonFocused = true;
+                }
+            }
+
+
             Player player = playerManager.getCurrentPlayer();
             if (player == null) return false;
 
             switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
+                    if (isButtonFocused) {
+                        return false; // Let the framework handle navigation
+                    }
+                    // No button is focused, so seek
                     player.seekTo(player.getCurrentPosition() + 15000);
                     return true;
+
                 case KeyEvent.KEYCODE_DPAD_LEFT:
+                    if (isButtonFocused) {
+                        return false; // Let the framework handle navigation
+                    }
+                    // No button is focused, so seek
                     player.seekTo(player.getCurrentPosition() - 15000);
                     return true;
+
+                case KeyEvent.KEYCODE_DPAD_CENTER:
+                case KeyEvent.KEYCODE_ENTER:
+                    if (!isButtonFocused) {
+                        // If no button is focused, treat as play/pause
+                        if (player.isPlaying()) {
+                            player.pause();
+                        } else {
+                            player.play();
+                        }
+                        return true;
+                    }
+                    // A button is focused, let the framework handle the click
+                    return false;
             }
+        }
+        // For other keys or ACTION_UP, let the framework handle it.
+        return false;
+    }
+
+    private boolean isDescendant(View view, View ancestor) {
+        if (view == null || ancestor == null) {
+            return false;
+        }
+        ViewParent parent = view.getParent();
+        while (parent != null) {
+            if (parent == ancestor) {
+                return true;
+            }
+            parent = parent.getParent();
         }
         return false;
     }
+
 
     public void handleBackPressed() {
         if (playerView.isControllerFullyVisible()) {

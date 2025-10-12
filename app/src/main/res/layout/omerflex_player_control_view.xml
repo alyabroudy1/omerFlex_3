@@ -51,33 +51,69 @@
                 android:id="@+id/share_button"
                 style="@style/ExoStyledControls.Button.Bottom"
                 android:src="@drawable/ic_baseline_share_24"
-                android:contentDescription="Share"/>
+                android:contentDescription="Share"
+                android:focusable="true"
+                android:clickable="true"
+                android:nextFocusUp="@id/exo_play_pause"
+                android:nextFocusLeft="@id/exo_overflow_show"
+                android:nextFocusRight="@+id/media_route_button"/>
 
             <androidx.mediarouter.app.MediaRouteButton
                 android:id="@+id/media_route_button"
                 style="@style/ExoStyledControls.Button.Bottom"
-                />
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_play_pause"
+                android:nextFocusLeft="@+id/share_button"
+                android:nextFocusRight="@id/exo_vr"/>
 
             <ImageButton android:id="@id/exo_vr"
-                style="@style/ExoStyledControls.Button.Bottom.VR"/>
+                style="@style/ExoStyledControls.Button.Bottom.VR"
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_play_pause"
+                android:nextFocusLeft="@+id/media_route_button"
+                android:nextFocusRight="@id/exo_shuffle"/>
 
             <ImageButton android:id="@id/exo_shuffle"
-                style="@style/ExoStyledControls.Button.Bottom.Shuffle"/>
+                style="@style/ExoStyledControls.Button.Bottom.Shuffle"
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_play_pause"
+                android:nextFocusLeft="@id/exo_vr"
+                android:nextFocusRight="@id/exo_repeat_toggle"/>
 
             <ImageButton android:id="@id/exo_repeat_toggle"
-                style="@style/ExoStyledControls.Button.Bottom.RepeatToggle"/>
+                style="@style/ExoStyledControls.Button.Bottom.RepeatToggle"
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_play_pause"
+                android:nextFocusLeft="@id/exo_shuffle"
+                android:nextFocusRight="@id/exo_subtitle"/>
 
             <ImageButton android:id="@id/exo_subtitle"
-                style="@style/ExoStyledControls.Button.Bottom.CC"/>
+                style="@style/ExoStyledControls.Button.Bottom.CC"
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_ffwd"
+                android:nextFocusLeft="@id/exo_repeat_toggle"
+                android:nextFocusRight="@id/exo_settings"/>
 
             <ImageButton android:id="@id/exo_settings"
-                style="@style/ExoStyledControls.Button.Bottom.Settings"/>
+                style="@style/ExoStyledControls.Button.Bottom.Settings"
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_ffwd"
+                android:nextFocusLeft="@id/exo_subtitle"
+                android:nextFocusRight="@id/exo_fullscreen"/>
 
             <ImageButton android:id="@id/exo_fullscreen"
-                style="@style/ExoStyledControls.Button.Bottom.FullScreen"/>
+                style="@style/ExoStyledControls.Button.Bottom.FullScreen"
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_next"
+                android:nextFocusLeft="@id/exo_settings"
+                android:nextFocusRight="@id/exo_overflow_show"/>
 
             <ImageButton android:id="@id/exo_overflow_show"
-                style="@style/ExoStyledControls.Button.Bottom.OverflowShow"/>
+                style="@style/ExoStyledControls.Button.Bottom.OverflowShow"
+                android:focusable="true"
+                android:nextFocusUp="@id/exo_next"
+                android:nextFocusLeft="@id/exo_fullscreen"
+                android:nextFocusRight="@+id/share_button"/>
 
         </LinearLayout>
 
@@ -150,17 +186,48 @@
         android:layoutDirection="ltr">
 
         <ImageButton android:id="@id/exo_prev"
-            style="@style/ExoStyledControls.Button.Center.Previous"/>
+            style="@style/ExoStyledControls.Button.Center.Previous"
+            android:focusable="true"
+            android:nextFocusUp="@id/exo_progress"
+            android:nextFocusDown="@id/share_button"
+            android:nextFocusLeft="@id/exo_next"
+            android:nextFocusRight="@+id/exo_rew"/>
 
-        <include layout="@layout/exo_player_control_rewind_button" />
+        <ImageButton android:id="@+id/exo_rew"
+            style="@style/ExoStyledControls.Button.Center"
+            android:src="@drawable/exo_styled_controls_rewind"
+            android:contentDescription="@string/exo_controls_rewind_description"
+            android:focusable="true"
+            android:nextFocusUp="@id/exo_progress"
+            android:nextFocusDown="@id/share_button"
+            android:nextFocusLeft="@id/exo_prev"
+            android:nextFocusRight="@id/exo_play_pause"/>
 
         <ImageButton android:id="@id/exo_play_pause"
-            style="@style/ExoStyledControls.Button.Center.PlayPause"/>
+            style="@style/ExoStyledControls.Button.Center.PlayPause"
+            android:focusable="true"
+            android:nextFocusUp="@id/exo_progress"
+            android:nextFocusDown="@id/share_button"
+            android:nextFocusLeft="@+id/exo_rew"
+            android:nextFocusRight="@+id/exo_ffwd"/>
 
-        <include layout="@layout/exo_player_control_ffwd_button" />
+        <ImageButton android:id="@+id/exo_ffwd"
+            style="@style/ExoStyledControls.Button.Center"
+            android:src="@drawable/exo_styled_controls_fastforward"
+            android:contentDescription="@string/exo_controls_fastforward_description"
+            android:focusable="true"
+            android:nextFocusUp="@id/exo_progress"
+            android:nextFocusDown="@id/exo_subtitle"
+            android:nextFocusLeft="@id/exo_play_pause"
+            android:nextFocusRight="@id/exo_next"/>
 
         <ImageButton android:id="@id/exo_next"
-            style="@style/ExoStyledControls.Button.Center.Next"/>
+            style="@style/ExoStyledControls.Button.Center.Next"
+            android:focusable="true"
+            android:nextFocusUp="@id/exo_progress"
+            android:nextFocusDown="@id/exo_fullscreen"
+            android:nextFocusLeft="@+id/exo_ffwd"
+            android:nextFocusRight="@id/exo_prev"/>
 
     </LinearLayout>
 

@@ -36,7 +36,7 @@ public class MainFragmentController extends BaseFragmentController {
         Log.d(TAG, "loadData: starting");
         try {
             Log.d(TAG, "loadData: try to check for update");
-            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
+//            ServerConfigRepository.getInstance().checkForRemoteUpdates(updateService);
         } catch (Exception e) {
             Log.e(TAG, "checkForRemoteUpdates: " + e.getMessage());
         }
@@ -50,18 +50,18 @@ public class MainFragmentController extends BaseFragmentController {
         }
 
         // Phase 2: Fetch all content asynchronously and in parallel
-        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded);
-        movieRepository.getWatchedMovies(this::onMoviesLoaded);
-        movieRepository.getWatchedChannels(this::onMoviesLoaded);
-        movieRepository.getHomepageChannels(this::onMoviesLoaded);
+//        movieRepository.getHomepageMovies(false, this::onHomepageMoviesLoaded);
+//        movieRepository.getWatchedMovies(this::onMoviesLoaded);
+//        movieRepository.getWatchedChannels(this::onMoviesLoaded);
+//        movieRepository.getHomepageChannels(this::onMoviesLoaded);
 
 
         // The rest of this is test code, you may want to remove it.
-//        Movie movie = new Movie();
-//        movie.setStudio(Movie.SERVER_FASELHD);
-//        movie.setTitle("test title");
-//        movie.setVideoUrl("https://www.w3schools.com/html/mov_bbb.mp4");
-//        Util.openExoPlayer(movie, mFragment.getActivity(),false);
+        Movie movie = new Movie();
+        movie.setStudio(Movie.SERVER_FASELHD);
+        movie.setTitle("test title");
+        movie.setVideoUrl("https://www.w3schools.com/html/mov_bbb.mp4");
+        Util.openExoPlayer(movie, mFragment.getActivity(),false);
     }
 
     private void addEmptyMovieRow(HeaderItem header) {
