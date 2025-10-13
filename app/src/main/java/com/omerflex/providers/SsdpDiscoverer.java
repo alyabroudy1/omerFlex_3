@@ -167,17 +167,20 @@ public class SsdpDiscoverer {
                 }
             }
 
-            if (location != null) {
-                String friendlyName = fetchFriendlyName(location);
-                if (friendlyName == null && server != null) {
-                    friendlyName = extractFriendlyName(server);
-                } else if (friendlyName == null) {
-                    friendlyName = "Unknown Device";
+            // Filter devices based on USN, looking for MediaRenderer or AVTransport
+            if (usn != null && (usn.contains(":device:MediaRenderer:") || usn.contains(":service:AVTransport:"))) {
+                if (location != null) {
+                    String friendlyName = fetchFriendlyName(location);
+                    if (friendlyName == null && server != null) {
+                        friendlyName = extractFriendlyName(server);
+                    } else if (friendlyName == null) {
+                        friendlyName = "Unknown Device";
+                    }
+                    return new DlnaDevice(friendlyName, ipAddress, location, server, usn);
                 }
-                return new DlnaDevice(friendlyName, ipAddress, location, server, usn);
             }
 
-            return null;
+            return null; // Return null if not a media renderer or no location
 
         } catch (Exception e) {
             Log.e(TAG, "Error parsing device details", e);
