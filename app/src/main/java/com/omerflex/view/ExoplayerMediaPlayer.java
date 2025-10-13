@@ -156,6 +156,11 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
             shareButton.setOnClickListener(v -> castingManager.showCastOrDlnaDialog());
         }
 
+        androidx.mediarouter.app.MediaRouteButton mediaRouteButton = playerView.findViewById(R.id.media_route_button);
+        if (mediaRouteButton != null) {
+            castingManager.setUpMediaRouteButton(mediaRouteButton);
+        }
+
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -318,14 +323,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        if (castingManager != null) {
-            castingManager.setUpCastButton(menu);
-        }
-        return true;
-    }
+    // onCreateOptionsMenu is no longer needed as the cast button is in the player view.
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {

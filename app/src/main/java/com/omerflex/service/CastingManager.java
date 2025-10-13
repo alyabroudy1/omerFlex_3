@@ -112,18 +112,9 @@ public class CastingManager {
         castContext.removeCastStateListener(castStateListener);
     }
 
-    public void setUpCastButton(Menu menu) {
-        activity.getMenuInflater().inflate(R.menu.main_menu, menu);
-        MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
+    public void setUpMediaRouteButton(androidx.mediarouter.app.MediaRouteButton mediaRouteButton) {
         if (isGoogleCastAvailable) {
-            CastButtonFactory.setUpMediaRouteButton(activity.getApplicationContext(), menu, R.id.media_route_menu_item);
-            if (mediaRouteMenuItem != null) {
-                mediaRouteMenuItem.setVisible(false);
-            }
-        } else {
-            if (mediaRouteMenuItem != null) {
-                mediaRouteMenuItem.setVisible(false);
-            }
+            CastButtonFactory.setUpMediaRouteButton(activity.getApplicationContext(), mediaRouteButton);
         }
     }
 
@@ -146,9 +137,7 @@ public class CastingManager {
         if (lastDeviceName != null && lastDeviceLocation != null) {
             items.add("Reconnect to " + lastDeviceName);
         }
-        if (isGoogleCastAvailable && googleCastDevicesAvailable) {
-            items.add("Google Cast Device");
-        }
+        // "Google Cast Device" is now handled by the MediaRouteButton in the player controls.
         items.add("Scan for DLNA Devices");
         items.add("Share to another app");
 
