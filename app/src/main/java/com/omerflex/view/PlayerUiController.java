@@ -67,6 +67,12 @@ public class PlayerUiController {
 
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (!playerView.isControllerFullyVisible()) {
+            if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+                // Controller is hidden, and back is pressed.
+                // Let the activity handle the back press, which should trigger handleBackPressed().
+                // Returning false allows the event to propagate.
+                return false;
+            }
             if (event.getAction() == KeyEvent.ACTION_DOWN) {
                 playerView.showController();
             }
