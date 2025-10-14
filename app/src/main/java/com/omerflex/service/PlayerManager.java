@@ -18,6 +18,10 @@ import androidx.media3.ui.PlayerView;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.cast.framework.CastContext;
+import com.omerflex.providers.MediaServer;
+import com.omerflex.server.Util;
+
+import java.util.Map;
 
 @androidx.media3.common.util.UnstableApi
 public class PlayerManager implements SessionAvailabilityListener {
@@ -26,14 +30,16 @@ public class PlayerManager implements SessionAvailabilityListener {
 
     private final Context context;
     private final PlayerView playerView;
+    private final com.omerflex.entity.Movie movie;
 
     private ExoPlayer localPlayer;
     @Nullable private CastPlayer castPlayer;
     private Player currentPlayer;
 
-    public PlayerManager(Context context, @Nullable CastContext castContext, PlayerView playerView) {
+    public PlayerManager(Context context, @Nullable CastContext castContext, PlayerView playerView, com.omerflex.entity.Movie movie) {
         this.context = context;
         this.playerView = playerView;
+        this.movie = movie;
 
         // 1. Always create local ExoPlayer
         DefaultLoadControl loadControl = new DefaultLoadControl.Builder().build();
@@ -72,10 +78,15 @@ public class PlayerManager implements SessionAvailabilityListener {
     }
 
     public void prepare(MediaSource mediaSource) {
+        MediaItem mediaItem = mediaSource.getMediaItem();
+        Log.d(TAG, "Preparing media with MIME type: " + mediaItem.localConfiguration.mimeType);
+        Log.d(TAG, "Full MediaItem URI: " + mediaItem.localConfiguration.uri);
+        Log.d(TAG, "Full MediaItem MIME Type: " + mediaItem.localConfiguration.mimeType);
+
         if (currentPlayer instanceof ExoPlayer) {
             ((ExoPlayer) currentPlayer).setMediaSource(mediaSource);
         } else if (currentPlayer != null) {
-            currentPlayer.setMediaItem(mediaSource.getMediaItem());
+            currentPlayer.setMediaItem(mediaItem);
         }
         if (currentPlayer != null) {
             currentPlayer.prepare();
@@ -105,7 +116,31 @@ public class PlayerManager implements SessionAvailabilityListener {
         currentPlayer = newPlayer;
         playerView.setPlayer(currentPlayer);
 
-        Log.d(TAG, "Switched to " + (currentPlayer == castPlayer ? "CastPlayer" : "LocalPlayer"));
+        Log.d(TAG, "Switched to " + (newPlayer == castPlayer ? "CastPlayer" : "LocalPlayer"));
+
+        if (newPlayer == castPlayer) {
+            // Check if the original video URL has custom headers
+            String originalVideoUrl = movie.getVideoUrl();
+            String[] parts = originalVideoUrl.split("\\|", 2);
+            if (parts.length == 2) {
+                // Video URL has custom headers, start MediaServer to proxy it
+                Map<String, String> headers = com.omerflex.server.Util.extractHeaders(parts[1]);
+                MediaServer mediaServer = MediaServer.getInstance();
+                String localServerUrl = mediaServer.startServer(movie, headers);
+                mediaServer.testServerConnectivity(); // Add this line
+                if (localServerUrl != null) {
+                    // Update the MediaItem to use the local server URL
+                    currentMediaItem = currentMediaItem.buildUpon().setUri(localServerUrl).build();
+                    Log.d(TAG, "Using MediaServer for CastPlayer: " + localServerUrl);
+                } else {
+                    Log.e(TAG, "Failed to start MediaServer for CastPlayer. Using original URL.");
+                }
+            }
+        } else if (currentPlayer == castPlayer && newPlayer == localPlayer) {
+            // Switching from CastPlayer to LocalPlayer, stop MediaServer if it was running
+            MediaServer.getInstance().stopServer();
+            Log.d(TAG, "MediaServer stopped due to Cast session ending.");
+        }
 
         if (currentMediaItem != null) {
             currentPlayer.setMediaItem(currentMediaItem, playbackPositionMs);

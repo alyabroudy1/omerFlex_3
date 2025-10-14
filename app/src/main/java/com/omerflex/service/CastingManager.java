@@ -23,11 +23,15 @@ import com.omerflex.entity.Movie;
 import com.omerflex.providers.DlnaCaster;
 import com.omerflex.providers.MediaServer;
 import com.omerflex.providers.SsdpDiscoverer;
+import com.omerflex.service.utils.NetworkUtils;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class CastingManager {
 
@@ -230,6 +234,23 @@ public class CastingManager {
     }
 
     private void castToDlnaLocation(String deviceName, String locationUrl) {
+        // First, check if we're on the right network
+        String localIp = NetworkUtils.getLocalIpAddress();
+        if (localIp.startsWith("10.") || localIp.startsWith("192.168.") || localIp.startsWith("172.")) {
+            // Good - private IP range
+            Log.d(TAG, "Using private IP: " + localIp);
+        } else {
+            // Bad - likely mobile data or unreachable IP
+            activity.runOnUiThread(() -> {
+                new AlertDialog.Builder(activity)
+                        .setTitle("Network Issue")
+                        .setMessage("Your phone appears to be on mobile data. Both devices must be on the same Wi-Fi network for casting to work.")
+                        .setPositiveButton("OK", null)
+                        .show();
+            });
+            return;
+        }
+
         AlertDialog castingDialog = new AlertDialog.Builder(activity)
                 .setTitle("Casting to " + deviceName)
                 .setMessage("Setting up media server...")
@@ -253,34 +274,70 @@ public class CastingManager {
             return;
         }
 
-        DlnaCaster.castToDevice(locationUrl, localServerUrl, movie.getTitle(), new DlnaCaster.CastListener() {
-            @Override
-            public void onCastSuccess() {
+        // Test if the server is actually reachable
+        testServerReachability(localServerUrl, success -> {
+            if (!success) {
                 activity.runOnUiThread(() -> {
                     castingDialog.dismiss();
-                    Toast.makeText(activity, "Casting started successfully to " + deviceName, Toast.LENGTH_LONG).show();
-
-                    SharedPreferences prefs = activity.getSharedPreferences("dlna_prefs", AppCompatActivity.MODE_PRIVATE);
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putString("last_dlna_name", deviceName);
-                    editor.putString("last_dlna_location", locationUrl);
-                    editor.apply();
-
-                    if (playerManager != null && playerManager.getCurrentPlayer() != null && playerManager.getCurrentPlayer().isPlaying()) {
-                        playerManager.getCurrentPlayer().pause();
-                    }
+                    new AlertDialog.Builder(activity)
+                            .setTitle("Server Not Reachable")
+                            .setMessage("Media server started but may not be accessible from the TV. Check that both devices are on the same Wi-Fi.")
+                            .setPositiveButton("OK", null)
+                            .show();
                 });
+                return;
             }
 
-            @Override
-            public void onCastError(String error) {
-                activity.runOnUiThread(() -> {
-                    castingDialog.dismiss();
-                    Toast.makeText(activity, "Cast failed: " + error, Toast.LENGTH_LONG).show();
-                    MediaServer.getInstance().stopServer();
-                });
-            }
+            // Continue with casting...
+            DlnaCaster.castToDevice(locationUrl, localServerUrl, movie.getTitle(), new DlnaCaster.CastListener() {
+                @Override
+                public void onCastSuccess() {
+                    activity.runOnUiThread(() -> {
+                        castingDialog.dismiss();
+                        Toast.makeText(activity, "Casting started successfully to " + deviceName, Toast.LENGTH_LONG).show();
+
+                        SharedPreferences prefs = activity.getSharedPreferences("dlna_prefs", AppCompatActivity.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putString("last_dlna_name", deviceName);
+                        editor.putString("last_dlna_location", locationUrl);
+                        editor.apply();
+
+                        if (playerManager != null && playerManager.getCurrentPlayer() != null && playerManager.getCurrentPlayer().isPlaying()) {
+                            playerManager.getCurrentPlayer().pause();
+                        }
+                    });
+                }
+
+                @Override
+                public void onCastError(String error) {
+                    activity.runOnUiThread(() -> {
+                        castingDialog.dismiss();
+                        Toast.makeText(activity, "Cast failed: " + error, Toast.LENGTH_LONG).show();
+                        MediaServer.getInstance().stopServer();
+                    });
+                }
+            });
         });
+    }
+
+    private void testServerReachability(String serverUrl, Consumer<Boolean> callback) {
+        new Thread(() -> {
+            try {
+                URL url = new URL(serverUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
+                connection.setRequestMethod("HEAD");
+
+                int responseCode = connection.getResponseCode();
+                Log.d(TAG, "Server reachability test: " + responseCode);
+                callback.accept(responseCode == 200);
+
+            } catch (Exception e) {
+                Log.e(TAG, "Server not reachable", e);
+                callback.accept(false);
+            }
+        }).start();
     }
 
     private void showDiscoveredDevicesDialog(List<String> devices) {

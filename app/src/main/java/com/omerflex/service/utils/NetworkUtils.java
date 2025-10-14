@@ -14,7 +14,9 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
 
 /**
  * Utility class for network-related operations.
@@ -62,25 +64,25 @@ public class NetworkUtils {
 
     public static String getLocalIpAddress() {
         try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface iface = interfaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp()) continue;
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                // Skip interfaces that are not Wi-Fi or are down
+                if (!intf.isUp() || intf.isLoopback() ||
+                        !intf.getDisplayName().toLowerCase().contains("wlan")) {
+                    continue;
+                }
 
-                Enumeration<InetAddress> addresses = iface.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    InetAddress addr = addresses.nextElement();
-                    if (addr instanceof Inet4Address) {
-                        String ip = addr.getHostAddress();
-                        Log.d("NetworkUtils", "Found local IP: " + ip);
-                        return ip;
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                for (InetAddress addr : addrs) {
+                    if (!addr.isLoopbackAddress() && addr instanceof Inet4Address) {
+                        return addr.getHostAddress();
                     }
                 }
             }
-        } catch (SocketException e) {
-            Log.e("NetworkUtils", "Error getting network interfaces", e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting local IP address", e);
         }
-        return null;
+        return "127.0.0.1";
     }
 
     /**

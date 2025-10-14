@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import android.webkit.MimeTypeMap;
+
 @androidx.media3.common.util.UnstableApi
 public class MediaSourceFactory {
 
@@ -122,34 +124,53 @@ public class MediaSourceFactory {
     }
 
     private String determineMimeType(String url) {
+        Log.d(TAG, "determineMimeType: URL = " + url);
         Uri uri = Uri.parse(url);
-        @C.ContentType int contentType = Util.inferContentType(uri);
+        @C.ContentType int inferredContentType = Util.inferContentType(uri);
+        Log.d(TAG, "determineMimeType: Util.inferContentType = " + inferredContentType);
 
-        switch (contentType) {
+        String mimeType = null;
+
+        switch (inferredContentType) {
             case C.CONTENT_TYPE_HLS:
-                return MimeTypes.APPLICATION_M3U8;
+                mimeType = MimeTypes.APPLICATION_M3U8;
+                break;
             case C.CONTENT_TYPE_DASH:
-                return MimeTypes.APPLICATION_MPD;
+                mimeType = MimeTypes.APPLICATION_MPD;
+                break;
             case C.CONTENT_TYPE_SS:
-                return MimeTypes.APPLICATION_SS;
+                mimeType = MimeTypes.APPLICATION_SS;
+                break;
+            case C.CONTENT_TYPE_OTHER:
             default:
-                // For progressive streams, try to detect from file extension
-                if (url.contains(".m3u8")) {
-                    return MimeTypes.APPLICATION_M3U8;
-                } else if (url.contains(".mpd")) {
-                    return MimeTypes.APPLICATION_MPD;
-                } else if (url.contains(".ism")) {
-                    return MimeTypes.APPLICATION_SS;
-                } else if (url.contains(".mp4")) {
-                    return MimeTypes.VIDEO_MP4;
-                } else if (url.contains(".webm")) {
-                    return MimeTypes.VIDEO_WEBM;
-                } else if (url.contains(".mkv")) {
-                    return "video/x-matroska";
-                } else {
-                    // Default to MP4
-                    return MimeTypes.VIDEO_MP4;
+                // Try to infer from file extension using MimeTypeMap
+                String fileExtension = MimeTypeMap.getFileExtensionFromUrl(url);
+                if (fileExtension != null && !fileExtension.isEmpty()) {
+                    mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension);
                 }
+
+                // Fallback for specific cases not covered by MimeTypeMap or inferContentType
+                if (mimeType == null) {
+                    if (url.contains(".m3u8")) {
+                        mimeType = MimeTypes.APPLICATION_M3U8;
+                    } else if (url.contains(".mpd")) {
+                        mimeType = MimeTypes.APPLICATION_MPD;
+                    } else if (url.contains(".ism")) {
+                        mimeType = MimeTypes.APPLICATION_SS;
+                    } else if (url.contains(".mp4")) {
+                        mimeType = MimeTypes.VIDEO_MP4;
+                    } else if (url.contains(".webm")) {
+                        mimeType = MimeTypes.VIDEO_WEBM;
+                    } else if (url.contains(".mkv")) {
+                        mimeType = "video/x-matroska";
+                    } else {
+                        // If still unknown, default to a generic video type or null
+                        mimeType = MimeTypes.VIDEO_UNKNOWN; // Or null, depending on desired strictness
+                    }
+                }
+                break;
         }
+        Log.d(TAG, "determineMimeType: Determined MIME type = " + mimeType);
+        return mimeType;
     }
 }

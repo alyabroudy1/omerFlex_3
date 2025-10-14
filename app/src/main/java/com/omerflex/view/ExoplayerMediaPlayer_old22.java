@@ -541,30 +541,30 @@ public class ExoplayerMediaPlayer_old22 extends AppCompatActivity implements Ses
 
         deviceLocations.clear(); // Clear previous devices
 
-        SsdpDiscoverer.discoverDevicesWithDetails(new SsdpDiscoverer.DiscoveryListener() {
-            @Override
-            public void onDeviceFound(SsdpDiscoverer.DlnaDevice device) {
-                Log.d(TAG, "Discovered device: " + device.friendlyName);
-                // Store device info for later use
-                deviceLocations.put(device.toString(), device);
-            }
-
-            @Override
-            public void onDiscoveryComplete(List<String> devices) {
-                runOnUiThread(() -> {
-                    loadingDialog.dismiss();
-                    showDiscoveredDevicesDialog(devices);
-                });
-            }
-
-            @Override
-            public void onError(String error) {
-                runOnUiThread(() -> {
-                    loadingDialog.dismiss();
-                    showDiscoveryError(error);
-                });
-            }
-        });
+//        SsdpDiscoverer.discoverDevicesWithDetails(new SsdpDiscoverer.DiscoveryListener() {
+//            @Override
+//            public void onDeviceFound(SsdpDiscoverer.DlnaDevice device) {
+//                Log.d(TAG, "Discovered device: " + device.friendlyName);
+//                // Store device info for later use
+//                deviceLocations.put(device.toString(), device);
+//            }
+//
+//            @Override
+//            public void onDiscoveryComplete(List<String> devices) {
+//                runOnUiThread(() -> {
+//                    loadingDialog.dismiss();
+//                    showDiscoveredDevicesDialog(devices);
+//                });
+//            }
+//
+//            @Override
+//            public void onError(String error) {
+//                runOnUiThread(() -> {
+//                    loadingDialog.dismiss();
+//                    showDiscoveryError(error);
+//                });
+//            }
+//        });
     }
 
     private void onDlnaDeviceSelected(String deviceInfo) {

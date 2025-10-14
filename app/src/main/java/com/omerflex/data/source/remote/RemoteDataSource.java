@@ -56,8 +56,8 @@ public class RemoteDataSource {
 
                             for (ServerConfig config : configs) {
                                 if (
-                                        config.getName().equals(Movie.SERVER_OLD_AKWAM)
-//                                        !config.getName().equals(Movie.SERVER_FASELHD)
+//                                        config.getName().equals(Movie.SERVER_OLD_AKWAM)
+                                        !config.getName().equals(Movie.SERVER_FASELHD)
 //                                        !config.getName().equals(Movie.SERVER_MyCima)
 //                                        !config.getName().equals(Movie.SERVER_ARAB_SEED)
                                 ){

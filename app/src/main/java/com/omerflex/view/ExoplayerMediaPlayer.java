@@ -130,7 +130,7 @@ public class ExoplayerMediaPlayer extends AppCompatActivity {
         mediaSourceFactory = new MediaSourceFactory();
         castingManager = new CastingManager(this, movie);
         castingManager.init();
-        playerManager = new PlayerManager(this, castingManager.getCastContext(), playerView);
+        playerManager = new PlayerManager(this, castingManager.getCastContext(), playerView, movie);
         castingManager.setPlayerManager(playerManager);
         playbackHistoryManager = new PlaybackHistoryManager(movieRepository, movie);
         uiController = new PlayerUiController(this, playerView, playerManager);
