@@ -4,14 +4,18 @@ import android.util.Log;
 import com.omerflex.entity.Movie;
 import com.omerflex.service.utils.NetworkUtils;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -75,20 +79,43 @@ public class MediaServer extends NanoHTTPD {
         return wasStarted();
     }
 
+
+
     @Override
     public Response serve(IHTTPSession session) {
         String uri = session.getUri();
+
+        // Handle CORS preflight requests
+        if (Method.OPTIONS.equals(session.getMethod())) {
+            Response response = newFixedLengthResponse(Response.Status.OK, "text/plain", "");
+            response.addHeader("Access-Control-Allow-Origin", "*");
+            response.addHeader("Access-Control-Allow-Headers", "*, Content-Type, Range, User-Agent");
+            response.addHeader("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD");
+            response.addHeader("Access-Control-Max-Age", "86400");
+            return response;
+        }
         Log.d(TAG, "Request: " + session.getMethod().name() + " " + uri);
 
         if (!Method.GET.equals(session.getMethod())) {
             return newFixedLengthResponse(Response.Status.METHOD_NOT_ALLOWED, "text/plain", "Method not allowed");
         }
-        // Add to serve() method
-        if ("/test".equals(uri)) {
-            return newFixedLengthResponse(Response.Status.OK, "text/plain", "Server is working!");
-        }
+
 
         try {
+            if (uri.startsWith("/proxy")) {
+                Map<String, String> params = session.getParms();
+                String targetUrl = params.get("url");
+                if (targetUrl != null) {
+                    try {
+                        String decodedUrl = URLDecoder.decode(targetUrl, "UTF-8");
+                        return proxyRequest(session, decodedUrl);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in proxy endpoint", e);
+                        return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Invalid URL");
+                    }
+                }
+            }
+
             String originalUrl = currentMovie.getVideoUrl().split("\\|")[0];
             String remoteUrl;
 
@@ -114,48 +141,35 @@ public class MediaServer extends NanoHTTPD {
 
     private String buildRemoteUrl(String originalUrl, String requestUri) {
         try {
-            // Remove leading slash from request URI
+            // Remove leading slash if present
             String relativePath = requestUri.startsWith("/") ? requestUri.substring(1) : requestUri;
 
-            // If the request is for a full URL (shouldn't happen but handle it)
-            if (relativePath.startsWith("http")) {
-                return relativePath;
+            // For proxy URLs
+            if (requestUri.startsWith("/proxy")) {
+                return null; // Let the proxy handling deal with it
             }
 
-            // Handle different URL patterns
-            if (originalUrl.contains(".m3u8")) {
-                // For HLS streams, build the full URL for segments
-                int lastSlashIndex = originalUrl.lastIndexOf('/');
-                if (lastSlashIndex != -1) {
-                    String baseUrl = originalUrl.substring(0, lastSlashIndex + 1);
-                    return baseUrl + relativePath;
-                }
-            } else if (originalUrl.contains("/hls/") || originalUrl.contains("/stream/")) {
-                // For structured URLs, try to reconstruct the full path
-                URL url = new URL(originalUrl);
-                String path = url.getPath();
-                int lastSlash = path.lastIndexOf('/');
-                if (lastSlash != -1) {
-                    String basePath = path.substring(0, lastSlash + 1);
-                    return new URL(url.getProtocol(), url.getHost(), url.getPort(), basePath + relativePath).toString();
-                }
-            }
-
-            // Fallback: assume the request URI is relative to the original URL's directory
+            // Build the full URL from the original base
             URL baseUrl = new URL(originalUrl);
             String basePath = baseUrl.getPath();
+
+            // Find the directory of the original URL
             int lastSlash = basePath.lastIndexOf('/');
-            if (lastSlash != -1) {
-                String newPath = basePath.substring(0, lastSlash + 1) + relativePath;
-                return new URL(baseUrl.getProtocol(), baseUrl.getHost(), baseUrl.getPort(), newPath).toString();
-            }
+            String baseDirectory = lastSlash != -1 ? basePath.substring(0, lastSlash + 1) : "/";
+
+            // Construct the full URL
+            String fullPath = baseDirectory + relativePath;
+            URL fullUrl = new URL(baseUrl.getProtocol(), baseUrl.getHost(), baseUrl.getPort(), fullPath);
+
+            return fullUrl.toString();
 
         } catch (Exception e) {
             Log.e(TAG, "Error building remote URL for: " + requestUri, e);
+            return null;
         }
-
-        return null;
     }
+
+
 
     private Response proxyRequest(IHTTPSession session, String remoteUrl) {
         HttpURLConnection connection = null;
@@ -165,8 +179,9 @@ public class MediaServer extends NanoHTTPD {
             URL url = new URL(remoteUrl);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(30000);
-            connection.setReadTimeout(30000);
+            connection.setConnectTimeout(15000); // Reduced from 30s
+            connection.setReadTimeout(15000);    // Reduced from 30s
+            connection.setInstanceFollowRedirects(true); // Handle redirects automatically
 
             // Add original headers
             if (headers != null) {
@@ -181,12 +196,6 @@ public class MediaServer extends NanoHTTPD {
             if (rangeHeader != null) {
                 connection.setRequestProperty("Range", rangeHeader);
                 Log.d(TAG, "Forwarding Range header: " + rangeHeader);
-            }
-
-            // Set user agent if not already set
-            if (!headers.containsKey("User-Agent")) {
-                connection.setRequestProperty("User-Agent",
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
             }
 
             int responseCode = connection.getResponseCode();
@@ -212,21 +221,29 @@ public class MediaServer extends NanoHTTPD {
                 inputStream = connection.getErrorStream();
             }
 
-            Response response;
-            if (contentLength >= 0) {
-                response = newFixedLengthResponse(
-                        Response.Status.lookup(responseCode),
-                        contentType,
-                        inputStream,
-                        contentLength
-                );
-            } else {
-                response = newChunkedResponse(
-                        Response.Status.lookup(responseCode),
-                        contentType,
-                        inputStream
-                );
+            // SPECIAL HANDLING FOR HLS MANIFESTS
+            if (contentType.equals("application/vnd.apple.mpegurl") ||
+                    contentType.equals("application/x-mpegurl")) {
+
+                // Read the entire manifest to process it
+                String manifestContent = readStreamToString(inputStream);
+                String processedManifest = processHlsManifestForCast(manifestContent, remoteUrl);
+
+                Log.d(TAG, "Processed HLS manifest for Cast device");
+                Response response = newFixedLengthResponse(Response.Status.OK, contentType, processedManifest);
+                response.addHeader("Access-Control-Allow-Origin", "*");
+                response.addHeader("Access-Control-Allow-Headers", "*, Content-Type, Range, User-Agent");
+                response.addHeader("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD");
+                response.addHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range");
+                response.addHeader("Access-Control-Max-Age", "86400");
+                return response;
             }
+
+            Response response = newChunkedResponse(
+                    Response.Status.lookup(responseCode),
+                    contentType,
+                    inputStream
+            );
 
             // Copy headers from remote response
             copyHeaders(connection, response);
@@ -244,52 +261,108 @@ public class MediaServer extends NanoHTTPD {
             if (connection != null) {
                 connection.disconnect();
             }
-            return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain",
-                    "Proxy error: " + e.getMessage());
+            // Return a proper error response instead of crashing
+            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain",
+                    "Unable to fetch resource: " + e.getMessage());
         }
     }
 
-    public void testServerConnectivity() {
-        new Thread(() -> {
-            try {
-                String localIp = NetworkUtils.getLocalIpAddress();
-                String testUrl = "http://" + localIp + ":" + getListeningPort() + "/video";
-
-                Log.d(TAG, "=== MEDIA SERVER CONNECTIVITY TEST ===");
-                Log.d(TAG, "Server URL: " + testUrl);
-                Log.d(TAG, "Is server running: " + isRunning());
-                Log.d(TAG, "Port: " + getListeningPort());
-                Log.d(TAG, "Network interfaces:");
-
-                // List all network interfaces
-                List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
-                for (NetworkInterface intf : interfaces) {
-                    if (intf.isUp()) {
-                        Log.d(TAG, "Interface: " + intf.getDisplayName() + " - " + intf.getName());
-                        List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
-                        for (InetAddress addr : addrs) {
-                            Log.d(TAG, "  Address: " + addr.getHostAddress() +
-                                    " (v" + (addr instanceof Inet4Address ? "4" : "6") + ")");
-                        }
-                    }
-                }
-                Log.d(TAG, "=== END CONNECTIVITY TEST ===");
-
-            } catch (Exception e) {
-                Log.e(TAG, "Connectivity test failed", e);
-            }
-        }).start();
+    private String readStreamToString(InputStream inputStream) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        StringBuilder stringBuilder = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            stringBuilder.append(line).append("\n");
+        }
+        reader.close();
+        return stringBuilder.toString();
     }
 
+    private String processHlsManifestForCast(String manifestContent, String baseUrl) {
+        // Then try a SIMPLE approach - minimal processing
+        return minimalHlsProcessing(manifestContent, baseUrl);
+    }
+
+    private String minimalHlsProcessing(String manifestContent, String baseUrl) {
+        try {
+            String serverBase = "http://" + NetworkUtils.getLocalIpAddress() + ":" + getListeningPort();
+            String[] lines = manifestContent.split("\n");
+            StringBuilder processed = new StringBuilder();
+
+            for (String line : lines) {
+                String trimmedLine = line.trim();
+                if (trimmedLine.isEmpty()) {
+                    processed.append(line).append("\n");
+                    continue;
+                }
+
+                if (trimmedLine.startsWith("#")) {
+                    // It's a tag. Check for a URI attribute.
+                    int uriIndex = trimmedLine.indexOf("URI=\"");
+                    if (uriIndex != -1) {
+                        int startIndex = uriIndex + 5;
+                        int endIndex = trimmedLine.indexOf("\"", startIndex);
+                        if (endIndex != -1) {
+                            String uri = trimmedLine.substring(startIndex, endIndex);
+                            URL base = new URL(baseUrl);
+                            URL absoluteUrl = new URL(base, uri);
+                            String proxyPath = "/proxy?url=" + URLEncoder.encode(absoluteUrl.toString(), "UTF-8");
+                            String finalUrl = serverBase + proxyPath;
+                            String rewrittenLine = line.replace(uri, finalUrl);
+                            processed.append(rewrittenLine).append("\n");
+                        } else {
+                            processed.append(line).append("\n");
+                        }
+                    } else {
+                        processed.append(line).append("\n");
+                    }
+                } else {
+                    // It's a URL on its own line.
+                    try {
+                        URL base = new URL(baseUrl);
+                        URL absoluteUrl = new URL(base, trimmedLine);
+                        String proxyPath = "/proxy?url=" + URLEncoder.encode(absoluteUrl.toString(), "UTF-8");
+                        String finalUrl = serverBase + proxyPath;
+                        processed.append(finalUrl).append("\n");
+                    } catch (Exception e) {
+                        Log.w(TAG, "HLS line rewrite failed for: " + line, e);
+                        processed.append(line).append("\n");
+                    }
+                }
+            }
+
+            Log.d(TAG, "✅ minimalHlsProcessing: All segment URLs rewritten for Cast compatibility");
+            return processed.toString();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error in minimal HLS processing", e);
+            return manifestContent;
+        }
+    }
+
+
+
+
+
+
     private String getContentType(String url, String originalContentType) {
-        // Determine content type based on URL and original content type
-        if (HLS_PATTERN.matcher(url).find()) {
+        // HLS manifests
+        if (url.contains(".m3u8") ||
+                (originalContentType != null &&
+                        (originalContentType.contains("mpegurl") ||
+                                originalContentType.contains("vnd.apple.mpegurl")))) {
             return "application/vnd.apple.mpegurl";
-        } else if (TS_PATTERN.matcher(url).find()) {
+        }
+        // TS segments
+        else if (url.contains(".ts")) {
             return "video/mp2t";
-        } else if (MP4_PATTERN.matcher(url).find()) {
+        }
+        // MP4 files
+        else if (url.contains(".mp4")) {
             return "video/mp4";
-        } else if (originalContentType != null) {
+        }
+        // Fallback to original or default
+        else if (originalContentType != null) {
             return originalContentType;
         } else {
             return "application/octet-stream";
@@ -302,13 +375,32 @@ public class MediaServer extends NanoHTTPD {
             for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
                 if (entry.getKey() != null && entry.getValue() != null) {
                     for (String value : entry.getValue()) {
-                        // Don't copy content encoding as we're handling the stream directly
-                        if (!"Content-Encoding".equalsIgnoreCase(entry.getKey())) {
-                            response.addHeader(entry.getKey(), value);
+                        String key = entry.getKey();
+
+                        // Skip problematic headers
+                        if ("Content-Encoding".equalsIgnoreCase(key) ||
+                                "Transfer-Encoding".equalsIgnoreCase(key) ||
+                                "Content-Length".equalsIgnoreCase(key) ||
+                                "Connection".equalsIgnoreCase(key)) {
+                            continue;
                         }
+
+                        response.addHeader(key, value);
                     }
                 }
             }
+
+            // Essential CORS headers for TV compatibility
+            response.addHeader("Access-Control-Allow-Origin", "*");
+            response.addHeader("Access-Control-Allow-Headers", "*, Content-Type, Range, User-Agent");
+            response.addHeader("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD");
+            response.addHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range");
+            response.addHeader("Access-Control-Max-Age", "86400");
+
+            // Important for HLS
+            response.addHeader("Accept-Ranges", "bytes");
+            response.addHeader("Connection", "keep-alive");
+
         } catch (Exception e) {
             Log.w(TAG, "Error copying headers", e);
         }
