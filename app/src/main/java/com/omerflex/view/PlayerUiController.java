@@ -151,14 +151,9 @@ public class PlayerUiController {
 
 
     public void handleBackPressed() {
-        if (playerView.isControllerFullyVisible()) {
-            playerView.hideController();
+        if (backPressedTime + 2000 > System.currentTimeMillis()) {
+            activity.finish();
         } else {
-            if (backPressedTime + 2000 > System.currentTimeMillis()) {
-                activity.finish();
-            } else {
-                Toast.makeText(activity, "Press back again to exit", Toast.LENGTH_SHORT).show();
-            }
             backPressedTime = System.currentTimeMillis();
         }
     }
