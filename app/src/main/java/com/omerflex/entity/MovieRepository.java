@@ -515,14 +515,14 @@ public class MovieRepository {
         Log.d(TAG, "getHomepageChannels: Started.");
         databaseExecutor.execute(() -> {
             List<String> groups = new ArrayList<>();
-            groups.add("الاخبار");
-            groups.add("أم بي سي");
             groups.add("shahid");
+            groups.add("أم بي سي");
             groups.add("Syria");
+            groups.add("الاخبار");
             groups.add("اسلامية");
             groups.add("Germany");
             groups.add("المجد");
-            groups.add("doc");
+//            groups.add("doc");
             groups.add("Children");
 
             List<Movie> movies = movieDao.getMoviesByStudioAndGroups(Movie.SERVER_IPTV, groups);
