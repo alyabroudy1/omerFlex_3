@@ -146,7 +146,8 @@ public class PlayerManager implements SessionAvailabilityListener {
         Log.d(TAG, "Full MediaItem MIME Type: " + mediaItem.localConfiguration.mimeType);
 
         if (currentPlayer instanceof ExoPlayer) {
-            ((ExoPlayer) currentPlayer).setMediaSource(mediaSource);
+            ((ExoPlayer) currentPlayer).setPlayWhenReady(true);
+            ((ExoPlayer) currentPlayer).prepare(mediaSource);
         } else if (currentPlayer instanceof CastPlayer) {
             // Rebuild the MediaItem explicitly for Cast compatibility
             MediaItem castItem = new MediaItem.Builder()

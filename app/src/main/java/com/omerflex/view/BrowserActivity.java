@@ -115,6 +115,7 @@ public class BrowserActivity extends AppCompatActivity {
         initializeThings();
         if (savedInstanceState == null) {
             redirectUrl = movie.getVideoUrl();
+            Log.d(TAG, "onCreate: linkHeaders original link: " + movie.getVideoUrl());
             LinkHeadersDTO linkHeadersDTO = prepareLoadingLink(movie);
 //            Log.d(TAG, "onCreate: linkHeadersDTO: "+ linkHeadersDTO);
             Log.d(TAG, "onCreate: linkHeadersDTO url: " + linkHeadersDTO.url);

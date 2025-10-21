@@ -136,9 +136,10 @@ public class MovieRepository {
             if (remoteMovies != null && !remoteMovies.isEmpty()) {
                 databaseExecutor.execute(() -> {
                     boolean isIpTv = remoteMovies.get(0).getStudio().equals(Movie.SERVER_IPTV);
+                    boolean isKoora = remoteMovies.get(0).getStudio().equals(Movie.SERVER_KOORA_LIVE);
                     for (int i = 0; i < remoteMovies.size(); i++) {
                         Movie movie = remoteMovies.get(i);
-                        String videoUrl = isIpTv ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
+                        String videoUrl = (isIpTv || isKoora) ? movie.getVideoUrl() : removeDomain(movie.getVideoUrl());
                         movie.setVideoUrl(videoUrl);
                         Movie existingMovie = null;
                         if (movie.getType() == MovieType.COLLECTION) {

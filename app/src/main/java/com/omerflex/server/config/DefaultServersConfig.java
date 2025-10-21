@@ -82,6 +82,17 @@ public class DefaultServersConfig {
         akwamConfig.setLabel("أكوام");
 
         scm.updateConfig(akwamConfig);
+
+        //         ### kooraLive ###
+        ServerConfig kooraLiveConfig = new ServerConfig();
+        kooraLiveConfig.setName(Movie.SERVER_KOORA_LIVE);
+        kooraLiveConfig.setActive(true);
+        kooraLiveConfig.setUrl("https://www.koraa-live.com");
+        kooraLiveConfig.setReferer("https://www.koraa-live.com/");
+        kooraLiveConfig.setCreatedAt(date);
+        kooraLiveConfig.setLabel("كورة");
+
+        scm.updateConfig(kooraLiveConfig);
 //
 //        //### old_Akwam ###
         ServerConfig oldAkwamConfig = new ServerConfig();

@@ -21,6 +21,8 @@ public class ServerFactory {
                 return new OldAkwamServer();
             case Movie.SERVER_IPTV:
                 return new IptvServer();
+            case Movie.SERVER_KOORA_LIVE:
+                return new KooraLiveServer();
             case Movie.SERVER_OMAR:
                 return null;
 //            case "Imdb":

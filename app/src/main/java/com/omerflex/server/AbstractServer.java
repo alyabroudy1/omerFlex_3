@@ -170,9 +170,10 @@ public abstract class AbstractServer implements ServerInterface {
                     isDomainUpdated = checkForDomainUpdate(currentUrl, initialHost);
                     redirectCount++;
                 } else {
-                    Log.e(TAG, "Unexpected status " + response.statusCode() + " for " + currentUrl);
-                    Log.e(TAG, response.body());
-                    return statusCode == HttpURLConnection.HTTP_NOT_FOUND ? null : response.parse();
+//                    Log.e(TAG, "Unexpected status " + response.statusCode() + " for " + currentUrl);
+//                    Log.e(TAG, response.body());
+//                    return statusCode == HttpURLConnection.HTTP_NOT_FOUND ? null : response.parse();
+                    return response.parse();
                 }
             }
             Log.w(TAG, "Too many redirects (" + MAX_REDIRECTS + ") for: " + url);
@@ -341,8 +342,7 @@ public abstract class AbstractServer implements ServerInterface {
             String docTitle = doc.title();
             Log.d(TAG, "getRequestDoc: " + docTitle);
 
-            // If Jsoup gets a challenge page, use the activity to get the real page
-            if (true) {
+            if (docTitle.contains("Just a moment") || docTitle.contains("Checking your browser") || docTitle.contains("لحظة…") || docTitle.contains("التحقق")) {
 //            if (docTitle.contains("Just a moment") || docTitle.contains("Checking your browser")) {
                 Log.d(TAG, "getRequestDoc: Cloudflare detected, launching GetDocActivity.");
                 if (context == null) {

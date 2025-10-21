@@ -75,12 +75,13 @@ public class GetDocActivity extends AppCompatActivity {
         }
 
         webView = findViewById(R.id.webView);
+        webView.clearCache(true);
         configureWebView();
 
         Log.d(TAG, "Loading URL in WebView: " + url);
         webView.loadUrl(url);
 
-        timeoutHandler.postDelayed(this::timeout, 60000); // 90-second timeout
+        timeoutHandler.postDelayed(this::timeout, 60000); // 60-second timeout
     }
 
     @SuppressLint("SetJavaScriptEnabled")
