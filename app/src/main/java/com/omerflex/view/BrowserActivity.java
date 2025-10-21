@@ -58,6 +58,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -104,6 +105,8 @@ public class BrowserActivity extends AppCompatActivity {
 
     private int selectedRowIndex = -1;
     private int  selectedItemIndex = -1;
+
+    private HashSet<String> playedVideoLinks;
 
     //#############
     @Override
@@ -188,6 +191,8 @@ public class BrowserActivity extends AppCompatActivity {
             return;
         }
         config = ServerConfigRepository.getInstance().getConfig(server.getServerId());
+
+        playedVideoLinks = new HashSet<>();
 
         configureWebview(webView);
     }
@@ -868,10 +873,15 @@ public class BrowserActivity extends AppCompatActivity {
 
     private void startExoplayer(Movie mov) {
         Log.d(TAG, "processVideoResource: openExoPlayer !openedForResult: "+ currentVideoUrl);
-        if (mov.getVideoUrl().equals(currentVideoUrl)){
+
+        String videoUrl = mov.getVideoUrl();
+        if (playedVideoLinks.contains(videoUrl)) {
+            Log.d(TAG, "Video link already played: " + videoUrl + ". Not opening ExoPlayer.");
             return;
         }
-        currentVideoUrl = mov.getVideoUrl();
+
+        playedVideoLinks.add(videoUrl);
+        currentVideoUrl = videoUrl;
         Util.openExoPlayer(mov, activity, false);
     }
 
